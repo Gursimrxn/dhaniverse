@@ -1,0 +1,35 @@
+{
+  "_about": "Launch settings for a local anvil chain (chain id 31337). Read by script/Deploy.s.sol. Money in USDC base units (1,000,000 = 1 USDC), FOOD in base units (1,000,000 = 1 FOOD). usdc = zero address means: deploy MockUSDC. Uniswap runs at its Sepolia addresses with Uniswap's own Sepolia bytecode, placed by script/dev_chain.sh (see script/anvil/UniswapOnAnvil.sol).",
+  "network": "anvil",
+  "chainId": 31337,
+  "usdc": "0x0000000000000000000000000000000000000000",
+  "uniswap": {
+    "_source": "https://docs.uniswap.org/contracts/v4/deployments (Sepolia 11155111), read 6 Nov 2026; same bytecode placed on anvil",
+    "poolManager": "0xe03a1074c86cfedd5c142c4f04f1a1536e203543",
+    "positionManager": "0x429ba70129df741b2ca2a85bc3a2a3328e5c09b4",
+    "universalRouter": "0x3a9d48ab9751398bbfa63ad67599bb04e4bdf98b",
+    "permit2": "0x000000000022d473030f116ddee9f6b43ac78ba3",
+    "stateView": "0xe1dd9c3fa50edb962e442f60dfbc432e24537e4c",
+    "quoter": "0x68afa8b853caa7a2d40b0f6aee5c4dbc147c8244"
+  },
+  "market": {
+    "floorUsdcPerFood": 2000,
+    "ceilingUsdcPerFood": 8000,
+    "baseUsdcPerFood": 4000,
+    "bandBps": 1500,
+    "dayLengthSeconds": 3600,
+    "tickSpacing": 60,
+    "foodSupply": 100000000000000,
+    "poolFood": 1250000000,
+    "rationFood": 1000000000,
+    "farmFood": 1000000000000
+  },
+  "house": { "budgetBps": 400, "perHumanDailyCap": 5000000, "seedFixed": 100000000, "seedSurprise": 100000000, "seedSafety": 20000000 },
+  "treasury": { "fixedBps": 6000, "safetyBps": 1000, "opsBps": 2000, "teamBps": 1000 },
+  "escrow": { "feeBps": 1000, "minPayout": 150000, "maxAdvance": 1000000 },
+  "vault": { "aprBps": 400, "drip": 50000000 },
+  "lucky": { "revealDelayBlocks": 2 },
+  "mango": { "name": "Mango", "symbol": "MANGO", "fee": 3000, "tickSpacing": 60, "usdcPerMango": 50000, "poolMango": "200000000000000000000000", "poolUsdc": 10000000000 },
+  "demoCampaign": { "title": "Tallyport Launch", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 100000000, "payoutPerClaim": 1000000, "energyCost": 30, "maxClaims": 80, "perHumanCap": 1, "days": 7 },
+  "deployerUsdc": 20000000000
+}

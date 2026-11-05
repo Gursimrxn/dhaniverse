@@ -1,0 +1,36 @@
+{
+  "_about": "Launch settings for Ethereum Sepolia (chain id 11155111). Read by script/Deploy.s.sol. Money in USDC base units. The deployer must hold the Circle test USDC the seeds below need (faucet.circle.com): poolUsdc + demoCampaign.budget + vault.drip + house seeds.",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "usdc": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+  "_usdcSource": "https://developers.circle.com/stablecoins/usdc-contract-addresses (Ethereum Sepolia), read 6 Nov 2026",
+  "uniswap": {
+    "_source": "https://docs.uniswap.org/contracts/v4/deployments (Sepolia 11155111), read 6 Nov 2026",
+    "poolManager": "0xe03a1074c86cfedd5c142c4f04f1a1536e203543",
+    "positionManager": "0x429ba70129df741b2ca2a85bc3a2a3328e5c09b4",
+    "universalRouter": "0x3a9d48ab9751398bbfa63ad67599bb04e4bdf98b",
+    "permit2": "0x000000000022d473030f116ddee9f6b43ac78ba3",
+    "stateView": "0xe1dd9c3fa50edb962e442f60dfbc432e24537e4c",
+    "quoter": "0x68afa8b853caa7a2d40b0f6aee5c4dbc147c8244"
+  },
+  "market": {
+    "floorUsdcPerFood": 2000,
+    "ceilingUsdcPerFood": 8000,
+    "baseUsdcPerFood": 4000,
+    "bandBps": 1500,
+    "dayLengthSeconds": 3600,
+    "tickSpacing": 60,
+    "foodSupply": 100000000000000,
+    "poolFood": 1250000000,
+    "rationFood": 1000000000,
+    "farmFood": 1000000000000
+  },
+  "house": { "budgetBps": 400, "perHumanDailyCap": 5000000, "seedFixed": 500000, "seedSurprise": 500000, "seedSafety": 500000 },
+  "treasury": { "fixedBps": 6000, "safetyBps": 1000, "opsBps": 2000, "teamBps": 1000 },
+  "escrow": { "feeBps": 1000, "minPayout": 150000, "maxAdvance": 1000000 },
+  "vault": { "aprBps": 400, "drip": 1000000 },
+  "lucky": { "revealDelayBlocks": 5 },
+  "mango": { "name": "Mango", "symbol": "MANGO", "fee": 3000, "tickSpacing": 60, "usdcPerMango": 50000, "poolMango": "100000000000000000000", "poolUsdc": 5000000 },
+  "demoCampaign": { "title": "Tallyport Launch", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 5000000, "payoutPerClaim": 1000000, "energyCost": 30, "maxClaims": 4, "perHumanCap": 1, "days": 7 },
+  "deployerUsdc": 0
+}

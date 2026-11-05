@@ -1,0 +1,56 @@
+{
+  "chainId": 31337,
+  "contracts": {
+    "CampaignEscrow": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+    "Farm": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+    "FloatManager": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+    "FoodHook": "0x2b11D6D5C0a27dE8713a976D5225F7023d5628c0",
+    "FoodRouter": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+    "FoodToken": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "HousePool": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+    "LuckyLedger": "0x59b670e9fA9D0A427751Af201D676719a970857b",
+    "MealCounter": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+    "MockYieldVault": "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
+    "QuestToken": "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
+    "SpiceMerchant": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+    "Treasury": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
+  },
+  "demoCampaignId": 1,
+  "keys": {
+    "admin": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "keeper": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "ops": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "team": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+    "ticketSigner": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    "voucherSigner": "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+  },
+  "network": "anvil",
+  "startBlock": 0,
+  "uniswap": {
+    "foodPool": {
+      "currency0": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "currency1": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "fee": 0,
+      "hooks": "0x2b11D6D5C0a27dE8713a976D5225F7023d5628c0",
+      "poolId": "0xf36a63a16f3aa400d84ee77834528607e78733dd8380975295f50a5762a8cd31",
+      "tickSpacing": 60
+    },
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+    "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+    "questPool": {
+      "currency0": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "currency1": "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
+      "fee": 3000,
+      "hooks": "0x0000000000000000000000000000000000000000",
+      "poolId": "0x53f60d1657382b5af8b0dbfb4958051ba3b3dab008d89d83552cb71290ad1b59",
+      "positionId": 1,
+      "tickSpacing": 60
+    },
+    "quoter": "0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244",
+    "stateView": "0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C",
+    "universalRouter": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b"
+  },
+  "usdc": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "usdcIsMock": true
+}
