@@ -1,0 +1,25 @@
+*.blend1
+*.blend@
+.godot/
+.import/
+*.import
+*.uid
+.DS_Store
+node_modules/
+.env
+
+# parity-harness data exported from the three.js reference (tools/vh_export_scene.js)
+dev/vhref/
+
+# exported game builds
+build/
+
+# written by tools/godot_d.sh for the length of a test run
+game/override.cfg
+
+# python bytecode from the tools
+__pycache__/
+
+# local secrets (tools/make_keys.sh)
+.env.*
+!.env.example
