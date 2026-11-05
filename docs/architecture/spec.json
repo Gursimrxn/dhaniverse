@@ -1,0 +1,2943 @@
+{
+  "meta": {
+    "title": "Dhaniverse contracts: food market, money, quests and names",
+    "version": "v4.0",
+    "date": "Fri 6 Nov 2026",
+    "status": "Built in contracts/. CI checks that every public function, event and error of ours has a plain-English line here.",
+    "sitsOn": "[Dhaniverse build spec](../planning/Dhaniverse_Build_Spec.md) and the [technical plan](../planning/Dhaniverse_Technical_Plan.html).",
+    "checked": "Checked on 6 Nov 2026",
+    "foundation": "⛓️ Standing on Ethereum Sepolia (Circle USDC, Uniswap v4, ENSv2); anvil locally",
+    "firstContract": "MealCounter",
+    "roofTags": [
+      "The Rust server (chain crate)",
+      "Phase 6"
+    ],
+    "roofOne": "The Rust server runs the game and signs tickets and vouchers; its chain crate sends transactions and indexes events. Each key it holds can press only certain functions.",
+    "fuseNote": "FoodToken and FoodHook have no off switch. Everywhere else, replacing a key (signer, keeper) or taking a role away is the off switch, and every read keeps working.",
+    "chainLane": [
+      "⛓️ On-chain",
+      "Ethereum Sepolia (money, Uniswap, names)"
+    ],
+    "phasesHint": "Built bottom to top, one phase at a time."
+  },
+  "summary": "USDC is the only money. Players buy food (energy) with USDC through MealCounter; every meal is a real Uniswap v4 swap in the FOOD/USDC pool, whose hook keeps the price in a band. Food revenue reaches Treasury, which feeds HousePool (fixed rewards, surprises, rescue meals, each capped at 4% a day). Sponsors fund campaigns in CampaignEscrow (10% fee, the 25% rule, daily caps, advances, refunds); FloatManager holds their USDC and earns (simulated, on testnet) yield for the house pool. The Spice Run sends players through Uniswap's Universal Router to SpiceMerchant; LuckyLedger runs the free weekly draw; ENSv2 names everyone under tallyport.eth.",
+  "needFromYou": [
+    "Fund the Sepolia deployer with Circle test USDC (faucet.circle.com) and Sepolia ETH, then run script/Deploy.s.sol.",
+    "Run the ENS setup (script/names/CityNames.s.sol) to register tallyport.eth and name the contracts.",
+    "Hand every contract's admin role to a multisig after the demo (transferOwnership + acceptOwnership)."
+  ],
+  "promises": [
+    {
+      "icon": "⚡",
+      "title": "The game never waits for the chain",
+      "text": "Players never sign anything or pay gas. Walking, working and eating never touch a chain. Bank actions confirm in about a second behind an animation, and names catch up in the background."
+    },
+    {
+      "icon": "🔎",
+      "title": "Every error names itself",
+      "text": "No vague failures. Each refusal says which contract, what went wrong, and the numbers that caused it. Our tool, dhv why, adds the plain-English meaning and the exact file and line."
+    },
+    {
+      "icon": "🧯",
+      "title": "If a chain breaks, the city doesn't",
+      "text": "If Arc or Sepolia is slow, or a key is switched off, the game keeps running: menus keep the last prices, bank actions wait in order, and names show from our database."
+    },
+    {
+      "icon": "🔧",
+      "title": "Fixable without losing anything",
+      "text": "A broken contract is replaced and its ENS name repointed, and the server follows the name. Every fix starts as a failing test and runs on a test world first."
+    },
+    {
+      "icon": "📖",
+      "title": "Every function in plain words",
+      "text": "Every function on every contract is listed here: who presses it, when, and what happens. Once code exists, CI fails if a public function has no plain-English line in this spec."
+    }
+  ],
+  "workLoop": [
+    {
+      "n": 1,
+      "title": "Brief",
+      "text": "Before any code: a short page with this phase's contracts, functions and decisions. You say go, or change it."
+    },
+    {
+      "n": 2,
+      "title": "Build",
+      "text": "I write the code and its tests. Money rules get their tests first."
+    },
+    {
+      "n": 3,
+      "title": "Prove",
+      "text": "Every test green, the numbers below hit exactly, and Arc Studio gives a second opinion."
+    },
+    {
+      "n": 4,
+      "title": "Show",
+      "text": "A phase report: what was built, what each function does, test results, anything that changed from this map, and one command to run it yourself."
+    },
+    {
+      "n": 5,
+      "title": "You review",
+      "text": "Then it merges and the next phase starts."
+    }
+  ],
+  "floors": [
+    {
+      "id": "roof",
+      "n": 5,
+      "name": "Rust server",
+      "plain": "The game, the signers (tickets, vouchers) and the chain crate (executor, indexer)",
+      "phase": "6",
+      "chapter": "Everything players do",
+      "folder": "server (Rust)"
+    },
+    {
+      "id": "names",
+      "n": 4,
+      "name": "Names (Sepolia)",
+      "plain": "ENSv2: the parent name, every player's name and records, NPC and contract names",
+      "phase": "4",
+      "chapter": "Town Pass · shop sign · stamps",
+      "folder": "script/names"
+    },
+    {
+      "id": "bank",
+      "n": 3,
+      "name": "Money",
+      "plain": "Treasury, HousePool, CampaignEscrow, FloatManager: where every dollar goes",
+      "phase": "3",
+      "chapter": "Rewards · sponsors · yield",
+      "folder": "src/money"
+    },
+    {
+      "id": "door",
+      "n": 2,
+      "name": "The doors",
+      "plain": "FoodRouter, MealCounter, Farm; SpiceMerchant and MANGO for quests",
+      "phase": "2",
+      "chapter": "Common Table · Spice Run",
+      "folder": "src/food, src/quests"
+    },
+    {
+      "id": "rules",
+      "n": 1,
+      "name": "Market rules",
+      "plain": "Uniswap v4 and FoodHook's price band",
+      "phase": "1",
+      "chapter": "Market board",
+      "folder": "src/food"
+    },
+    {
+      "id": "money",
+      "n": 0,
+      "name": "Tokens",
+      "plain": "USDC (the only money) and FOOD (burned when eaten)",
+      "phase": "0",
+      "chapter": "Everything",
+      "folder": "src/food, src/mocks"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "USDC",
+      "floor": "money",
+      "phase": 0,
+      "emoji": "💵",
+      "nick": "Circle's dollar",
+      "kind": "external",
+      "ours": false,
+      "file": "Circle's test USDC on Sepolia (0x1c7D…7238, 6 decimals); MockUSDC on anvil",
+      "upgrade": "Circle's",
+      "fuse": "n/a",
+      "one": "The only money. Players buy food with it, sponsors fund campaigns with it, and every reward is paid in it.",
+      "game": "Shown everywhere as dollars: 1,000,000 base units = 1 USDC.",
+      "remembers": [
+        "who holds how much USDC"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "transfer · transferFrom · approve · balanceOf · permit",
+          "who": "Players' wallets, our contracts",
+          "when": "Every payment",
+          "does": "A standard token with EIP-2612 permit."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Transfer · Approval",
+          "means": "USDC moved."
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "MockUSDC",
+      "floor": "money",
+      "phase": 0,
+      "emoji": "🧪",
+      "nick": "Local stand-in for USDC",
+      "kind": "building",
+      "ours": true,
+      "file": "src/mocks/MockUSDC.sol",
+      "upgrade": "Fixed (test only)",
+      "fuse": "n/a",
+      "one": "A stand-in for Circle's USDC on anvil and in tests: 6 decimals and EIP-2612 permit under Circle's domain (\"USDC\", version \"2\"). Anyone can mint it. Never deployed to Sepolia.",
+      "game": "Only on local chains; deployments/anvil.json says usdcIsMock: true.",
+      "remembers": [
+        "balances, allowances and permit nonces"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "constructor()",
+          "who": "Deploy script (anvil) and tests",
+          "when": "Once",
+          "does": "Creates the token."
+        },
+        {
+          "sig": "mint(to, amount)",
+          "who": "Anyone (it's a test faucet)",
+          "when": "Local chains",
+          "does": "Makes mock USDC. Not money."
+        },
+        {
+          "sig": "permit(owner, spender, value, deadline, v, r, s) · nonces(owner) · DOMAIN_SEPARATOR",
+          "who": "Players' wallets, the server",
+          "when": "Instead of approve",
+          "does": "EIP-2612: an allowance from a signature."
+        },
+        {
+          "sig": "eip712Domain",
+          "read": true,
+          "who": "The server, wallets",
+          "when": "Any time",
+          "does": "The EIP-712 domain the server signs under: name \"Dhaniverse\", version \"1\", this chain, this contract."
+        },
+        {
+          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance",
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A standard ERC-20 token."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Transfer · Approval",
+          "means": "Tokens moved, or an allowance changed."
+        },
+        {
+          "sig": "EIP712DomainChanged",
+          "means": "Part of OpenZeppelin's EIP-712 base; never emitted by our code."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "MockUSDC__PermitExpired(deadline, nowSeconds)",
+          "means": "The permit's deadline passed."
+        },
+        {
+          "sig": "MockUSDC__BadPermit(signer, owner)",
+          "means": "The permit wasn't signed by the owner it names."
+        }
+      ]
+    },
+    {
+      "id": "FoodToken",
+      "floor": "money",
+      "phase": 1,
+      "emoji": "🍚",
+      "nick": "One serving of food",
+      "kind": "building",
+      "ours": true,
+      "file": "src/food/FoodToken.sol",
+      "upgrade": "Fixed forever",
+      "fuse": "No: a token shouldn't be switchable",
+      "one": "FOOD: every serving there will ever be is made once, at deploy. Eaten FOOD is burned, so supply really shrinks. Players never hold it.",
+      "game": "Invisible: players see meals and energy. 1 FOOD = 10 energy.",
+      "remembers": [
+        "balances"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "constructor(holder, supply)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Mints the whole fixed supply to the admin, who stocks the pool, the farm and the ration reserve."
+        },
+        {
+          "sig": "burn(amount)",
+          "who": "FoodRouter, MealCounter",
+          "when": "Every meal",
+          "does": "Destroys the caller's own FOOD: food that was eaten."
+        },
+        {
+          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance",
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A standard ERC-20 token."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Transfer · Approval",
+          "means": "Tokens moved, or an allowance changed."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "FoodToken__ZeroSupply",
+          "means": "A token with no supply is a mistake."
+        }
+      ]
+    },
+    {
+      "id": "PoolManager",
+      "floor": "rules",
+      "phase": 1,
+      "emoji": "🦄",
+      "nick": "Uniswap v4's engine",
+      "kind": "external",
+      "ours": false,
+      "file": "Uniswap v4 PoolManager on Sepolia (0xE03A…3543); the same bytecode at the same address on anvil",
+      "upgrade": "Uniswap's",
+      "fuse": "n/a",
+      "one": "Uniswap's singleton that holds every v4 pool: our FOOD/USDC pool (with FoodHook) and the plain MANGO/USDC quest pool.",
+      "game": "Every meal and every harvest is a real Uniswap v4 swap.",
+      "remembers": [
+        "pools, liquidity, prices"
+      ],
+      "talksTo": [
+        "FoodHook (the FOOD pool's rules)"
+      ],
+      "fns": [
+        {
+          "sig": "initialize · unlock · swap · modifyLiquidity · settle · take · sync",
+          "who": "FoodRouter, PositionManager, UniversalRouter",
+          "when": "Every trade",
+          "does": "Uniswap's own functions."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Initialize · Swap · ModifyLiquidity",
+          "means": "A pool was created, traded or restocked. The server's indexer reads Swap on the quest pool to verify the Spice Run."
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "UniswapPeriphery",
+      "floor": "rules",
+      "phase": 5,
+      "emoji": "🔁",
+      "nick": "PositionManager, UniversalRouter, Permit2, Quoter, StateView",
+      "kind": "external",
+      "ours": false,
+      "file": "Uniswap v4 periphery on Sepolia (addresses in deployments/sepolia.config.json; same bytecode placed on anvil)",
+      "upgrade": "Uniswap's",
+      "fuse": "n/a",
+      "one": "The MANGO/USDC quest pool is seeded through PositionManager, and players swap through the Universal Router with Permit2 approvals. Minimal interfaces: src/uniswap/UniswapPeriphery.sol.",
+      "game": "The Spice Run's kiosk: a real Uniswap swap from the player's own wallet.",
+      "remembers": [
+        "positions, allowances"
+      ],
+      "talksTo": [
+        "PoolManager"
+      ],
+      "fns": [
+        {
+          "sig": "execute(commands, inputs, deadline)",
+          "who": "Players' wallets (sent by the server)",
+          "when": "Spice Run",
+          "does": "V4_SWAP with SWAP_EXACT_IN_SINGLE, SETTLE_ALL, TAKE_ALL (script/uniswap/QuestPool.sol encodes it)."
+        },
+        {
+          "sig": "initializePool · modifyLiquidities",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Creates and seeds the quest pool (MINT_POSITION, SETTLE_PAIR)."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Transfer (position NFT)",
+          "means": "A liquidity position was minted."
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "FoodHook",
+      "floor": "rules",
+      "phase": 1,
+      "emoji": "🪝",
+      "nick": "The price rules",
+      "kind": "building",
+      "ours": true,
+      "file": "src/food/FoodHook.sol",
+      "upgrade": "Fixed forever (Uniswap hooks can't change)",
+      "fuse": "No: point it at a new router instead",
+      "one": "Runs inside every trade in the FOOD/USDC pool: only FoodRouter trades; the price moves at most bandBps (15%) a day from the day's open; it never leaves the floor ($0.002) and ceiling ($0.008); each day's trades are totalled.",
+      "game": "The market board's price ticks with every meal (up) and every harvest (down).",
+      "remembers": [
+        "the one pool it serves",
+        "the router",
+        "each day's opening price and USDC/FOOD totals"
+      ],
+      "talksTo": [
+        "PoolManager (live price)"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(manager, admin, initialRouter, usdc, food, floorUsdcPerFood, ceilingUsdcPerFood, bandBps, dayLengthSeconds)",
+          "who": "Deploy script (CREATE2 at a mined address)",
+          "when": "Once",
+          "does": "Fixes the rules. Launch: 2,000 / 8,000 USDC base units per FOOD, band 1,500 bps, 1-hour market days."
+        },
+        {
+          "sig": "beforeInitialize · beforeAddLiquidity · beforeSwap · afterSwap",
+          "who": "PoolManager only",
+          "when": "Inside pool actions",
+          "does": "Allow only our pool (created by the admin), only FoodRouter's stock and trades, and refuse any trade ending outside today's band."
+        },
+        {
+          "sig": "afterInitialize · afterAddLiquidity · beforeRemoveLiquidity · afterRemoveLiquidity · beforeDonate · afterDonate",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Switched off by the hook's address; refuse if called."
+        },
+        {
+          "sig": "setRouter(newRouter)",
+          "who": "Admin key",
+          "when": "Replacing a broken router",
+          "does": "Points the hook at a new FoodRouter. Zero stops all trading."
+        },
+        {
+          "sig": "band() · priceBand() · ceilingPrice() · usdcPerFood(sqrtPriceX96) · today() · dayPrice(day) · dayTotals(day) · settings() · router · poolManager · getHookPermissions",
+          "read": true,
+          "who": "FoodRouter, MealCounter, CampaignEscrow, the server",
+          "when": "Any time",
+          "does": "Today's band (sqrt prices, and in USDC per FOOD), the ceiling, price conversions, day totals and the fixed settings."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (FoodHook__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "DayOpened(day, openPrice)",
+          "means": "The first trade of a market day; today's band is set around this price (USDC per FOOD)."
+        },
+        {
+          "sig": "TradeCounted(day, usdc, food, priceAfter)",
+          "means": "A trade counted toward today's totals. The server turns these into FoodTrade observations."
+        },
+        {
+          "sig": "RouterSet(oldRouter, newRouter)",
+          "means": "FoodRouter was replaced."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "FoodHook__NotPoolManager(caller)",
+          "means": "Hook functions are for Uniswap's PoolManager only."
+        },
+        {
+          "sig": "FoodHook__HookNotUsed",
+          "means": "That hook function is switched off."
+        },
+        {
+          "sig": "FoodHook__BadSettings(floor, ceiling, bandBps, dayLength)",
+          "means": "Deploy settings make no sense."
+        },
+        {
+          "sig": "FoodHook__NotAdmin(sender)",
+          "means": "Only the admin can create the pool."
+        },
+        {
+          "sig": "FoodHook__PoolExists",
+          "means": "This hook serves one pool, and it exists."
+        },
+        {
+          "sig": "FoodHook__WrongTokens(currency0, currency1)",
+          "means": "The pool must be FOOD against USDC."
+        },
+        {
+          "sig": "FoodHook__StartOutsideBounds(price, floor, ceiling)",
+          "means": "The starting price must be inside the floor and ceiling."
+        },
+        {
+          "sig": "FoodHook__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        },
+        {
+          "sig": "FoodHook__NotRouter(sender)",
+          "means": "Trades and stock must come through FoodRouter."
+        },
+        {
+          "sig": "FoodHook__OutsideBand(price, low, high)",
+          "means": "The trade would leave today's band (USDC per FOOD)."
+        }
+      ]
+    },
+    {
+      "id": "FoodRouter",
+      "floor": "door",
+      "phase": 2,
+      "emoji": "🚪",
+      "nick": "The only door in",
+      "kind": "building",
+      "ours": true,
+      "file": "src/food/FoodRouter.sol",
+      "upgrade": "Fixed (replace if broken; the pool stays)",
+      "fuse": "Yes: take MealCounter's or Farm's role away",
+      "one": "The only way to trade FOOD. MealCounter (Buyer) buys each meal's FOOD, which is burned; Farm (Seller) sells the harvest. At today's limit a trade fills part-way. A ref works once; a Buyer can cap the USDC it pays.",
+      "game": "Every meal anyone eats is a swap here.",
+      "remembers": [
+        "the pool",
+        "which address has which role",
+        "refs used"
+      ],
+      "talksTo": [
+        "PoolManager",
+        "FoodHook",
+        "USDC",
+        "FoodToken"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(manager, hook, admin, tickSpacing)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Learns the pool from FoodHook (FOOD/USDC, no fee)."
+        },
+        {
+          "sig": "buyFood(foodWanted, maxUsdc, ref) → (foodBought, usdcPaid)",
+          "who": "Buyer role: MealCounter",
+          "when": "Every meal",
+          "does": "Buys up to foodWanted FOOD, stopping at today's band, and burns it. Refuses (TooDear) if it would cost more than maxUsdc."
+        },
+        {
+          "sig": "sellFood(foodOffered, ref) → (foodSold, usdcGot)",
+          "who": "Seller role: Farm",
+          "when": "Through the day",
+          "does": "Sells up to foodOffered FOOD, stopping at today's band; only what sold leaves the seller."
+        },
+        {
+          "sig": "addLiquidity(liquidity) · removeLiquidity(liquidity)",
+          "who": "Admin key",
+          "when": "Setup; moving to a new router",
+          "does": "Full-range stock in or out, paid by / returned to the admin."
+        },
+        {
+          "sig": "setRole(key, role)",
+          "who": "Admin key",
+          "when": "Setup; the off switch",
+          "does": "Gives Buyer or Seller, or takes it away (None)."
+        },
+        {
+          "sig": "roleOf(key) · refUsed(ref) · poolKey()",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A key's role, whether a ref was used, and the pool's key."
+        },
+        {
+          "sig": "unlockCallback(data)",
+          "who": "PoolManager only",
+          "when": "Inside our own trades",
+          "does": "Uniswap's settlement plumbing."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (FoodRouter__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "FoodBought(day, buyer, wanted, bought, usdcPaid, ref)",
+          "means": "A meal's FOOD was bought and burned."
+        },
+        {
+          "sig": "FoodSold(day, seller, offered, sold, usdcGot, ref)",
+          "means": "Harvest sold into the pool."
+        },
+        {
+          "sig": "LiquidityChanged(by, liquidityDelta, usdc, food)",
+          "means": "The pool's stock changed."
+        },
+        {
+          "sig": "RoleSet(key, role)",
+          "means": "A key got or lost a role."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "FoodRouter__NotAllowed(caller, has, needs)",
+          "means": "Wrong role, or switched off."
+        },
+        {
+          "sig": "FoodRouter__RefUsed(ref)",
+          "means": "That action already went through."
+        },
+        {
+          "sig": "FoodRouter__ZeroAmount",
+          "means": "Asked to move nothing."
+        },
+        {
+          "sig": "FoodRouter__TooDear(usdcNeeded, maxUsdc)",
+          "means": "The FOOD would cost more than the buyer allowed. Nothing bought."
+        },
+        {
+          "sig": "FoodRouter__OnlyPoolManager(caller)",
+          "means": "Only PoolManager may call the plumbing."
+        },
+        {
+          "sig": "FoodRouter__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "MealCounter",
+      "floor": "door",
+      "phase": 2,
+      "emoji": "🍛",
+      "nick": "Where players eat",
+      "kind": "building",
+      "ours": true,
+      "file": "src/food/MealCounter.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: replace the ticket signer, or take the Buyer role away",
+      "one": "The only way a player buys food. The player's wallet sends a server-signed MealTicket and USDC; the counter buys the FOOD through FoodRouter (burned), fills any shortfall from the ration reserve at today's band-high price (burned too, revenue to Treasury), refunds the rest. Never charges more than maxUsdc. Also buys rescue meals for HousePool.",
+      "game": "Buying a chai, vada pav or thali at the Common Table; energy arrives when MealEaten is seen.",
+      "remembers": [
+        "ticket signer",
+        "refs used",
+        "the ration reserve (its FOOD)",
+        "HousePool, router, Treasury"
+      ],
+      "talksTo": [
+        "FoodRouter",
+        "FoodHook (band-high price)",
+        "USDC",
+        "FoodToken",
+        "Treasury"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(router, hook, treasury, ticketSigner, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Wires the counter. It then needs FoodRouter's Buyer role."
+        },
+        {
+          "sig": "buyMeal(MealTicket t, sig) → (usdcPaid, fromRation)",
+          "who": "The player's wallet (t.player)",
+          "when": "Every meal",
+          "does": "Checks the ticket (EIP-712 MealTicket, signer, ref, expiry), pulls maxUsdc, buys and burns, ration fallback, refunds."
+        },
+        {
+          "sig": "buyMealFor(player, item, food, maxUsdc, ref) → (usdcPaid, fromRation)",
+          "who": "HousePool only",
+          "when": "Rescue meals, meal vouchers",
+          "does": "Same meal, paid by the pool; energy to the player."
+        },
+        {
+          "sig": "restockRation(food)",
+          "who": "Admin key",
+          "when": "Setup; topping up",
+          "does": "Adds FOOD to the ration reserve."
+        },
+        {
+          "sig": "setTicketSigner(newSigner) · setHousePool(newPool) · setRouter(newRouter)",
+          "who": "Admin key",
+          "when": "Rarely",
+          "does": "Replaces the ticket signer (old tickets die), HousePool, or the router."
+        },
+        {
+          "sig": "rationReserve() · refUsed(ref) · ticketSigner · housePool · router · treasury",
+          "read": true,
+          "who": "Anyone, the dashboard",
+          "when": "Any time",
+          "does": "Ration FOOD left, ref status and wiring."
+        },
+        {
+          "sig": "eip712Domain",
+          "read": true,
+          "who": "The server, wallets",
+          "when": "Any time",
+          "does": "The EIP-712 domain the server signs under: name \"Dhaniverse\", version \"1\", this chain, this contract."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (MealCounter__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "MealEaten(player, ref, item, usdcPaid, foodBurned, fromRation)",
+          "means": "A meal was eaten: credit energy for foodBurned."
+        },
+        {
+          "sig": "RationRestocked(from, food)",
+          "means": "The ration reserve grew."
+        },
+        {
+          "sig": "TicketSignerSet · HousePoolSet · RouterSet",
+          "means": "Wiring changed."
+        },
+        {
+          "sig": "EIP712DomainChanged",
+          "means": "Part of OpenZeppelin's EIP-712 base; never emitted by our code."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "MealCounter__NotPlayer(sender, player)",
+          "means": "Only the ticket's player can use it."
+        },
+        {
+          "sig": "MealCounter__NotHousePool(sender)",
+          "means": "Only HousePool buys meals for others."
+        },
+        {
+          "sig": "MealCounter__RefUsed(ref)",
+          "means": "That meal already went through."
+        },
+        {
+          "sig": "MealCounter__Expired(expiry, nowSeconds)",
+          "means": "The ticket expired."
+        },
+        {
+          "sig": "MealCounter__BadSignature(recovered, expected)",
+          "means": "Not signed by the ticket signer."
+        },
+        {
+          "sig": "MealCounter__ZeroFood",
+          "means": "A meal needs some FOOD."
+        },
+        {
+          "sig": "MealCounter__TooDear(cost, maxUsdc)",
+          "means": "The meal would cost more than maxUsdc; nothing moved."
+        },
+        {
+          "sig": "MealCounter__RationEmpty(needed, reserve)",
+          "means": "The pool can't fill it and the ration reserve is short."
+        },
+        {
+          "sig": "MealCounter__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "MealCounter__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "Farm",
+      "floor": "door",
+      "phase": 2,
+      "emoji": "🌾",
+      "nick": "Kofi's farm (the supplier)",
+      "kind": "building",
+      "ours": true,
+      "file": "src/food/Farm.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: take the key away",
+      "one": "Holds the harvest's FOOD and the Seller role. The keeper sells tranches; every USDC goes straight to Treasury in the same call. The admin moves stock in.",
+      "game": "Kofi's harvest pulls the price back down through the day.",
+      "remembers": [
+        "keeper",
+        "router",
+        "its FOOD stock"
+      ],
+      "talksTo": [
+        "FoodRouter",
+        "USDC",
+        "FoodToken",
+        "Treasury"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(router, usdc, foodToken, treasury, keeper, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Wires the farm. It then needs the Seller role."
+        },
+        {
+          "sig": "sell(food, ref) → (sold, usdc)",
+          "who": "Keeper key",
+          "when": "Through the day",
+          "does": "Sells up to food FOOD (today's band permitting); proceeds to Treasury."
+        },
+        {
+          "sig": "restock(food)",
+          "who": "Admin key",
+          "when": "Setup",
+          "does": "Moves FOOD into the farm."
+        },
+        {
+          "sig": "setKeeper(newKeeper) · setRouter(newRouter)",
+          "who": "Admin key",
+          "when": "Rarely",
+          "does": "Replaces the keeper (the off switch) or the router."
+        },
+        {
+          "sig": "stock() · keeper · router · treasury",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "FOOD held and wiring."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (Farm__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "HarvestSold(ref, offered, sold, usdc)",
+          "means": "A tranche went to the pool; usdc went to Treasury."
+        },
+        {
+          "sig": "Restocked(from, food)",
+          "means": "Stock moved in."
+        },
+        {
+          "sig": "KeeperSet · RouterSet",
+          "means": "Wiring changed."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "Farm__NotKeeper(sender, keeper)",
+          "means": "Only the keeper sells."
+        },
+        {
+          "sig": "Farm__ZeroAmount",
+          "means": "Nothing to sell or stock."
+        },
+        {
+          "sig": "Farm__NotEnoughStock(offered, stock)",
+          "means": "The farm holds less FOOD."
+        },
+        {
+          "sig": "Farm__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "Farm__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "Treasury",
+      "floor": "money",
+      "phase": 3,
+      "emoji": "🏦",
+      "nick": "Splits food revenue",
+      "kind": "building",
+      "ours": true,
+      "file": "src/money/Treasury.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: take the key away",
+      "one": "Collects food revenue (Farm sales, ration meals). split() sends the whole balance: 60% HousePool FIXED, 10% HousePool SAFETY, 20% ops, 10% team.",
+      "game": "The dashboard's food revenue split.",
+      "remembers": [
+        "the four shares",
+        "ops and team addresses"
+      ],
+      "talksTo": [
+        "USDC",
+        "HousePool"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(usdc, housePool, ops, team, fixedBps, safetyBps, opsBps, teamBps, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Fixes the shares (must sum to 10,000)."
+        },
+        {
+          "sig": "split() → total",
+          "who": "Anyone (keeper)",
+          "when": "Hourly",
+          "does": "Splits the whole balance; rounding dust goes to the team share."
+        },
+        {
+          "sig": "setPayees(ops, team)",
+          "who": "Admin key",
+          "when": "Rarely",
+          "does": "Changes the ops and team addresses."
+        },
+        {
+          "sig": "fixedBps · safetyBps · opsBps · teamBps · ops · team · housePool",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "The shares and payees."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (Treasury__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Split(total, fixedShare, safety, ops, team)",
+          "means": "Revenue was split."
+        },
+        {
+          "sig": "PayeesSet(ops, team)",
+          "means": "Payees changed."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "Treasury__NothingToSplit",
+          "means": "No USDC to split."
+        },
+        {
+          "sig": "Treasury__BadShares(fixedBps, safetyBps, opsBps, teamBps)",
+          "means": "Shares must sum to 10,000."
+        },
+        {
+          "sig": "Treasury__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "Treasury__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "HousePool",
+      "floor": "money",
+      "phase": 3,
+      "emoji": "🎁",
+      "nick": "Pays for our own fun",
+      "kind": "building",
+      "ours": true,
+      "file": "src/money/HousePool.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: replace the voucher signer",
+      "one": "Three buckets: FIXED (Rush pot, streaks, errands), SURPRISE (chests, golden coins, mystery quests, the draw), SAFETY (rescue meals). Each spends at most 4% of its balance a day (fixed at the day's first payout); each human at most perHumanDailyCap a day. Server-signed PayoutVouchers, a ref works once.",
+      "game": "Every house reward and rescue meal.",
+      "remembers": [
+        "bucket balances",
+        "each day's budget and spend per bucket",
+        "each human's paid-today",
+        "refs used",
+        "voucher signer, MealCounter, LuckyLedger"
+      ],
+      "talksTo": [
+        "USDC",
+        "MealCounter"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(usdc, voucherSigner, budgetBps, perHumanDailyCap, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Launch: 400 bps a day, $5 per human per day."
+        },
+        {
+          "sig": "fund(bucket, amount)",
+          "who": "Treasury, CampaignEscrow, FloatManager, anyone",
+          "when": "Revenue in",
+          "does": "Pulls USDC into a bucket."
+        },
+        {
+          "sig": "pay(PayoutVoucher v, sig)",
+          "who": "Anyone (the server submits)",
+          "when": "Rewards",
+          "does": "Checks signature, ref, expiry, bucket budget and human cap; pays v.player."
+        },
+        {
+          "sig": "payMeal(PayoutVoucher v, item, food, sig) → usdcSpent",
+          "who": "The player's wallet",
+          "when": "Rescue meals (SAFETY), meal vouchers (SURPRISE)",
+          "does": "Buys the meal through MealCounter.buyMealFor; only the meal's real cost leaves the bucket."
+        },
+        {
+          "sig": "payDraw(winner, amount, ref)",
+          "who": "LuckyLedger only",
+          "when": "Weekly draw",
+          "does": "Pays the prize from SURPRISE within today's budget."
+        },
+        {
+          "sig": "setVoucherSigner · setPerHumanDailyCap · setMealCounter · setLuckyLedger",
+          "who": "Admin key",
+          "when": "Rarely",
+          "does": "Wiring and the human cap."
+        },
+        {
+          "sig": "bucketBalance(bucket) · todayBudget(bucket) · humanPaidToday(humanId) · refUsed(ref) · today() · budgetBps · perHumanDailyCap · voucherSigner · mealCounter · luckyLedger · FIXED · SURPRISE · SAFETY",
+          "read": true,
+          "who": "Anyone, the dashboard",
+          "when": "Any time",
+          "does": "Balances, today's budget/spend/left, caps and wiring."
+        },
+        {
+          "sig": "eip712Domain",
+          "read": true,
+          "who": "The server, wallets",
+          "when": "Any time",
+          "does": "The EIP-712 domain the server signs under: name \"Dhaniverse\", version \"1\", this chain, this contract."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (HousePool__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Funded(bucket, from, amount)",
+          "means": "USDC came in."
+        },
+        {
+          "sig": "Paid(source, player, humanId, amount, ref)",
+          "means": "A payout (humanId 0 for a draw prize)."
+        },
+        {
+          "sig": "MealPaid(source, player, humanId, usdcSpent, ref)",
+          "means": "A rescue meal or meal voucher was bought."
+        },
+        {
+          "sig": "BudgetOpened(bucket, day, budget)",
+          "means": "Today's budget was fixed."
+        },
+        {
+          "sig": "VoucherSignerSet · PerHumanDailyCapSet · MealCounterSet · LuckyLedgerSet",
+          "means": "Settings changed."
+        },
+        {
+          "sig": "EIP712DomainChanged",
+          "means": "Part of OpenZeppelin's EIP-712 base; never emitted by our code."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "HousePool__BadSource(source)",
+          "means": "No such bucket for this use."
+        },
+        {
+          "sig": "HousePool__ZeroAmount",
+          "means": "Nothing to fund or pay."
+        },
+        {
+          "sig": "HousePool__RefUsed(ref)",
+          "means": "That voucher was used."
+        },
+        {
+          "sig": "HousePool__Expired(expiry, nowSeconds)",
+          "means": "The voucher expired."
+        },
+        {
+          "sig": "HousePool__BadSignature(recovered, expected)",
+          "means": "Not signed by the voucher signer."
+        },
+        {
+          "sig": "HousePool__NotVerified(player)",
+          "means": "Payouts need a humanId (Town Pass)."
+        },
+        {
+          "sig": "HousePool__OverDailyBudget(bucket, wouldSpend, budget)",
+          "means": "Today's budget is spent."
+        },
+        {
+          "sig": "HousePool__InsufficientBalance(bucket, amount, balance)",
+          "means": "Defence in depth: the bucket holds less (can't happen within budget)."
+        },
+        {
+          "sig": "HousePool__HumanCapReached(humanId, wouldReceive, cap)",
+          "means": "This human hit today's cap."
+        },
+        {
+          "sig": "HousePool__NotPlayer(sender, player)",
+          "means": "Meal vouchers are sent by the player."
+        },
+        {
+          "sig": "HousePool__NotLuckyLedger(sender)",
+          "means": "Only LuckyLedger pays the draw."
+        },
+        {
+          "sig": "HousePool__NoMealCounter",
+          "means": "MealCounter isn't set."
+        },
+        {
+          "sig": "HousePool__BadSettings(budgetBps, perHumanDailyCap)",
+          "means": "Settings make no sense."
+        },
+        {
+          "sig": "HousePool__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "HousePool__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "CampaignEscrow",
+      "floor": "money",
+      "phase": 3,
+      "emoji": "📜",
+      "nick": "Sponsor money and its rules",
+      "kind": "building",
+      "ours": true,
+      "file": "src/money/CampaignEscrow.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: pause a campaign, or replace the voucher signer",
+      "one": "Sponsors create campaigns (open sign-up; admin can pause). 10% fee at deposit (half HousePool SURPRISE, half team); 90% held by FloatManager. I1, the 25% rule, on create: energyCost × (ceiling ÷ 10) × 4 ≤ payoutPerClaim, and payout ≥ $0.15. Daily cap = remaining ÷ days left (at least one payout). Server-signed claims (CampaignClaim) and one open advance per human (AdvanceVoucher), repaid first. Refund after end or cancel.",
+      "game": "The Bounty Board's sponsored quests and their payouts.",
+      "remembers": [
+        "campaigns",
+        "per-human claims and open advances",
+        "each campaign's daily cap",
+        "refs",
+        "total liabilities",
+        "open campaigns (≤ 100)"
+      ],
+      "talksTo": [
+        "USDC",
+        "HousePool (fee)",
+        "FloatManager (holds the money)",
+        "FoodHook (ceiling)"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(usdc, hook, housePool, floatManager, team, voucherSigner, feeBps, minPayout, maxAdvance, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Launch: fee 1,000 bps, min payout $0.15, max advance $1."
+        },
+        {
+          "sig": "createCampaign(CampaignParams p) → campaignId",
+          "who": "Any sponsor",
+          "when": "Any time",
+          "does": "Checks the params and I1, pulls the budget, splits the fee, parks the rest in FloatManager. Spice Run / Hold the Line need a questToken."
+        },
+        {
+          "sig": "claim(CampaignClaim v, sig)",
+          "who": "Anyone (server submits)",
+          "when": "Quest done",
+          "does": "Ref once, live, slots, per-human cap, daily cap; repays an open advance first; pays the rest from FloatManager."
+        },
+        {
+          "sig": "advance(AdvanceVoucher v, sig)",
+          "who": "Anyone (server submits)",
+          "when": "Spice Run with a short wallet",
+          "does": "One open advance per human per campaign, ≤ maxAdvance, within the daily cap."
+        },
+        {
+          "sig": "cancel(campaignId)",
+          "who": "The sponsor",
+          "when": "Any time",
+          "does": "Ends it now for new claims."
+        },
+        {
+          "sig": "refund(campaignId) → amount",
+          "who": "Anyone",
+          "when": "After end or cancel",
+          "does": "Returns the unspent budget (advances already counted as spent) to the sponsor."
+        },
+        {
+          "sig": "setPaused(campaignId, paused) · setVoucherSigner · setTeam · setLimits(minPayout, maxAdvance)",
+          "who": "Admin key",
+          "when": "Abuse; rarely",
+          "does": "Pause a campaign; settings."
+        },
+        {
+          "sig": "campaign(id) · remaining(id) · dailyCap(id) · dailyCapLeft(id) · totalLiabilities() · liveDailyCapSum() · pendingRefunds() · openCampaigns() · isLive(id) · deliverTo(id) · questToken(id) · humanState(id, humanId) · minPayoutFor(energyCost) · refUsed(ref) · campaignCount · feeBps · minPayout · maxAdvance · team · voucherSigner · ENERGY_PER_FOOD · QUARTER_RULE_MULTIPLE · MAX_OPEN_CAMPAIGNS · KIND_SPONSORED · KIND_BOOSTED · SPICE_RUN_TEMPLATE · HOLD_LINE_TEMPLATE",
+          "read": true,
+          "who": "Sponsor console, server, FloatManager, SpiceMerchant",
+          "when": "Any time",
+          "does": "Everything about campaigns and their money; minPayoutFor lets the console check I1 live."
+        },
+        {
+          "sig": "eip712Domain",
+          "read": true,
+          "who": "The server, wallets",
+          "when": "Any time",
+          "does": "The EIP-712 domain the server signs under: name \"Dhaniverse\", version \"1\", this chain, this contract."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (CampaignEscrow__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "CampaignCreated(campaignId, sponsor, params, net, fee)",
+          "means": "A campaign was funded (params include metaHash and questToken)."
+        },
+        {
+          "sig": "Claimed(campaignId, player, humanId, amount, advanceRepaid, ref)",
+          "means": "A quest was paid; the player got amount − advanceRepaid."
+        },
+        {
+          "sig": "Advanced(campaignId, player, humanId, amount, ref)",
+          "means": "Cargo advanced."
+        },
+        {
+          "sig": "Refunded(campaignId, sponsor, amount, advancesUnpaid)",
+          "means": "Unspent budget returned."
+        },
+        {
+          "sig": "Cancelled(campaignId)",
+          "means": "The sponsor ended it."
+        },
+        {
+          "sig": "PausedSet(campaignId, paused)",
+          "means": "Admin paused or unpaused."
+        },
+        {
+          "sig": "DailyCapOpened(campaignId, day, cap)",
+          "means": "Today's cap was fixed."
+        },
+        {
+          "sig": "VoucherSignerSet · TeamSet · LimitsSet",
+          "means": "Settings changed."
+        },
+        {
+          "sig": "EIP712DomainChanged",
+          "means": "Part of OpenZeppelin's EIP-712 base; never emitted by our code."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "CampaignEscrow__PayoutTooSmall(payoutPerClaim, minPayout)",
+          "means": "Under the minimum payout."
+        },
+        {
+          "sig": "CampaignEscrow__BreaksQuarterRule(ceilingFoodCostX4, payoutPerClaim)",
+          "means": "I1: food for the quest at the ceiling, ×4, exceeds the payout."
+        },
+        {
+          "sig": "CampaignEscrow__BadWindow(start, end, nowSeconds)",
+          "means": "Start must be before end, end in the future."
+        },
+        {
+          "sig": "CampaignEscrow__BudgetTooSmall(net, payoutPerClaim)",
+          "means": "After the fee, not even one claim."
+        },
+        {
+          "sig": "CampaignEscrow__BadLimits(maxClaims, perHumanCap)",
+          "means": "Limits must be above zero."
+        },
+        {
+          "sig": "CampaignEscrow__QuestTokenMissing(template)",
+          "means": "This template needs a quest token."
+        },
+        {
+          "sig": "CampaignEscrow__BadKind(kind)",
+          "means": "Kind is 0 Sponsored or 1 Boosted."
+        },
+        {
+          "sig": "CampaignEscrow__TooManyOpen(open, max)",
+          "means": "Refund ended campaigns first."
+        },
+        {
+          "sig": "CampaignEscrow__UnknownCampaign(campaignId)",
+          "means": "No such campaign."
+        },
+        {
+          "sig": "CampaignEscrow__NotLive(campaignId, start, end, nowSeconds)",
+          "means": "Not running now."
+        },
+        {
+          "sig": "CampaignEscrow__Closed(campaignId, paused, cancelled)",
+          "means": "Paused or cancelled."
+        },
+        {
+          "sig": "CampaignEscrow__RefUsed(ref)",
+          "means": "That voucher was used."
+        },
+        {
+          "sig": "CampaignEscrow__Expired(expiry, nowSeconds)",
+          "means": "The voucher expired."
+        },
+        {
+          "sig": "CampaignEscrow__BadSignature(recovered, expected)",
+          "means": "Not signed by the voucher signer."
+        },
+        {
+          "sig": "CampaignEscrow__NotVerified(player)",
+          "means": "Needs a humanId (Town Pass)."
+        },
+        {
+          "sig": "CampaignEscrow__BadAmount(amount, max)",
+          "means": "Zero, or over the payout / max advance."
+        },
+        {
+          "sig": "CampaignEscrow__SoldOut(campaignId, claims, maxClaims)",
+          "means": "Every claim was made."
+        },
+        {
+          "sig": "CampaignEscrow__HumanCapReached(campaignId, humanId, claims, cap)",
+          "means": "This human was paid as often as allowed."
+        },
+        {
+          "sig": "CampaignEscrow__DailyCapReached(campaignId, wouldSpend, cap)",
+          "means": "Today's cap; retry tomorrow."
+        },
+        {
+          "sig": "CampaignEscrow__OverRemaining(campaignId, amount, remaining)",
+          "means": "More than the campaign has left."
+        },
+        {
+          "sig": "CampaignEscrow__AdvanceOpen(campaignId, humanId, open)",
+          "means": "One open advance at a time."
+        },
+        {
+          "sig": "CampaignEscrow__NotSponsor(sender, sponsor)",
+          "means": "Only the sponsor cancels."
+        },
+        {
+          "sig": "CampaignEscrow__NotEnded(campaignId, end, nowSeconds)",
+          "means": "Refunds wait for the end or a cancel."
+        },
+        {
+          "sig": "CampaignEscrow__AlreadyRefunded(campaignId)",
+          "means": "Already refunded."
+        },
+        {
+          "sig": "CampaignEscrow__BadFee(feeBps)",
+          "means": "Fee must be under 10,000 bps."
+        },
+        {
+          "sig": "CampaignEscrow__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "CampaignEscrow__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "FloatManager",
+      "floor": "money",
+      "phase": 3,
+      "emoji": "🌊",
+      "nick": "Custody and yield, no lock-ins",
+      "kind": "building",
+      "ours": true,
+      "file": "src/money/FloatManager.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: take the key away",
+      "one": "Holds all sponsor USDC. Only CampaignEscrow can pay or release principal (pulled back from venues automatically). rebalance(): buffer = 1.5 × 3 days × Σ live daily caps + pending refunds; invest ≤ min(80% float, float − buffer); withdraw to buffer under 0.5×, deposit excess over 1.5×; up to two instant-withdraw ERC-4626 venues. harvestYield(): surplus above liabilities and the loss reserve → 80% SURPRISE / 20% reserve until 2% of invested, then 100%.",
+      "game": "The dashboard's float, buffer and interest earned.",
+      "remembers": [
+        "escrow (set once)",
+        "keeper",
+        "two venues",
+        "loss reserve",
+        "yield earned"
+      ],
+      "talksTo": [
+        "USDC",
+        "CampaignEscrow (liabilities, caps)",
+        "venues (ERC-4626)",
+        "HousePool"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(usdc, housePool, keeper, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Creates the float."
+        },
+        {
+          "sig": "pay(to, amount) · release(to, amount)",
+          "who": "CampaignEscrow only",
+          "when": "Claims, advances; refunds",
+          "does": "Moves principal out, withdrawing from venues if cash is short."
+        },
+        {
+          "sig": "rebalance() → (deposited, withdrawn)",
+          "who": "Keeper key",
+          "when": "Hourly",
+          "does": "The buffer rule above."
+        },
+        {
+          "sig": "harvestYield() → (toPool, toReserve)",
+          "who": "Anyone",
+          "when": "Daily",
+          "does": "Sends yield to HousePool SURPRISE and the loss reserve; never principal."
+        },
+        {
+          "sig": "setEscrow(escrow) · setVenue(index, venue) · setKeeper(newKeeper)",
+          "who": "Admin key",
+          "when": "Setup; rarely",
+          "does": "Escrow once; a venue (old one fully withdrawn first); the keeper."
+        },
+        {
+          "sig": "totalAssets() · liquid() · invested() · buffer() · investCap() · surplus() · lossReserve · yieldEarned · venue(index) · venues() · escrow · keeper · MAX_VENUES · BUFFER_DAYS · BUFFER_FACTOR_BPS · MAX_INVESTED_BPS · LOW_WATER_BPS · HIGH_WATER_BPS · POOL_SHARE_BPS · RESERVE_TARGET_BPS",
+          "read": true,
+          "who": "Dashboard, server",
+          "when": "Any time",
+          "does": "The float's state and rules."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (FloatManager__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "PaidOut(to, amount)",
+          "means": "Principal paid to a player."
+        },
+        {
+          "sig": "Released(to, amount)",
+          "means": "Principal refunded to a sponsor."
+        },
+        {
+          "sig": "Rebalanced(buffer, liquidBefore, deposited, withdrawn)",
+          "means": "Cash and venues rebalanced."
+        },
+        {
+          "sig": "YieldHarvested(surplus, toPool, toReserve)",
+          "means": "Yield harvested."
+        },
+        {
+          "sig": "VenueSet(index, oldVenue, newVenue, assetsMoved)",
+          "means": "A venue changed."
+        },
+        {
+          "sig": "EscrowSet(escrow) · KeeperSet",
+          "means": "Wiring changed."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "FloatManager__NotEscrow(sender)",
+          "means": "Only CampaignEscrow moves principal."
+        },
+        {
+          "sig": "FloatManager__NotKeeper(sender, keeper)",
+          "means": "Only the keeper rebalances."
+        },
+        {
+          "sig": "FloatManager__EscrowAlreadySet(escrow)",
+          "means": "Escrow is set once."
+        },
+        {
+          "sig": "FloatManager__Illiquid(needed, available)",
+          "means": "Not enough cash even after withdrawing what venues allow."
+        },
+        {
+          "sig": "FloatManager__NoYield(totalAssets, owed)",
+          "means": "Nothing above liabilities and the reserve."
+        },
+        {
+          "sig": "FloatManager__BadVenueIndex(index)",
+          "means": "Venues are 0 and 1."
+        },
+        {
+          "sig": "FloatManager__WrongAsset(venue, asset)",
+          "means": "A venue must be an ERC-4626 over USDC."
+        },
+        {
+          "sig": "FloatManager__ZeroAmount",
+          "means": "Nothing to move."
+        },
+        {
+          "sig": "FloatManager__ZeroAddress",
+          "means": "A required address was zero."
+        },
+        {
+          "sig": "FloatManager__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "MockYieldVault",
+      "floor": "money",
+      "phase": 3,
+      "emoji": "🧪",
+      "nick": "Simulated yield (demo only)",
+      "kind": "building",
+      "ours": true,
+      "file": "src/mocks/MockYieldVault.sol",
+      "upgrade": "Fixed (demo only)",
+      "fuse": "Yes: take the key away",
+      "one": "SIMULATED: an ERC-4626 vault over USDC paying a stated APR from an admin-funded drip pot. Used on anvil and Sepolia because Aave/Morpho don't run on Sepolia with Circle USDC. Labelled 'simulated' in the UI.",
+      "game": "The dashboard's interest line, marked simulated.",
+      "remembers": [
+        "APR",
+        "drip pot",
+        "last accrual"
+      ],
+      "talksTo": [
+        "USDC"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(usdc, aprBps, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Launch APR 400 bps (max 5,000)."
+        },
+        {
+          "sig": "fundDrip(amount) · accrue()",
+          "who": "Admin / anyone",
+          "when": "Demo setup; any time",
+          "does": "Fund the interest pot; settle interest so far."
+        },
+        {
+          "sig": "setApr(newAprBps)",
+          "who": "Admin key",
+          "when": "Rarely",
+          "does": "Changes the stated APR."
+        },
+        {
+          "sig": "aprBps · dripPot · lastAccrual · MAX_APR_BPS",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "The simulation's settings."
+        },
+        {
+          "sig": "asset · totalAssets · convertToShares · convertToAssets · maxDeposit · maxMint · maxWithdraw · maxRedeem · previewDeposit · previewMint · previewWithdraw · previewRedeem · deposit · mint · withdraw · redeem",
+          "who": "FloatManager",
+          "when": "Rebalance",
+          "does": "Standard ERC-4626 (instant withdrawal)."
+        },
+        {
+          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance",
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A standard ERC-20 token."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (MockYieldVault__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Deposit · Withdraw",
+          "means": "ERC-4626 moves."
+        },
+        {
+          "sig": "DripFunded(from, amount)",
+          "means": "The pot grew."
+        },
+        {
+          "sig": "Accrued(interest, potLeft)",
+          "means": "Interest settled."
+        },
+        {
+          "sig": "AprSet(oldAprBps, newAprBps)",
+          "means": "APR changed."
+        },
+        {
+          "sig": "Transfer · Approval",
+          "means": "Tokens moved, or an allowance changed."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "MockYieldVault__AprTooHigh(aprBps, max)",
+          "means": "APR over 50%."
+        },
+        {
+          "sig": "MockYieldVault__ZeroAmount",
+          "means": "Nothing to fund."
+        },
+        {
+          "sig": "MockYieldVault__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "SpiceMerchant",
+      "floor": "door",
+      "phase": 5,
+      "emoji": "🧑‍🍳",
+      "nick": "The Spice Run's NPC",
+      "kind": "building",
+      "ours": true,
+      "file": "src/quests/SpiceMerchant.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "No admin: pause the campaign instead",
+      "one": "spice-merchant.tallyport.eth. The player delivers the campaign's quest token (bought on Uniswap); it goes straight to the campaign's deliverTo. The server then verifies the swap and signs the claim.",
+      "game": "Delivering MANGO at the spice market.",
+      "remembers": [
+        "quest refs used"
+      ],
+      "talksTo": [
+        "CampaignEscrow (live, questToken, deliverTo)",
+        "the quest token"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(escrow)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Points at CampaignEscrow."
+        },
+        {
+          "sig": "deliver(campaignId, token, amount, questRef)",
+          "who": "The player's wallet",
+          "when": "Spice Run",
+          "does": "Checks live campaign, token = questToken, ref unused; forwards the tokens."
+        },
+        {
+          "sig": "refUsed(questRef) · escrow",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "Ref status; the escrow."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Delivered(campaignId, player, token, amount, questRef)",
+          "means": "Cargo delivered."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "SpiceMerchant__CampaignNotLive(campaignId)",
+          "means": "The campaign isn't running."
+        },
+        {
+          "sig": "SpiceMerchant__WrongToken(token, questToken)",
+          "means": "Not the campaign's quest token."
+        },
+        {
+          "sig": "SpiceMerchant__RefUsed(questRef)",
+          "means": "Already delivered."
+        },
+        {
+          "sig": "SpiceMerchant__ZeroAmount",
+          "means": "Nothing to deliver."
+        },
+        {
+          "sig": "SpiceMerchant__ZeroAddress",
+          "means": "A required address was zero."
+        }
+      ]
+    },
+    {
+      "id": "QuestToken",
+      "floor": "door",
+      "phase": 5,
+      "emoji": "🥭",
+      "nick": "MANGO, the demo sponsor's token",
+      "kind": "building",
+      "ours": true,
+      "file": "src/quests/QuestToken.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: take the key away",
+      "one": "A plain ERC-20 (18 decimals, permit), admin-mintable, trading in a plain Uniswap v4 MANGO/USDC pool (0.3%, no hook) seeded through PositionManager.",
+      "game": "What the Spice Run buys.",
+      "remembers": [
+        "balances"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "constructor(name, symbol, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Creates MANGO."
+        },
+        {
+          "sig": "mint(to, amount)",
+          "who": "Admin key",
+          "when": "Seeding the pool",
+          "does": "Mints MANGO."
+        },
+        {
+          "sig": "permit · nonces · DOMAIN_SEPARATOR",
+          "who": "Wallets",
+          "when": "Instead of approve",
+          "does": "EIP-2612."
+        },
+        {
+          "sig": "eip712Domain",
+          "read": true,
+          "who": "The server, wallets",
+          "when": "Any time",
+          "does": "The EIP-712 domain the server signs under: name \"Dhaniverse\", version \"1\", this chain, this contract."
+        },
+        {
+          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance",
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A standard ERC-20 token."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (QuestToken__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Transfer · Approval",
+          "means": "Tokens moved, or an allowance changed."
+        },
+        {
+          "sig": "EIP712DomainChanged",
+          "means": "Part of OpenZeppelin's EIP-712 base; never emitted by our code."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "QuestToken__ZeroAmount",
+          "means": "Nothing to mint."
+        },
+        {
+          "sig": "QuestToken__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "LuckyLedger",
+      "floor": "money",
+      "phase": 5,
+      "emoji": "🎟️",
+      "nick": "The weekly draw",
+      "kind": "building",
+      "ours": true,
+      "file": "src/quests/LuckyLedger.sol",
+      "upgrade": "Fixed (replace if broken)",
+      "fuse": "Yes: take the key away",
+      "one": "Free tickets, never bought. The keeper commits (seedHash, Merkle root of ticket ranges, count, prize); after revealDelayBlocks anyone reveals; winner = uint256(keccak256(abi.encode(seed, blockhash(commitBlock+1)))) % count; the winner proves [from, to) and is paid from SURPRISE via payDraw.",
+      "game": "The phone's weekly draw.",
+      "remembers": [
+        "each week's draw",
+        "keeper"
+      ],
+      "talksTo": [
+        "HousePool (payDraw)"
+      ],
+      "fns": [
+        {
+          "sig": "constructor(housePool, keeper, revealDelayBlocks, admin)",
+          "who": "Deploy script",
+          "when": "Once",
+          "does": "Wires the draw (delay 1..255 blocks)."
+        },
+        {
+          "sig": "commit(week, seedHash, ticketsRoot, ticketCount, prize)",
+          "who": "Keeper key",
+          "when": "Weekly",
+          "does": "Commits the week's draw."
+        },
+        {
+          "sig": "reveal(week, seed) → winnerIndex",
+          "who": "Anyone with the seed",
+          "when": "After the delay, within 256 blocks",
+          "does": "Fixes the winning ticket."
+        },
+        {
+          "sig": "claim(week, player, from, to, proof)",
+          "who": "Anyone",
+          "when": "After reveal",
+          "does": "Verifies the leaf keccak256(bytes.concat(keccak256(abi.encode(player, from, to)))) and pays the prize."
+        },
+        {
+          "sig": "voidDraw(week) · setKeeper(newKeeper)",
+          "who": "Admin key",
+          "when": "Missed reveal window; rarely",
+          "does": "Voids an unrevealed draw (public in DrawVoided); replaces the keeper."
+        },
+        {
+          "sig": "draw(week) · revealFromBlock(week) · drawRef(week) · keeper · revealDelayBlocks · BLOCKHASH_WINDOW",
+          "read": true,
+          "who": "Anyone",
+          "when": "Any time",
+          "does": "A week's draw and timing."
+        },
+        {
+          "sig": "owner · pendingOwner · transferOwnership · acceptOwnership",
+          "who": "Admin key; the new admin key accepts",
+          "when": "Rarely (hand to a multisig after deploy)",
+          "does": "Hands the admin role to another key in two steps, so a typo can't lose control."
+        },
+        {
+          "sig": "renounceOwnership",
+          "who": "Nobody",
+          "when": "Never",
+          "does": "Always refuses (LuckyLedger__AdminCantBeRemoved). Without an admin, a leaked key could never be switched off."
+        }
+      ],
+      "events": [
+        {
+          "sig": "Committed(week, seedHash, ticketsRoot, ticketCount, prize, block_)",
+          "means": "A draw was committed."
+        },
+        {
+          "sig": "Revealed(week, seed, entropyBlockHash, winnerIndex)",
+          "means": "The winner is fixed."
+        },
+        {
+          "sig": "DrawClaimed(week, player, prize)",
+          "means": "The prize was paid."
+        },
+        {
+          "sig": "DrawVoided(week)",
+          "means": "An unrevealed draw was voided."
+        },
+        {
+          "sig": "KeeperSet",
+          "means": "Keeper changed."
+        },
+        {
+          "sig": "OwnershipTransferStarted · OwnershipTransferred",
+          "means": "The admin role is being, or was, handed over."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "LuckyLedger__NotKeeper(sender, keeper)",
+          "means": "Only the keeper commits."
+        },
+        {
+          "sig": "LuckyLedger__AlreadyCommitted(week)",
+          "means": "This week has a draw."
+        },
+        {
+          "sig": "LuckyLedger__BadDraw(ticketCount, prize)",
+          "means": "Needs tickets, a prize, a root and a seed hash."
+        },
+        {
+          "sig": "LuckyLedger__NotCommitted(week)",
+          "means": "No draw this week."
+        },
+        {
+          "sig": "LuckyLedger__AlreadyRevealed(week)",
+          "means": "Already revealed."
+        },
+        {
+          "sig": "LuckyLedger__BadSeed(seedHash, committed)",
+          "means": "Wrong seed."
+        },
+        {
+          "sig": "LuckyLedger__TooEarly(nowBlock, revealFromBlock)",
+          "means": "Wait for the delay."
+        },
+        {
+          "sig": "LuckyLedger__RevealWindowMissed(commitBlock, nowBlock)",
+          "means": "The entropy block hash is gone; void and recommit."
+        },
+        {
+          "sig": "LuckyLedger__NotRevealed(week)",
+          "means": "Not revealed yet."
+        },
+        {
+          "sig": "LuckyLedger__AlreadyClaimed(week)",
+          "means": "Already paid."
+        },
+        {
+          "sig": "LuckyLedger__NotTheWinner(winnerIndex, from, to)",
+          "means": "That range doesn't hold the winning ticket."
+        },
+        {
+          "sig": "LuckyLedger__BadProof",
+          "means": "The proof doesn't match the root."
+        },
+        {
+          "sig": "LuckyLedger__BadSettings",
+          "means": "Bad address or delay."
+        },
+        {
+          "sig": "LuckyLedger__AdminCantBeRemoved",
+          "means": "renounceOwnership always refuses."
+        }
+      ]
+    },
+    {
+      "id": "ENSRegistry",
+      "floor": "names",
+      "phase": 4,
+      "emoji": "🗂️",
+      "nick": "ENSv2's .eth registry and registrar",
+      "kind": "external",
+      "ours": false,
+      "file": "ENS's ETHRegistry and ETHRegistrar on Sepolia (addresses from ENS's deployments page, never hard-coded)",
+      "upgrade": "ENS's (we don't control it)",
+      "fuse": "n/a",
+      "one": "ENS's own registry for .eth names. We register tallyport.eth here once, and point it at our own registry for the town's names.",
+      "game": "Never seen. It's what makes our names real ENS names that any app can read.",
+      "remembers": [
+        "who owns tallyport.eth, and which registry and resolver it uses"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "commit(commitment) · register(label, owner, secret, subregistry, resolver, duration, paymentToken, referrer)",
+          "who": "ENS admin key",
+          "when": "Once, at go-live",
+          "does": "Registers tallyport.eth in two steps a minute apart (so nobody can snipe it), pointing it at our registry and the directory resolver from the start. ENSv2 takes the fee in a stablecoin: about 8 test-USDC a year on Sepolia."
+        },
+        {
+          "sig": "getRegisterPrice · isAvailable · ETH_REGISTRY",
+          "read": true,
+          "who": "The setup script",
+          "when": "Before registering",
+          "does": "The fee, whether the name is free, and which registry the registrar writes to (checked against the root, so we never talk to a stale deployment)."
+        }
+      ],
+      "events": [
+        {
+          "sig": "ENS's own registry events",
+          "means": "tallyport.eth was registered or repointed."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "CommitmentTooNew(commitment, validFrom, now) · CommitmentTooOld(commitment, validTo, now)",
+          "means": "Registered too soon after committing (wait a minute), or too late (commit again)."
+        },
+        {
+          "sig": "NameNotAvailable(label)",
+          "means": "Someone already holds that .eth name."
+        },
+        {
+          "sig": "DurationTooShort(duration, minDuration) · PaymentTokenNotSupported(token)",
+          "means": "ENS's registration rules: at least 28 days, paid in a stablecoin it accepts."
+        }
+      ]
+    },
+    {
+      "id": "NameRegistry",
+      "floor": "names",
+      "phase": 4,
+      "emoji": "📇",
+      "nick": "tallyport.eth's registry (our copy of ENS's code)",
+      "kind": "external",
+      "ours": false,
+      "file": "ENS's UserRegistry, deployed for us through ENS's VerifiableFactory on Sepolia",
+      "upgrade": "ENS's code; our copy",
+      "fuse": "Take the names key's registrar role away",
+      "one": "Holds every name under tallyport.eth. Each name is a token owned by the player's address, and ENSv2 roles say who can change what. Player names get no transfer role, so they can't be sold or taken.",
+      "game": "sam.tallyport.eth and priya.tallyport.eth for players; bank.tallyport.eth and market.tallyport.eth for the town's own contracts.",
+      "remembers": [
+        "each name's owner, resolver and expiry",
+        "who holds which ENSv2 role"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "deployProxy(implementation, salt, data) (ENS's VerifiableFactory)",
+          "who": "ENS admin key",
+          "when": "Once, at go-live",
+          "does": "Deploys our copy of ENS's registry at an address anyone can predict, with the admin holding every role and the names key allowed only to register and renew."
+        },
+        {
+          "sig": "register(label, owner, registry, resolver, roleBitmap, expiry)",
+          "who": "Names key (ROLE_REGISTRAR); admin key for the town's own names",
+          "when": "When a player picks a name",
+          "does": "Creates sam.tallyport.eth, owned by Sam's address, using the players' resolver, with no roles at all for the owner: it can't be transferred, sold or repointed."
+        },
+        {
+          "sig": "setParent(parent, label)",
+          "who": "ENS admin key",
+          "when": "Once",
+          "does": "Links our registry back to tallyport.eth in the .eth registry."
+        },
+        {
+          "sig": "findTokenId · ownerOf · getSubregistry · getResolver",
+          "read": true,
+          "who": "The server, tests",
+          "when": "Before every write",
+          "does": "A name's current token and owner, and where its records live. Read fresh every time, as ENS asks."
+        }
+      ],
+      "events": [
+        {
+          "sig": "ENS's registry events (name registered, roles changed)",
+          "means": "The indexer builds the list of names from these."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "EACUnauthorizedAccountRoles(resource, roleBitmap, account)",
+          "means": "ENSv2's role check: this key doesn't hold the role for that action (for example a stranger trying to give out names)."
+        },
+        {
+          "sig": "LabelAlreadyRegistered(label) · LabelExpired(tokenId)",
+          "means": "The name is already someone's, or it ran out (the names key renews names yearly)."
+        },
+        {
+          "sig": "TransferDisallowed(tokenId, from)",
+          "means": "Player names can't be transferred: the owner holds no transfer role."
+        }
+      ]
+    },
+    {
+      "id": "NameResolver",
+      "floor": "names",
+      "phase": 4,
+      "emoji": "🪪",
+      "nick": "The records: two resolvers (our copies of ENS's code)",
+      "kind": "external",
+      "ours": false,
+      "file": "ENS's PermissionedResolver, deployed through VerifiableFactory on Sepolia: one directory resolver for NPC/contract names, and one per player (so the player's wallet can hold the text role for description and avatar on its own name only)",
+      "upgrade": "ENS's code; our copies",
+      "fuse": "Take a key's record role away",
+      "one": "Holds a name's records. Players: ETH address (60), default EVM address, avatar, description (the shop sign, written by the player), tallyport.title, tallyport.stamps, tallyport.human. NPC/contract names: spice-merchant, market, mealcounter, campaigns, housepool, treasury, farm, luckyledger, food, foodhook, float, mango.",
+      "game": "The profile card when you tap a player: avatar, Academy badge and, if they chose to show it, their credit level.",
+      "remembers": [
+        "each name's records",
+        "which key may write which record"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "deployProxy(implementation, salt, data) (ENS's VerifiableFactory)",
+          "who": "ENS admin key",
+          "when": "Once, at go-live",
+          "does": "Deploys our two copies of ENS's Permissioned Resolver: one for players' records, one for the town's directory."
+        },
+        {
+          "sig": "grantSetterRoles(setter, account)",
+          "who": "ENS admin key",
+          "when": "Once, at go-live; switching a key off",
+          "does": "Gives each key exactly one kind of record: names key (ETH address (coin type 60), default address, avatar, description), Academy key (tier only), bureau key (credit level only). This is ENSv2's per-record role."
+        },
+        {
+          "sig": "multicall(calls) · setAddress(name, coinType, address) · setText(name, key, value)",
+          "who": "Names key; Academy key (tier); bureau key (credit); admin key (directory)",
+          "when": "A new name; a finished tier; a month closing; a replaced contract",
+          "does": "Writes records. Each key's writes are refused outside its own record type."
+        }
+      ],
+      "events": [
+        {
+          "sig": "ENS's resolver events (address and text changed)",
+          "means": "A record changed; apps refresh it."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "EACUnauthorizedAccountRoles(resource, roleBitmap, account)",
+          "means": "A key tried to write a record it has no role for: the names key writing a credit level, or anyone but the admin touching the directory."
+        }
+      ]
+    },
+    {
+      "id": "ENSLookup",
+      "floor": "names",
+      "phase": 4,
+      "emoji": "🔍",
+      "nick": "Universal Resolver and reverse registrar",
+      "kind": "external",
+      "ours": false,
+      "file": "ENS's UniversalResolverV2 and default reverse registrar on Sepolia, reached through the alloy library",
+      "upgrade": "ENS's (we don't control it)",
+      "fuse": "n/a",
+      "one": "How anyone reads ENS. One entry point turns any name into an address for any chain, reads text records, and turns an address back into its primary name.",
+      "game": "Typing a friend's name to pay them, and names on receipts instead of 0x numbers.",
+      "remembers": [
+        "primary names: which name each address chose"
+      ],
+      "talksTo": [],
+      "fns": [
+        {
+          "sig": "resolve(name, data)",
+          "read": true,
+          "who": "The server, through alloy's ENS support",
+          "when": "Paying by name; loading a profile; startup",
+          "does": "A name's ETH address (coin type 60), avatar or tier. Works for any ENS name, not just ours."
+        },
+        {
+          "sig": "reverse(address, coinType)",
+          "read": true,
+          "who": "The server",
+          "when": "Showing receipts",
+          "does": "An address's primary name, then a forward check that the name points back."
+        },
+        {
+          "sig": "setName(account, name) on ENS's default reverse registrar adapter",
+          "who": "The player's own address (its key is server-held)",
+          "when": "Once, after the name is created",
+          "does": "Makes sam.tallyport.eth the primary name of Sam's address on every EVM chain, Arc included. It needs a few cents of Sepolia ETH in that address."
+        }
+      ],
+      "events": [
+        {
+          "sig": "ENS's reverse-registrar events",
+          "means": "A primary name was set."
+        }
+      ],
+      "errors": [
+        {
+          "sig": "UnauthorizedNamer(namer)",
+          "means": "Only the address itself can set its own primary name."
+        }
+      ]
+    }
+  ],
+  "offchain": [
+    {
+      "emoji": "🎫",
+      "name": "Ticket signer",
+      "does": "Signs EIP-712 MealTickets for MealCounter (2% headroom over the live price; none when energy is full)."
+    },
+    {
+      "emoji": "🧾",
+      "name": "Voucher signer",
+      "does": "Signs PayoutVouchers (HousePool) and CampaignClaims / AdvanceVouchers (CampaignEscrow)."
+    },
+    {
+      "emoji": "🧑‍🌾",
+      "name": "Keeper",
+      "does": "Farm.sell through the day, Treasury.split, FloatManager.rebalance hourly, harvestYield, LuckyLedger.commit weekly."
+    },
+    {
+      "emoji": "🪪",
+      "name": "Names key",
+      "does": "Registers verified players' names, deploys their resolvers, writes titles, stamps and tallyport.human."
+    },
+    {
+      "emoji": "⛽",
+      "name": "Gas station",
+      "does": "Tops up players' server-held wallets with Sepolia ETH before a player-sent transaction."
+    },
+    {
+      "emoji": "👛",
+      "name": "Player wallets",
+      "does": "Server-held, derived from WALLET_SEED; send buyMeal, payMeal, the Universal Router swap, deliver and paintSign."
+    },
+    {
+      "emoji": "🔎",
+      "name": "Indexer",
+      "does": "eth_getLogs over deployments/<network>.json addresses and the quest pool's Swap logs; every observation becomes a logged Input."
+    },
+    {
+      "emoji": "📣",
+      "name": "Publisher",
+      "does": "Writes campaign cards and boards to Arkiv and bundles to Swarm (metaHash on chain)."
+    }
+  ],
+  "moments": [
+    {
+      "icon": "🚶",
+      "title": "Never touches the chain",
+      "text": "Walking, talking, Rush runs, chests opening, energy regen, the free thali.",
+      "wait": "No wait"
+    },
+    {
+      "icon": "🍛",
+      "title": "A meal",
+      "text": "buyMeal from the player's wallet: a real swap and burn; energy arrives with MealEaten.",
+      "wait": "One block (~12 s on Sepolia)"
+    },
+    {
+      "icon": "💸",
+      "title": "A payout",
+      "text": "House rewards, quest claims and advances: server-signed vouchers.",
+      "wait": "One block"
+    },
+    {
+      "icon": "🪪",
+      "title": "Names in the background",
+      "text": "Town Pass → name, resolver and records.",
+      "wait": "A few blocks"
+    },
+    {
+      "icon": "🌊",
+      "title": "Hourly",
+      "text": "Harvest tranches, Treasury split, float rebalance.",
+      "wait": "Background"
+    }
+  ],
+  "flows": [
+    {
+      "id": "meal",
+      "title": "Buying a thali",
+      "tag": "Uniswap v4 on Sepolia",
+      "lede": "Every meal is a real swap and burn.",
+      "steps": [
+        {
+          "t": "tap",
+          "lane": "game",
+          "text": "Sam buys a thali at the Common Table."
+        },
+        {
+          "t": "~5 ms",
+          "lane": "server",
+          "text": "Quotes 6 FOOD × live price + 2% and signs a MealTicket."
+        },
+        {
+          "t": "~12 s",
+          "lane": "chain",
+          "on": "Sepolia",
+          "text": "Sam's wallet calls MealCounter.buyMeal: FoodRouter buys 6 FOOD (burned); any shortfall from the ration reserve at band-high; the rest refunded.",
+          "group": "One transaction"
+        },
+        {
+          "t": "next poll",
+          "lane": "server",
+          "text": "The indexer sees MealEaten and credits +70 energy."
+        }
+      ]
+    },
+    {
+      "id": "spice",
+      "title": "The Spice Run",
+      "tag": "Uniswap + escrow",
+      "lede": "Advance, swap, deliver, get paid.",
+      "steps": [
+        {
+          "t": "quest",
+          "lane": "server",
+          "text": "Sam is short: the server signs an AdvanceVoucher; CampaignEscrow advances $0.50."
+        },
+        {
+          "t": "kiosk",
+          "lane": "chain",
+          "on": "Sepolia",
+          "text": "Sam's wallet swaps USDC→MANGO through the Universal Router (V4_SWAP)."
+        },
+        {
+          "t": "merchant",
+          "lane": "chain",
+          "on": "Sepolia",
+          "text": "SpiceMerchant.deliver forwards MANGO to the sponsor."
+        },
+        {
+          "t": "verify",
+          "lane": "server",
+          "text": "The indexer sees the Swap and Delivered; the server signs a CampaignClaim; escrow repays the advance first and pays the rest."
+        }
+      ]
+    }
+  ],
+  "errorDemos": [
+    {
+      "label": "A meal priced too high",
+      "lines": [
+        "$ dhv why 0x…",
+        "✗ MealCounter refused · MealCounter__TooDear",
+        "  cost 27600 · maxUsdc 24480",
+        "  Meaning  The price moved past the ticket's headroom. Nothing moved.",
+        "  Next     Re-quote and sign a new ticket."
+      ]
+    },
+    {
+      "label": "A campaign that breaks the 25% rule",
+      "lines": [
+        "✗ CampaignEscrow refused · CampaignEscrow__BreaksQuarterRule",
+        "  ceilingFoodCostX4 160000 · payoutPerClaim 150000",
+        "  Meaning  The quest's food at the ceiling would cost more than a quarter of its payout."
+      ]
+    },
+    {
+      "label": "Today's campaign cap",
+      "lines": [
+        "✗ CampaignEscrow refused · CampaignEscrow__DailyCapReached",
+        "  Meaning  The campaign paid its share for today; the server retries tomorrow."
+      ]
+    }
+  ],
+  "fuses": [
+    {
+      "id": "MealCounter",
+      "label": "Ticket signer replaced",
+      "stops": [
+        "Old meal tickets"
+      ],
+      "keeps": [
+        "Reading prices",
+        "Rescue meals already signed by HousePool's signer"
+      ]
+    },
+    {
+      "id": "FoodRouter",
+      "label": "Buyer role taken from MealCounter",
+      "stops": [
+        "All paid meals"
+      ],
+      "keeps": [
+        "Free energy",
+        "The farm selling",
+        "Reads"
+      ]
+    },
+    {
+      "id": "HousePool",
+      "label": "Voucher signer replaced",
+      "stops": [
+        "Unspent house vouchers"
+      ],
+      "keeps": [
+        "Funding",
+        "Reads"
+      ]
+    },
+    {
+      "id": "CampaignEscrow",
+      "label": "Campaign paused",
+      "stops": [
+        "That campaign's claims and advances"
+      ],
+      "keeps": [
+        "Refund after the end",
+        "Other campaigns"
+      ]
+    },
+    {
+      "id": "FloatManager",
+      "label": "Keeper replaced",
+      "stops": [
+        "Rebalancing"
+      ],
+      "keeps": [
+        "Claims and refunds (cash and instant withdrawals)",
+        "Yield harvest (anyone)"
+      ]
+    },
+    {
+      "id": "Farm",
+      "label": "Keeper replaced",
+      "stops": [
+        "Harvest sales"
+      ],
+      "keeps": [
+        "Meals (ration reserve backs them)"
+      ]
+    }
+  ],
+  "fixSteps": [
+    {
+      "t": "Switch it off",
+      "d": "Take the key's role away, or stop the server sending. The game keeps running."
+    },
+    {
+      "t": "Find it",
+      "d": "dhv why names the contract, the error, the numbers and the line."
+    },
+    {
+      "t": "Prove it",
+      "d": "Write a test that fails because of the bug. Now the bug can never quietly come back."
+    },
+    {
+      "t": "Fix it",
+      "d": "Change the code until that test and every other test pass."
+    },
+    {
+      "t": "Try it on a test world first",
+      "d": "Deploy the fix to a fresh test world and replay the last days of trades."
+    },
+    {
+      "t": "Swap it in",
+      "d": "Deploy the fixed contract and point its ENS name at it (bank.dhaniverse.eth or market.dhaniverse.eth); the server follows the name. FoodRouter swaps without touching the pool or its history. A new CityBank is rebuilt from the old one's public records: the server re-deposits each balance and reopens each loan with what's left to pay. A FoodHook bug means a new hook and pool; the server carries the price history over."
+    },
+    {
+      "t": "Switch back on and write it down",
+      "d": "Give the keys their roles back. The changelog says what broke and why, and you approve it."
+    }
+  ],
+  "prep": [
+    "Sepolia ETH and Circle test USDC for the deployer.",
+    "A Sepolia RPC URL (SEPOLIA_RPC_URL) for fork tests and fetch_uniswap.sh.",
+    "Foundry on D: (HOME=/d/foundry/home), contracts/script/dev_chain.sh for anvil."
+  ],
+  "phases": [
+    {
+      "n": 0,
+      "name": "Setup: project, tools and rules",
+      "floor": "money",
+      "chapter": "",
+      "size": "S",
+      "builds": [
+        "Foundry, pinned libraries, TestKit with MockUSDC",
+        "dhv why and spec_check"
+      ],
+      "see": "",
+      "done": [
+        "CI green"
+      ]
+    },
+    {
+      "n": 1,
+      "name": "Food market on Sepolia",
+      "floor": "rules",
+      "chapter": "Market board",
+      "size": "M",
+      "builds": [
+        "FoodToken, FoodHook (band 15%, $0.002–$0.008)"
+      ],
+      "see": "",
+      "done": [
+        "Price stays in band under fuzzing"
+      ]
+    },
+    {
+      "n": 2,
+      "name": "Doors: FoodRouter, MealCounter, Farm",
+      "floor": "door",
+      "chapter": "Common Table",
+      "size": "M",
+      "builds": [
+        "Signed meal tickets, ration shop, harvest sales"
+      ],
+      "see": "",
+      "done": [
+        "A meal never charges above maxUsdc (fuzz)"
+      ]
+    },
+    {
+      "n": 3,
+      "name": "Money: Treasury, HousePool, CampaignEscrow, FloatManager",
+      "floor": "bank",
+      "chapter": "Rewards, sponsors, yield",
+      "size": "L",
+      "builds": [
+        "Splits, budgets, campaigns, float and yield"
+      ],
+      "see": "",
+      "done": [
+        "Money invariants hold (invariant tests)"
+      ]
+    },
+    {
+      "n": 4,
+      "name": "Names on ENSv2",
+      "floor": "names",
+      "chapter": "Town Pass",
+      "size": "M",
+      "builds": [
+        "tallyport.eth, per-player resolvers, coin type 60"
+      ],
+      "see": "",
+      "done": [
+        "Fork tests pass on live Sepolia"
+      ]
+    },
+    {
+      "n": 5,
+      "name": "Quests and deploy",
+      "floor": "door",
+      "chapter": "Spice Run",
+      "size": "M",
+      "builds": [
+        "SpiceMerchant, MANGO pool via PositionManager, LuckyLedger, Deploy.s.sol, dev_chain.sh"
+      ],
+      "see": "",
+      "done": [
+        "Real Universal Router swap on anvil"
+      ]
+    },
+    {
+      "n": 6,
+      "name": "Hand-off to the server",
+      "floor": "roof",
+      "chapter": "Everything",
+      "size": "S",
+      "builds": [
+        "deployments/<network>.json, ABIs in contracts/out"
+      ],
+      "see": "",
+      "done": [
+        "The chain crate reads it"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "q": "What is money?",
+      "pick": "USDC only (founder rule). No coins, no play money.",
+      "why": "One currency keeps the economy honest and legible.",
+      "alt": "A second in-game currency (dropped)."
+    },
+    {
+      "q": "How are meals bought?",
+      "pick": "The player's own wallet calls MealCounter with a server-signed ticket.",
+      "why": "No bots outside the game, no hoarding, a real swap per meal.",
+      "alt": "Server batches (the old Arc design)."
+    },
+    {
+      "q": "Does the router cap what a meal costs?",
+      "pick": "Yes: buyFood takes maxUsdc and refuses with FoodRouter__TooDear.",
+      "why": "Token-agnostic: Circle USDC's string reverts can't be mapped to a clean error otherwise.",
+      "alt": "Catch token errors in MealCounter."
+    },
+    {
+      "q": "How does a player own their shop sign?",
+      "pick": "Each player's name gets its own Permissioned Resolver; the player's wallet holds the text role for description and avatar on it.",
+      "why": "ENSv2 roles are per resolver and per key, not per name.",
+      "alt": "A shared players' resolver (any player could edit any sign)."
+    },
+    {
+      "q": "Uniswap on anvil?",
+      "pick": "Uniswap's own Sepolia bytecode placed at the Sepolia addresses (script/anvil).",
+      "why": "The server uses one set of addresses and the real Universal Router everywhere.",
+      "alt": "v4 test routers (different code path) or forking Sepolia (needs network)."
+    },
+    {
+      "q": "Which compiler?",
+      "pick": "Solidity 0.8.26, Cancun, optimizer 200, no via-IR.",
+      "why": "Same as Uniswap v4; via-IR bugs avoided.",
+      "alt": ""
+    }
+  ],
+  "notOnChain": [
+    {
+      "what": "Energy, quests, chests, streaks, Rush scores",
+      "why": "Game state the server keeps; only money settles on chain."
+    },
+    {
+      "what": "Which menu item a meal was",
+      "why": "Only its hash (item) is on chain; energy comes from foodBurned."
+    },
+    {
+      "what": "Ticket ownership for the draw",
+      "why": "A Merkle root of ranges goes on chain; the list is published off-chain."
+    },
+    {
+      "what": "Campaign stories and media",
+      "why": "On Swarm; the chain holds metaHash."
+    }
+  ],
+  "studio": [
+    {
+      "where": "Day-to-day",
+      "how": "Foundry: forge build / test / fmt / lint, tools/spec_check.py, tools/dhv_why.py",
+      "fit": "easy"
+    },
+    {
+      "where": "Local chain",
+      "how": "script/dev_chain.sh (anvil + Uniswap bytecode + Deploy.s.sol)",
+      "fit": "easy"
+    },
+    {
+      "where": "Sepolia",
+      "how": "forge script script/Deploy.s.sol --rpc-url sepolia --broadcast; then script/names/CityNames.s.sol",
+      "fit": "easy"
+    }
+  ],
+  "rules": [
+    {
+      "t": "One contract, one job",
+      "d": "A contract does one thing. A second job gets a second contract."
+    },
+    {
+      "t": "Names say what they do",
+      "d": "Contracts are nouns (FoodRouter), functions are verbs (buyFood), events are past tense (FoodBought), errors name the contract and the problem (FoodRouter__RefUsed)."
+    },
+    {
+      "t": "Every error carries its numbers",
+      "d": "Not just 'too much', but how much and what the limit was."
+    },
+    {
+      "t": "Every change emits an event",
+      "d": "Each state change emits an event, so the server's indexer can replay history into the world log."
+    },
+    {
+      "t": "Money is USDC base units",
+      "d": "1,000,000 base units = 1 USDC. FOOD also has 6 decimals. Prices are USDC base units per whole FOOD."
+    },
+    {
+      "t": "Check, then change, then pay",
+      "d": "Checks first, then update the records, and only then move money (checks-effects-interactions)."
+    },
+    {
+      "t": "Reading is never blocked",
+      "d": "Every read function works even when every key is switched off."
+    },
+    {
+      "t": "Every action has a ref, and a ref works once",
+      "d": "That's how a retry can never pay, charge or buy twice."
+    },
+    {
+      "t": "Short, one-way links between our contracts",
+      "d": "Each link is a small interface in src/money/Links.sol and listed under talksTo. Money only ever moves in the direction the spec says."
+    },
+    {
+      "t": "Names, not addresses",
+      "d": "The server finds our contracts and players by ENS name. The only fixed entry point is ENS's own, which the alloy library already knows."
+    },
+    {
+      "t": "Budgets are fixed at the day's first payout",
+      "d": "HousePool's 4% and each campaign's daily cap are snapshotted on the first payout of a UTC day, so a day can never spend more than its budget."
+    },
+    {
+      "t": "Money rules are tested first",
+      "d": "Every bug becomes a test before it's fixed."
+    },
+    {
+      "t": "The spec and the code can't drift",
+      "d": "CI fails if a public function has no plain-English line here."
+    },
+    {
+      "t": "No magic numbers",
+      "d": "Every number is a named constant with its unit in the name."
+    }
+  ],
+  "words": [
+    {
+      "w": "Contract",
+      "d": "A program that lives on the chain and follows fixed rules.",
+      "like": ""
+    },
+    {
+      "w": "Function",
+      "d": "One thing a contract can do.",
+      "like": ""
+    },
+    {
+      "w": "Transaction",
+      "d": "Pressing a function for real. Costs a little gas, and is final in under a second on Sepolia.",
+      "like": ""
+    },
+    {
+      "w": "Read (view)",
+      "d": "Looking something up. Free, instant, and never blocked.",
+      "like": ""
+    },
+    {
+      "w": "Event",
+      "d": "A record a contract writes when something changes.",
+      "like": ""
+    },
+    {
+      "w": "Error (revert)",
+      "d": "The contract refuses, says why, and nothing changes.",
+      "like": ""
+    },
+    {
+      "w": "Key",
+      "d": "A secret that signs transactions. The server holds a few, each with one job, plus one per player.",
+      "like": ""
+    },
+    {
+      "w": "Role",
+      "d": "Which FoodRouter functions a key may press: Buyer, Seller or None.",
+      "like": ""
+    },
+    {
+      "w": "Ref",
+      "d": "A reference number on every trade. It works once.",
+      "like": "A UPI transaction ID"
+    },
+    {
+      "w": "Token",
+      "d": "A list of balances on the chain. FOOD and USDC are both tokens.",
+      "like": ""
+    },
+    {
+      "w": "Burn",
+      "d": "Destroying tokens for good. Eaten FOOD is burned.",
+      "like": ""
+    },
+    {
+      "w": "Pool",
+      "d": "Uniswap's shared pot of FOOD and USDC. Trades against it set the price.",
+      "like": ""
+    },
+    {
+      "w": "Liquidity (stock)",
+      "d": "What's in the pool. More stock means each trade moves the price less.",
+      "like": ""
+    },
+    {
+      "w": "Hook",
+      "d": "Our rules that run inside every Uniswap trade.",
+      "like": ""
+    },
+    {
+      "w": "Router",
+      "d": "The contract you trade through. Ours is the only door into the pool.",
+      "like": ""
+    },
+    {
+      "w": "Day limit",
+      "d": "How far the price may move in one city day: 5% either way from the day's opening price.",
+      "like": "A stock exchange's circuit breaker"
+    },
+    {
+      "w": "Indexer",
+      "d": "The server's reader that turns events into records.",
+      "like": ""
+    },
+    {
+      "w": "Gas",
+      "d": "The small USDC fee per transaction. The server pays it.",
+      "like": ""
+    },
+    {
+      "w": "Finality",
+      "d": "When a transaction can't be undone. On Sepolia, as soon as it's in a block (under a second).",
+      "like": ""
+    },
+    {
+      "w": "Mined address",
+      "d": "A Uniswap hook's address must carry its permissions in its last digits, so we search for a deploy setting that produces one.",
+      "like": ""
+    },
+    {
+      "w": "ENS name",
+      "d": "A readable name, like sam.tallyport.eth, that points to addresses and holds profile records.",
+      "like": "A UPI ID"
+    },
+    {
+      "w": "Registry",
+      "d": "ENS's list of who owns which name. tallyport.eth has its own.",
+      "like": ""
+    },
+    {
+      "w": "Resolver",
+      "d": "Where a name's records live: its addresses, avatar and other text.",
+      "like": ""
+    },
+    {
+      "w": "Record",
+      "d": "One piece of a name's profile, such as its Sepolia address or its Academy tier.",
+      "like": ""
+    },
+    {
+      "w": "Coin type",
+      "d": "The number that says which chain an address record is for. Sepolia's is 2152525650.",
+      "like": ""
+    },
+    {
+      "w": "Primary name",
+      "d": "The name an address chooses to show. It must point back to the address to count.",
+      "like": ""
+    },
+    {
+      "w": "Universal Resolver",
+      "d": "ENS's single entry point for reading any name.",
+      "like": ""
+    },
+    {
+      "w": "Sepolia",
+      "d": "Ethereum's test network, where ENSv2 lives.",
+      "like": ""
+    },
+    {
+      "w": "Ticket",
+      "d": "A server-signed permission for one meal (EIP-712 MealTicket).",
+      "like": ""
+    },
+    {
+      "w": "Voucher",
+      "d": "A server-signed permission for one payout (PayoutVoucher, CampaignClaim, AdvanceVoucher).",
+      "like": ""
+    },
+    {
+      "w": "Bucket",
+      "d": "One of HousePool's three pots: FIXED, SURPRISE, SAFETY.",
+      "like": ""
+    },
+    {
+      "w": "Float",
+      "d": "Sponsor money not yet paid out, held by FloatManager.",
+      "like": ""
+    },
+    {
+      "w": "The 25% rule (I1)",
+      "d": "A quest's energy, bought as food at the ceiling, costs at most a quarter of its payout.",
+      "like": ""
+    }
+  ],
+  "numbers": [
+    {
+      "what": "FOOD price",
+      "value": "Base 4,000, floor 2,000, ceiling 8,000 USDC base units per FOOD ($0.004 / $0.002 / $0.008)",
+      "phase": "1"
+    },
+    {
+      "what": "Day band",
+      "value": "1,500 bps (15%) either way from the market day's open; a market day is 1 hour",
+      "phase": "1"
+    },
+    {
+      "what": "Menu",
+      "value": "chai 1 FOOD, vada pav 3, thali 6 (1 FOOD = 10 energy); thali ≈ $0.024 at base",
+      "phase": "2"
+    },
+    {
+      "what": "Treasury split",
+      "value": "60% FIXED, 10% SAFETY, 20% ops, 10% team",
+      "phase": "3"
+    },
+    {
+      "what": "House budget",
+      "value": "400 bps of each bucket a day; $5 per human per day",
+      "phase": "3"
+    },
+    {
+      "what": "Campaigns",
+      "value": "10% fee (half SURPRISE, half team); min payout $0.15; max advance $1; ≤ 100 open",
+      "phase": "3"
+    },
+    {
+      "what": "Float",
+      "value": "Buffer 1.5 × 3 days × caps + refunds; ≤ 80% invested; reserve 20% of yield up to 2% of invested",
+      "phase": "3"
+    },
+    {
+      "what": "Draw",
+      "value": "Reveal after revealDelayBlocks (anvil 2, Sepolia 5), within 256 blocks",
+      "phase": "5"
+    },
+    {
+      "what": "ENS coin type",
+      "value": "60 (ETH), plus the default EVM record",
+      "phase": "4"
+    }
+  ],
+  "facts": [
+    {
+      "fact": "Uniswap v4 on Sepolia: PoolManager 0xE03A…3543, PositionManager 0x429b…09b4, UniversalRouter 0x3A9D…F98b, Permit2 0x0000…8BA3.",
+      "src": "https://docs.uniswap.org/contracts/v4/deployments"
+    },
+    {
+      "fact": "Circle's USDC on Ethereum Sepolia: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 (6 decimals).",
+      "src": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+    },
+    {
+      "fact": "The deployed Universal Router's ExactInputSingleParams has five fields (no minHopPriceX36); verified by test/uniswap/QuestPool.t.sol against its bytecode.",
+      "src": "contracts/test/uniswap/QuestPool.t.sol"
+    },
+    {
+      "fact": "ENSv2's PermissionedResolver scopes roles by resolver and record key, not by name.",
+      "src": "https://github.com/ensdomains/contracts-v2 (v2-mainnet-deployment-1)"
+    },
+    {
+      "fact": "tallyport.eth was available on Sepolia's ENSv2 registrar on 6 Nov 2026.",
+      "src": "cast call (isAvailable)"
+    }
+  ]
+}
