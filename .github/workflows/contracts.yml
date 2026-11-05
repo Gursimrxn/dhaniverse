@@ -1,0 +1,38 @@
+# Every push and pull request: the contracts must be formatted, lint-clean, tested, and match their spec.
+name: contracts
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+
+      - name: Formatting
+        run: forge fmt --check
+
+      - name: Build (with contract sizes)
+        run: forge build --sizes
+
+      - name: Lint (contracts only, warnings fail)
+        run: forge lint -D warnings src
+
+      - name: Tests (5,000 fuzz runs; the ENS fork tests run only if the SEPOLIA_RPC_URL secret is set)
+        run: FOUNDRY_PROFILE=ci forge test -vvv
+        env:
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+
+      - name: Code matches the plain-English spec
+        run: python3 tools/spec_check.py
