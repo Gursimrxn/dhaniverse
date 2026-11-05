@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dhaniverse Technical Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Technical plan in the Dhaniverse brand: cream paper, dark plates, coin blue for money, orange for risk.
+   Layout: one reading column; wide tables and the money-flow drawing scroll inside their own frames. */
+:root {
+  --paper: #fffbf0;
+  --surface: #ffffff;
+  --plate: #262727;
+  --ink: #1d2a33;
+  --muted: #5d6870;
+  --line: #e6dfc9;
+  --coin: #0011ff;
+  --alert: #d65400;
+  --gold: #b47c00;
+  --good: #2f7a41;
+  --tint: #eef0ff;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1a1b1b; --surface: #232525; --plate: #0f1010; --ink: #f6efd9; --muted: #b3ab95;
+    --line: #3a3b38; --coin: #8c97ff; --alert: #ff8a3d; --gold: #f2b632; --good: #7fcf92; --tint: #23264a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1a1b1b; --surface: #232525; --plate: #0f1010; --ink: #f6efd9; --muted: #b3ab95;
+  --line: #3a3b38; --coin: #8c97ff; --alert: #ff8a3d; --gold: #f2b632; --good: #7fcf92; --tint: #23264a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 var(--font-body); }
+main { max-width: 920px; margin: 0 auto; padding: 48px 20px 96px; display: grid; gap: 56px; }
+section { display: grid; gap: 16px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font: 400 clamp(40px, 7vw, 64px)/1.02 var(--font-display); letter-spacing: -0.01em; }
+h2 { font: 400 clamp(30px, 4.6vw, 40px)/1.1 var(--font-display); }
+h3 { font: 600 18px/1.35 var(--font-body); }
+p, li { max-width: 70ch; }
+p { margin: 0; }
+ul, ol { margin: 0; padding-left: 1.25em; display: grid; gap: 6px; }
+a { color: var(--coin); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--coin); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.88em; }
+.kicker { font: 500 13px/1.4 var(--font-mono); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.lede { font-size: 20px; line-height: 1.5; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--muted); font-size: 15px; }
+.answer { background: var(--plate); color: #fff8e3; border-radius: 14px; padding: 28px; display: grid; gap: 16px; }
+.answer h2 { color: #fff8e3; }
+.answer li { max-width: none; }
+.answer strong { color: #ffd36b; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.box p, .box li { font-size: 15px; }
+.box.key { border-left: 4px solid var(--coin); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 660px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; background: color-mix(in srgb, var(--paper) 70%, var(--surface)); }
+tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yes { color: var(--good); font-weight: 600; }
+.maybe { color: var(--gold); font-weight: 600; }
+.no { color: var(--muted); font-weight: 600; }
+.callout { border-left: 4px solid var(--alert); background: var(--surface); padding: 14px 18px; border-radius: 0 8px 8px 0; display: grid; gap: 8px; }
+.callout.blue { border-left-color: var(--coin); }
+.formula { font-family: var(--font-mono); font-size: 14px; line-height: 1.7; background: var(--tint); color: var(--ink); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; }
+figure { margin: 0; display: grid; gap: 10px; }
+.svgwrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+figure svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--ink); }
+figcaption { font-size: 14px; color: var(--muted); max-width: 70ch; }
+.steps { counter-reset: s; display: grid; gap: 10px; padding: 0; list-style: none; }
+.steps li { counter-increment: s; position: relative; padding-left: 40px; max-width: 70ch; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--coin); color: #fff; font: 600 13px/26px var(--font-mono); text-align: center; }
+.timeline { display: grid; border-left: 2px solid var(--line); margin-left: 6px; }
+.slot { position: relative; padding: 0 0 20px 22px; display: grid; gap: 6px; }
+.slot::before { content: ""; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--coin); }
+.slot .when { font: 500 14px/1.3 var(--font-mono); color: var(--coin); }
+.slot ul { font-size: 15px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 10px; }
+footer { color: var(--muted); font-size: 14px; }
+@media (max-width: 480px) { body { font-size: 16px; } .answer { padding: 20px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<main>
+
+<header style="display:grid;gap:16px">
+  <div class="kicker">Dhaniverse · technical plan</div>
+  <h1>Dhaniverse Technical Plan</h1>
+  <p class="lede">Learn money, learn finance, earn money. The full system: sponsor campaigns, an energy economy priced by Uniswap, a house reward pool, yield on idle money, and a safety net so nobody ever gets stuck.</p>
+  <div class="meta">
+    <span>Written 5 Nov 2026, before the first phase</span>
+    <span>Chain: Ethereum Sepolia</span>
+    <span>Replaces the earlier Arc-based rewards plan</span>
+  </div>
+</header>
+
+<section class="answer" aria-labelledby="summary">
+  <h2 id="summary">The system in one screen</h2>
+  <ol>
+    <li><strong>Sponsors fund campaigns.</strong> Their USDC sits in an escrow contract. Their quests appear on the Bounty Board as story missions that make players really use the sponsor's product, such as swapping on Uniswap inside the game.</li>
+    <li><strong>Quests cost energy, and energy comes from food.</strong> Food costs a tiny amount of USDC, a few cents for a full bar. Players never hold food tokens: the food is bought and burned in the same transaction, and the player only gets energy.</li>
+    <li><strong>Food prices move with supply and demand on a Uniswap v4 pool.</strong> Every meal anyone buys pushes the price up; our farm's harvest pushes it down. A hook keeps it inside a floor and a ceiling.</li>
+    <li><strong>Food money funds the house reward pool.</strong> That pool pays for our own fun: chests, streak bonuses, Market Rush prizes, mystery quests and rescue meals. It spends 4% of its balance a day, so it can never run dry.</li>
+    <li><strong>Idle sponsor money earns yield.</strong> We keep a cash buffer sized from the campaigns' daily caps and put the rest in a no-lock-in vault. The interest goes to the house pool.</li>
+    <li><strong>Nobody can get stuck.</strong> Free energy regenerates, there's a free daily meal, every paid quest earns at least four times its food cost, and a broke player gets a rescue meal.</li>
+    <li><strong>USDC is the only money.</strong> There are no coins, no play money and no life sim (no wages, rent, savings or loans). Every amount a player sees, pays or earns is real USDC.</li>
+  </ol>
+</section>
+
+<section aria-labelledby="flow">
+  <div class="kicker">Money flow</div>
+  <h2 id="flow">Where every dollar goes</h2>
+  <figure>
+    <div class="svgwrap">
+    <svg viewBox="0 0 1000 580" role="img" aria-label="Sponsors deposit into escrow, which pays sponsored quests and lends idle float to a yield vault. Players buy meals through the Uniswap food pool; the farm's sales return USDC to a treasury that splits it into the house pool, the safety net, operations and the team. The house pool and safety net pay players.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <g fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="20" y="30" width="180" height="56" rx="8"/>
+        <rect x="270" y="30" width="200" height="56" rx="8"/>
+        <rect x="270" y="150" width="200" height="56" rx="8"/>
+        <rect x="540" y="130" width="200" height="70" rx="8" stroke="#3a4bff" stroke-width="2.5"/>
+        <rect x="270" y="270" width="200" height="56" rx="8"/>
+        <rect x="270" y="400" width="200" height="56" rx="8"/>
+        <rect x="540" y="400" width="200" height="56" rx="8"/>
+        <rect x="540" y="500" width="200" height="56" rx="8"/>
+        <rect x="830" y="30" width="150" height="456" rx="10"/>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)">
+        <line x1="200" y1="58" x2="266" y2="58"/>
+        <line x1="470" y1="50" x2="826" y2="50"/>
+        <line x1="370" y1="86" x2="370" y2="146"/>
+        <line x1="470" y1="76" x2="590" y2="126"/>
+        <line x1="470" y1="178" x2="536" y2="170"/>
+        <line x1="740" y1="165" x2="826" y2="165"/>
+        <line x1="470" y1="298" x2="826" y2="298"/>
+        <line x1="826" y1="428" x2="744" y2="428"/>
+        <line x1="640" y1="500" x2="640" y2="460"/>
+        <line x1="540" y1="428" x2="474" y2="428"/>
+        <line x1="330" y1="400" x2="330" y2="330"/>
+        <line x1="440" y1="400" x2="600" y2="204"/>
+      </g>
+      <g fill="currentColor" font-family="Instrument Sans, Segoe UI, sans-serif" font-size="14" text-anchor="middle">
+        <text x="110" y="55" font-weight="600">Sponsors</text>
+        <text x="110" y="74" font-size="12">fund campaigns</text>
+        <text x="370" y="55" font-weight="600">Campaign escrow</text>
+        <text x="370" y="74" font-size="12">caps, refunds, 10% fee</text>
+        <text x="370" y="175" font-weight="600">Yield vault</text>
+        <text x="370" y="194" font-size="12">float above buffer, no lock-in</text>
+        <text x="640" y="160" font-weight="600" font-size="15">House reward pool</text>
+        <text x="640" y="180" font-size="12">spends 4% of balance a day</text>
+        <text x="370" y="295" font-weight="600">Safety net</text>
+        <text x="370" y="314" font-size="12">rescue meals only</text>
+        <text x="370" y="425" font-weight="600">Treasury</text>
+        <text x="370" y="444" font-size="12">splits food revenue</text>
+        <text x="640" y="425" font-weight="600">Uniswap v4 food pool</text>
+        <text x="640" y="444" font-size="12">FOOD burned, energy credited</text>
+        <text x="640" y="525" font-weight="600">Farm (our supplier key)</text>
+        <text x="640" y="544" font-size="12">sells the harvest</text>
+        <text x="905" y="250" font-weight="600" font-size="16">Players</text>
+        <text x="905" y="270" font-size="12">energy, quests,</text>
+        <text x="905" y="286" font-size="12">wallet</text>
+      </g>
+      <g fill="currentColor" font-family="Instrument Sans, Segoe UI, sans-serif" font-size="12">
+        <text x="210" y="50">USDC</text>
+        <text x="600" y="42">sponsored quest payouts</text>
+        <text x="378" y="122">idle float</text>
+        <text x="520" y="92">fee share</text>
+        <text x="478" y="166">interest</text>
+        <text x="783" y="155" text-anchor="middle">house</text>
+        <text x="783" y="186" text-anchor="middle">rewards</text>
+        <text x="600" y="290">rescue meals</text>
+        <text x="756" y="420">USDC for</text>
+        <text x="756" y="446">meals</text>
+        <text x="648" y="484">harvest</text>
+        <text x="480" y="420">USDC</text>
+        <text x="338" y="370">10%</text>
+        <text x="520" y="320">60%</text>
+        <text x="282" y="480" font-size="12">20% ops · 10% team</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Money enters from two places only: sponsors and players buying meals. It leaves to players only through signed quest vouchers, house rewards and rescue meals, and every pool can pay only what it holds.</figcaption>
+  </figure>
+</section>
+
+<section aria-labelledby="currencies">
+  <div class="kicker">Money</div>
+  <h2 id="currencies">One kind of money: USDC</h2>
+  <div class="box key"><h3>USDC, and nothing else</h3><p>Buys food and therefore energy. Earned from sponsored quests and house rewards. Lives in the player's wallet. Shown in blue with a dollar sign everywhere. There are no coins, no points that can be spent, no play money and no life sim: no wages, rent, savings or loans.</p></div>
+  <p>What a player can earn that isn't money: energy, meal vouchers (thalis bought for them with real USDC from a pool), tickets for the weekly draw, titles and stamps on their ENS name. None of these can be bought, sold or turned into USDC.</p>
+</section>
+
+<section aria-labelledby="energy">
+  <div class="kicker">Energy and food</div>
+  <h2 id="energy">Prices and energy, with numbers</h2>
+  <p>All numbers are launch values in <code>rules.toml</code>, marked tunable. 1 FOOD is one serving, worth 10 energy. The energy bar holds 100.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Meal</th><th>FOOD burned</th><th>Energy</th><th>Price at base</th><th>At the floor</th><th>At the ceiling</th></tr></thead>
+    <tbody>
+      <tr><td>Chai and biscuit</td><td class="n">1</td><td class="n">+10</td><td class="n">$0.004</td><td class="n">$0.002</td><td class="n">$0.008</td></tr>
+      <tr><td>Vada pav</td><td class="n">3</td><td class="n">+32</td><td class="n">$0.012</td><td class="n">$0.006</td><td class="n">$0.024</td></tr>
+      <tr><td>Thali (best value)</td><td class="n">6</td><td class="n">+70</td><td class="n">$0.024</td><td class="n">$0.012</td><td class="n">$0.048</td></tr>
+      <tr><td>Free community thali</td><td class="n">0</td><td class="n">+40</td><td colspan="3">Free once a day at the Common Table</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Activity</th><th>Energy</th><th>Pays</th><th>Funded by</th></tr></thead>
+    <tbody>
+      <tr><td>Daily errands (three a day)</td><td class="n">10</td><td>A small USDC amount at today's rate</td><td>House pool, fixed bucket</td></tr>
+      <tr><td>Sponsored story quest</td><td class="n">20–40</td><td><span class="num">$0.25–$2</span>, minimum <span class="num">$0.15</span></td><td>Sponsor escrow</td></tr>
+      <tr><td>Mystery quest</td><td class="n">50</td><td><span class="num">$0.50–$5</span></td><td>Sponsor, boosted, or house (see quests)</td></tr>
+      <tr><td>Market Rush (90 seconds)</td><td class="n">0</td><td>Top 10 split the day's pot</td><td>House pool. Three free runs a day</td></tr>
+      <tr><td>Daily chest, 5-of-7 login streak</td><td class="n">0</td><td>Energy, golden drops (USDC), meal vouchers, tickets</td><td>House pool, surprise bucket</td></tr>
+    </tbody>
+  </table></div>
+  <p>A full bar costs about <span class="num">$0.035</span> at base and <span class="num">$0.07</span> at the ceiling. In the economy example below a player spends about 14% of what they earn on food, well under the 25% limit.</p>
+</section>
+
+<section aria-labelledby="market">
+  <div class="kicker">Uniswap</div>
+  <h2 id="market">How the food price follows supply and demand</h2>
+  <p>We already built most of this: <code>FoodToken</code>, <code>FoodHook</code> and <code>FoodRouter</code> in <code>contracts/src/food/</code>. They were written for Arc and move to Sepolia with small changes.</p>
+  <ol class="steps">
+    <li><strong>One pool, FOOD/USDC, on Uniswap v4.</strong> The hook lets only our router trade or add stock, so outsiders can't move the price. It keeps the price between a floor and a ceiling (0.5× and 2× base) and limits each day's move. Widen today's 5% daily limit to 15% so the price visibly flickers.</li>
+    <li><strong>Demand: every meal is a buy.</strong> A new <code>MealCounter</code> contract holds the router's Buyer role. The player's wallet calls <code>buyMeal(ticket)</code>: it takes the USDC, buys FOOD through the pool, burns it in the same transaction, and emits <code>MealEaten</code>. The server sees the event and adds energy. The player never holds FOOD, so there's nothing to trade.</li>
+    <li><strong>Supply: the farm sells the harvest.</strong> A keeper with the Seller role sells new FOOD into the pool through the day. Harvest size responds to price, so supply chases demand and the price drifts back toward base.
+      <div class="formula">harvest_today = base_harvest × (1 + 0.5 × (yesterday's avg price ÷ base − 1)), clamped to 0.5×–2×
+story shocks: drought −30% · festival demand · bumper crop +40%  (the morning paper reports them)</div></li>
+    <li><strong>The price ticks with the whole town.</strong> Every meal anyone buys moves it; each harvest tranche pulls it back. The market board in the square shows the live price and history (read from Arkiv).</li>
+    <li><strong>Food can never sell out.</strong> When the pool is at the ceiling, <code>MealCounter</code> falls back to the ration shop: it sells from a reserve at the ceiling price. That also teaches price controls.</li>
+    <li><strong>Server-signed meal tickets.</strong> Each purchase needs an EIP-712 ticket from the server <code>{player, meal, maxUsdc, expiry, ref}</code>. That stops bots buying outside the game, and blocks buying when energy is already full, so nobody can hoard.</li>
+  </ol>
+  <div class="callout blue">
+    <h3>Who gets the food money?</h3>
+    <p>We're the only seller, so all the USDC players spend ends up with the farm when it sells FOOD into the pool. The farm forwards it to the <code>Treasury</code>, which splits it: <strong>60% house pool, 10% safety net, 20% operations</strong> (paymaster gas, servers) <strong>and 10% team</strong>. The pool itself charges no fee.</p>
+  </div>
+</section>
+
+<section aria-labelledby="stuck">
+  <div class="kicker">Safety net</div>
+  <h2 id="stuck">Making sure nobody ever gets stuck</h2>
+  <p>The deadlock you described is real: prices are shared, so one player can be priced out by everyone else. Five rules make it impossible, and the server checks each one.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Rule</th><th>What it guarantees</th><th>Enforced by</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. Free floor</strong></td><td>Energy regenerates +1 every 4 minutes up to 40, plus a free +40 thali once a day. That's at least 80 free energy a day: two sponsored quests with no USDC at all.</td><td>Server energy model</td></tr>
+      <tr><td><strong>2. Quests always beat food</strong></td><td>Food for a quest's energy, at the ceiling price, costs at most 25% of its minimum payout. So one paid quest buys at least four full quests' worth of food.</td><td><code>CampaignEscrow.create</code> rejects campaigns that break it; house quests are configured to it</td></tr>
+      <tr><td><strong>3. Food is always available</strong></td><td>Ration shop at the ceiling price when the pool is maxed.</td><td><code>MealCounter</code></td></tr>
+      <tr><td><strong>4. Rescue meal</strong></td><td>If energy is under 10, USDC is below the cheapest meal and today's free thali is used, a neighbour brings a meal within 10 minutes. Once a day per human.</td><td>Server, paid from the safety net. If that's empty, the server grants the energy directly as a last resort</td></tr>
+      <tr><td><strong>5. The basics never need energy</strong></td><td>Walking the town, talking to people, Market Rush runs, chests and the Town Pass all cost zero energy and zero USDC.</td><td>Game design</td></tr>
+    </tbody>
+  </table></div>
+  <p>New players start with zero USDC. They earn their first dollars from free energy, and the first sponsored quest can advance cargo (below), so nobody has to deposit money to start.</p>
+</section>
+
+<section aria-labelledby="house">
+  <div class="kicker">House reward pool</div>
+  <h2 id="house">How we pay for our own fun</h2>
+  <div class="formula">daily house budget = 4% × pool balance          (it can never reach zero; it shrinks by half in ~17 days with no income)
+steady pool size   = daily inflow ÷ 0.04          ($50 a day in → the pool settles at about $1,250)</div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Share of the daily budget</th><th>Spent on</th><th>Bucket</th></tr></thead>
+    <tbody>
+      <tr><td class="n">30%</td><td>Market Rush pot, split by rank among the day's top 10</td><td>Fixed (skill)</td></tr>
+      <tr><td class="n">20%</td><td>Streak bonus: log in 5 days out of 7 to open the weekly chest</td><td>Fixed</td></tr>
+      <tr><td class="n">15%</td><td>Daily errands at today's rate</td><td>Fixed</td></tr>
+      <tr><td class="n">20%</td><td>Daily chests and golden drops (USDC). Pity rule: every 10th chest without one guarantees one, or a meal voucher if the budget is gone</td><td>Surprise</td></tr>
+      <tr><td class="n">15%</td><td>House mystery quests and town events (Town Goal, festivals)</td><td>Surprise</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Why two buckets:</strong> food revenue, which comes from players' own money, funds only the fixed rewards. Random rewards (chests, golden drops, mystery boxes) are funded only by sponsor fees, sponsor drops and yield. Nothing random is ever paid for by what a player spent, and chests are never sold. See Risks for why.</p>
+</section>
+
+<section aria-labelledby="yield">
+  <div class="kicker">Yield</div>
+  <h2 id="yield">Earning interest on idle sponsor money</h2>
+  <p>The key fact: every campaign has a daily payout cap, so the most money that can leave in any three days is known in advance. The buffer is sized from that, and the rest earns interest.</p>
+  <div class="formula">buffer   = 1.5 × 3 days × (sum of live campaigns' daily caps) + refunds requested
+invest   = min(80% of float, float − buffer)
+rebalance every hour:  liquid &lt; 0.5 × buffer → withdraw up to buffer
+                       liquid &gt; 1.5 × buffer → deposit the excess (within the 80% cap)
+yield    = vault assets − what we owe sponsors   → 80% house pool, 20% loss reserve
+           (reserve stops filling at 2% of the invested amount; then 100% to the pool)</div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Idle float invested</th><th>Per day at 4% a year</th><th>Per month</th></tr></thead>
+    <tbody>
+      <tr><td class="n">$10,000</td><td class="n">$1.10</td><td class="n">$33</td></tr>
+      <tr><td class="n">$100,000</td><td class="n">$11</td><td class="n">$329</td></tr>
+      <tr><td class="n">$1,000,000</td><td class="n">$110</td><td class="n">$3,288</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Worked example:</strong> live campaigns cap out at $500 a day, so the buffer is 1.5 × 3 × $500 = $2,250. With $20,000 of float we invest min($16,000, $17,750) = $16,000, which earns about $1.75 a day.</p>
+  <div class="grid2">
+    <div class="box"><h3>No lock-ins, ever</h3><p>Only venues you can withdraw from in the same block: Aave v3 USDC supply, or ERC-4626 vaults with instant redemption. Never staking or fixed terms. Split across two venues.</p></div>
+    <div class="box"><h3>What if we need the money?</h3><p>The buffer covers three days of the maximum possible payouts. If a venue's withdrawals stall (Aave at 100% utilisation), we draw from the other. In the worst case claims queue for up to 24 hours, as the sponsor terms say.</p></div>
+    <div class="box"><h3>Whose interest is it?</h3><p>The campaign terms say Dhaniverse keeps the yield and the sponsor's principal is always owed first. Later option: rebate half to the sponsor as extra budget, so their campaign runs longer.</p></div>
+    <div class="box"><h3>On testnet</h3><p>Aave's Sepolia market uses its own test USDC, not Circle's. So we demo with a mock ERC-4626 vault that accrues a stated rate, clearly labelled simulated. The keeper and accounting are real.</p></div>
+  </div>
+  <p><strong>Honest scale:</strong> yield is a bonus, not the engine, until float reaches six figures. Sponsors are the engine; food is the price game and the money sink.</p>
+</section>
+
+<section aria-labelledby="quests">
+  <div class="kicker">Quests</div>
+  <h2 id="quests">Quests, who funds them, and sponsor traction</h2>
+  <p>Every quest is a <strong>story wrapper + one real action + a verifier + a payout</strong>. Sponsors pick a template; the server verifies the action from chain events; escrow pays.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Funding type</th><th>Who pays</th><th>When to use it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Sponsored</strong></td><td>The sponsor pays everything</td><td>The quest is about their product</td></tr>
+      <tr><td><strong>Boosted</strong></td><td>Our quest; the sponsor adds a bonus pot and their banner</td><td>Brand visibility without a product action</td></tr>
+      <tr><td><strong>House</strong></td><td>House pool</td><td>Our story: errands, Grandma's Ledger, events</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The flagship: the Spice Run (Uniswap)</h3>
+  <ol class="steps">
+    <li><strong>The harbourmaster gives you cargo:</strong> carry 0.50 USDC to the spice market and buy MANGO. If your wallet has less, he advances it from the campaign. One open advance per human, repaid automatically when you deliver. It's a micro-loan lesson.</li>
+    <li><strong>At the exchange kiosk you swap for real.</strong> The kiosk shows the Uniswap quote, the fee and slippage in plain words. You confirm, and a real swap runs through Uniswap's Universal Router from your own wallet, with gas covered.</li>
+    <li><strong>Deliver to the spice merchant at <code>spice-merchant.tallyport.eth</code>.</strong> The delivery contract checks you brought at least the quoted MANGO. It pays back your 0.50 cargo plus the 0.50 reward from escrow, and repays any advance first.</li>
+    <li><strong>The server confirms the swap from the chain.</strong> It looks for the Swap event by your account inside the quest window, then marks the quest done and posts it to the feed.</li>
+  </ol>
+  <p>The sponsor gets a verified human who made a real Uniswap swap, real buy volume on their token, and a reason to come back. For the demo MANGO is our own token with a seeded v4 pool; in production it's the sponsor's real token.</p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Quest</th><th>Type</th><th>Energy</th><th>Real action</th><th>Teaches</th></tr></thead>
+    <tbody>
+      <tr><td>Spice Run</td><td>Sponsored (Uniswap)</td><td class="n">30</td><td>Swap on Uniswap, deliver to an NPC name</td><td>Swaps, fees, slippage, a small loan</td></tr>
+      <tr><td>Paint your shop sign</td><td>Sponsored (ENS)</td><td class="n">20</td><td>Set an avatar and records on your name</td><td>Owning your identity</td></tr>
+      <tr><td>Town Pass</td><td>Onboarding</td><td class="n">0</td><td>World ID verification</td><td>Proof of personhood; unlocks cash claims</td></tr>
+      <tr><td>Hold the line</td><td>Sponsored template</td><td class="n">20</td><td>Hold a token for three days (random balance checks)</td><td>Volatility, patience</td></tr>
+      <tr><td>Grandma's Ledger page</td><td>House or boosted mystery</td><td class="n">50</td><td>In-game clue chain</td><td>One money lesson per page</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box key">
+    <h3>What sponsors see on their dashboard</h3>
+    <p>Verified unique humans reached, completed quests, on-chain actions and volume, cost per verified action, and whether those players used the product again on their own after 7 and 30 days. That last number is what quest platforms can't show, and it's our pitch to sponsors.</p>
+  </div>
+</section>
+
+<section aria-labelledby="arch">
+  <div class="kicker">Architecture</div>
+  <h2 id="arch">What we build</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Piece</th><th>Where</th><th>Status</th><th>Job</th></tr></thead>
+    <tbody>
+      <tr><td><code>FoodToken</code>, <code>FoodHook</code>, <code>FoodRouter</code></td><td>Sepolia, Uniswap v4</td><td>Built for Arc; port</td><td>The food market. Widen the daily band; add MealCounter as Buyer</td></tr>
+      <tr><td><code>MealCounter</code></td><td>Sepolia</td><td>New</td><td>Ticket check, USDC in, buy and burn, ration shop fallback</td></tr>
+      <tr><td><code>Treasury</code></td><td>Sepolia</td><td>New</td><td>Splits food revenue 60/10/20/10</td></tr>
+      <tr><td><code>CampaignEscrow</code></td><td>Sepolia</td><td>New</td><td>Campaigns, 10% fee, daily caps, the 25% rule, refunds, voucher payouts, advances</td></tr>
+      <tr><td><code>HousePool</code></td><td>Sepolia</td><td>New</td><td>Two buckets, 4% daily budget, voucher payouts, safety net</td></tr>
+      <tr><td><code>FloatManager</code></td><td>Sepolia</td><td>New</td><td>Buffer maths, ERC-4626 deposits and withdrawals, yield harvest</td></tr>
+      <tr><td><code>QuestDelivery</code> (Spice Merchant)</td><td>Sepolia</td><td>New</td><td>Receives the swapped token, pays cargo and reward</td></tr>
+      <tr><td>ENSv2 names</td><td>Sepolia</td><td>Scripts built; change Arc's coin type</td><td><code>name.tallyport.eth</code> for players, NPCs and sponsors; stamps as records</td></tr>
+      <tr><td>Rust server</td><td>Off-chain</td><td>Extend</td><td>The referee: energy, quests, tickets and vouchers (EIP-712 via alloy), chain indexer, keepers (harvest, rebalance, split), World ID checks, Arkiv writes</td></tr>
+      <tr><td>Arkiv</td><td>Arkiv testnet</td><td>New</td><td>Public data with expiry: campaign cards (expire at campaign end), daily boards (48h), price ticks (7 days), profiles (season)</td></tr>
+      <tr><td>Wallet</td><td>Sepolia</td><td>New</td><td>Embedded smart wallet (ERC-4337) with a paymaster, so players never see gas or a seed phrase</td></tr>
+      <tr><td>Godot client</td><td>Browser</td><td>Extend</td><td>Energy bar, live menu prices, market board, Bounty Board, Spice Run, chest, streak, rescue scene</td></tr>
+      <tr><td>Sponsor console</td><td>Web</td><td>New, can be a script for the demo</td><td>Create and fund a campaign; see the dashboard</td></tr>
+    </tbody>
+  </table></div>
+  <div class="formula">payout voucher (EIP-712) = { player, source: campaignId | houseBucket, amount, questRef, expiry, humanId }
+contract checks: server signature · questRef unused · humanId's daily cap · source's daily budget · balance</div>
+</section>
+
+<section aria-labelledby="economy">
+  <div class="kicker">Does it add up?</div>
+  <h2 id="economy">The economy at 1,000 daily players</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Flow</th><th>Per day</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Sponsor payouts to players</td><td class="n">$300</td><td>About $0.30 a player</td></tr>
+      <tr><td>Platform fee → house pool</td><td class="n">$15</td><td>Half of the 10% fee on $300</td></tr>
+      <tr><td>Food spending</td><td class="n">$52</td><td>About 1.5 full bars a player at base price</td></tr>
+      <tr><td>Food → house pool (60%)</td><td class="n">$31</td><td>Plus $5 safety net, $10 ops, $5 team</td></tr>
+      <tr><td>Yield → house pool</td><td class="n">$0.70</td><td>About $6,000 invested at 4%</td></tr>
+      <tr><td>House rewards paid out</td><td class="n">≈ $47</td><td>The pool settles near $1,170; about $0.05 a player a day</td></tr>
+    </tbody>
+  </table></div>
+  <p>A typical player earns about $0.35 a day and spends about $0.05 on food: 14%. Food is cheap on purpose, so it's a small slice of revenue. The pools stay solvent at any player count because every pool spends a share of what it has, never a fixed promise.</p>
+</section>
+
+<section aria-labelledby="risks">
+  <div class="kicker">Problems you didn't list</div>
+  <h2 id="risks">Risks and fixes</h2>
+  <div class="callout">
+    <h3>The big one: Indian law</h3>
+    <p>India's Promotion and Regulation of Online Gaming Act, 2025 (rules in force since 1 May 2026) bans online money games: games where a player pays, deposits or stakes something hoping to win money, whether by skill or chance. Paying USDC for energy that's used to earn USDC could be read that way. This plan reduces the risk: energy is always free to get, walking, talking and Rush runs are free, contests cost no energy, random rewards are never funded by player money, and nothing random is sold. It does not remove the risk. Testnet at the build is fine. Before real money, get a lawyer's opinion, and be ready to launch outside India or switch paid food off there. This isn't legal advice.</p>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>New players have no USDC</td><td>Free energy, a first quest that pays, and the cargo advance. No deposit needed.</td></tr>
+      <tr><td>Gas can cost more than a $0.004 meal on mainnet</td><td>Paymaster on testnet. In production, an L2, and batch the town's meals every few minutes (the router already supports that).</td></tr>
+      <tr><td>One person, many accounts</td><td>World ID before any USDC claim, rescue meal or advance; per-human daily caps; server tickets.</td></tr>
+      <tr><td>Outsiders trading the food pool</td><td>The hook allows only our router. Players never hold FOOD.</td></tr>
+      <tr><td>Hoarding energy</td><td>Bar capped at 100; no meal ticket when full; food can't be stored.</td></tr>
+      <tr><td>Abandoned Spice Runs with an advance</td><td>Small amounts, one open per human, deducted from later rewards.</td></tr>
+      <tr><td>Sponsor cancels mid-campaign</td><td>Unspent money refunded within 24 hours; the buffer covers it.</td></tr>
+      <tr><td>Yield venue fails or freezes</td><td>No lock-ins, two venues, 80% cap, loss reserve. The principal is owed first.</td></tr>
+      <tr><td>Scammy sponsors</td><td>Allowlist, fixed quest templates, never "buy and hold for profit" promises.</td></tr>
+      <tr><td>12-second blocks feel slow</td><td>Show the result straight away with a pending stamp; confirm when the chain does.</td></tr>
+      <tr><td>A server key is stolen</td><td>Separate keys per role, on-chain daily caps on every pool, admin on a multisig.</td></tr>
+      <tr><td>Privacy</td><td>ENS and Arkiv hold only public things: names, titles, stamps, ranks. Never balances or debts.</td></tr>
+      <tr><td>Taxes and KYC at scale</td><td>Fine for testnet. Before real money: tax advice, payout thresholds, sponsor invoicing.</td></tr>
+      <tr><td>Repository</td><td>The food contracts, the ENS scripts and the contracts above all live in this repository, each in its own commits.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="tracks">
+  <div class="kicker">Partner tracks</div>
+  <h2 id="tracks">Prizes this design targets</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Sponsor</th><th>Track</th><th>Our case</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Uniswap</td><td>Build with Uniswap, <span class="num">$10,000</span> over four places</td><td>A v4 hook running a real supply-and-demand food market, plus sponsored quests that make players swap through the Universal Router. Needs FEEDBACK.md, the feedback form and README links to contract lines.</td><td class="yes">Enter</td></tr>
+      <tr><td>ENS</td><td>Best Use of ENSv2, <span class="num">$7,000</span></td><td>Every player, NPC and sponsor is a name; quests deliver to names; stamps live on them. Not hard-coded.</td><td class="yes">Enter</td></tr>
+      <tr><td>Arkiv</td><td>Build on Arkiv, <span class="num">$4,000</span></td><td>The Bounty Board, leaderboards, price history and profiles read from Arkiv, and expiry does real work. Needs the <code>/arkiv/</code> files, schema, writer wallets and a runnable query.</td><td class="yes">Enter</td></tr>
+      <tr><td>World</td><td>Best Use of IDKit, <span class="num">$2,500</span></td><td>Used either way. Enter only if the event allows more than three sponsors.</td><td class="maybe">If allowed</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="build">
+  <div class="kicker">The build</div>
+  <h2 id="build">Build order</h2>
+  <div class="timeline">
+    <div class="slot"><span class="when">Thu 21:00 – 01:00</span><h3>Foundations</h3><ul>
+      <li>Port the food contracts to Sepolia; create the FOOD/USDC v4 pool with Circle's test USDC.</li>
+      <li>Pick the smart wallet and paymaster; create the World ID app; fund an Arkiv wallet from its faucet.</li>
+      <li>Server: energy model, free floor, meal tickets.</li></ul></div>
+    <div class="slot"><span class="when">Fri 01:00 – 08:00</span><h3>The economy works</h3><ul>
+      <li>MealCounter, Treasury, CampaignEscrow and HousePool with tests; deploy.</li>
+      <li>Godot: energy bar, Common Table menu with live prices, market board.</li>
+      <li>By 08:00: buying a thali moves the price on two screens.</li></ul></div>
+    <div class="slot"><span class="when">Fri 08:00 – 14:00</span><h3>The flagship quest</h3><ul>
+      <li>MANGO pool, Spice Run end to end with the advance, swap and delivery.</li>
+      <li>Bounty Board reading campaigns from Arkiv; ENS names at signup.</li></ul></div>
+    <div class="slot"><span class="when">Fri 14:00 – 20:00</span><h3>The fun and the net</h3><ul>
+      <li>Daily chest, 5-of-7 streak, rescue meal, ration shop, Market Rush pot.</li>
+      <li>FloatManager with the mock vault and keeper; a treasury dashboard page.</li></ul></div>
+    <div class="slot"><span class="when">Fri 20:00 – Sat 02:00</span><h3>Real players</h3><ul>
+      <li>Ten or more hackers play. Tune prices. Arkiv leaderboards. Feel and sound.</li></ul></div>
+    <div class="slot"><span class="when">Sat 02:00 – 09:00</span><h3>Freeze and submit</h3><ul>
+      <li>Freeze at 04:00. Record. Track files: FEEDBACK.md, <code>/arkiv/</code>, ENS notes. Submit by 08:00.</li></ul></div>
+  </div>
+  <div class="callout blue">
+    <h3>Cut in this order if time runs short</h3>
+    <ol><li>Live yield (keep the maths and the mock dashboard)</li><li>Mystery quests</li><li>Ration shop (the rescue meal still prevents deadlock)</li><li>Chest pity rule</li><li>Market Rush pot</li></ol>
+    <p><strong>Never cut:</strong> meals bought through the v4 pool with a visible price change, the Spice Run with a real swap, the house pool paying the streak and chest, the safety net, ENS names, the Arkiv board.</p>
+  </div>
+</section>
+
+<section aria-labelledby="demo">
+  <div class="kicker">On stage</div>
+  <h2 id="demo">The four-minute demo</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Time</th><th>Beat</th></tr></thead>
+    <tbody>
+      <tr><td class="n">0:00</td><td>"Learn money, earn money." Two laptops in the same town. The market board ticks.</td></tr>
+      <tr><td class="n">0:30</td><td>Buy a thali on laptop A; the price jumps on laptop B. Show the swap and the burn on the explorer.</td></tr>
+      <tr><td class="n">1:10</td><td>A sponsor funds a campaign; the card appears on the Bounty Board from Arkiv.</td></tr>
+      <tr><td class="n">1:40</td><td>The Spice Run: the advance, a real Uniswap swap at the kiosk, delivery to <code>spice-merchant.tallyport.eth</code>, paid.</td></tr>
+      <tr><td class="n">2:40</td><td>Laptop B is broke and hungry. The neighbour brings a rescue meal. "Nobody gets stuck."</td></tr>
+      <tr><td class="n">3:10</td><td>Treasury dashboard: food revenue split, house pool, buffer ratio, interest earned.</td></tr>
+      <tr><td class="n">3:40</td><td>"Players learn money and earn it. Sponsors get real users. We never pay from our pocket."</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="decide">
+  <div class="kicker">Open questions</div>
+  <h2 id="decide">Decisions to confirm</h2>
+  <ol>
+    <li>Confirm USDC is the only money: no coins, play money or life sim anywhere in the game.</li>
+    <li>Approve Uniswap, ENS and Arkiv as the three tracks, with World ID built in.</li>
+    <li>Approve the launch numbers: energy, meal prices, the 25% rule, the 60/10/20/10 split, the 4% daily budget.</li>
+    <li>Confirm the food contracts and ENS scripts in this repository are the ones we build on.</li>
+  </ol>
+</section>
+
+<details>
+  <summary>Sources</summary>
+  <ul>
+    <li><a href="https://docs.uniswap.org/contracts/v4/overview">Uniswap v4 documentation</a>, read 5 Nov 2026</li>
+    <li><a href="https://prsindia.org/billtrack/the-promotion-and-regulation-of-online-gaming-bill-2025">PRS India: the Online Gaming Bill, 2025</a></li>
+    <li><a href="https://webiis10.mondaq.com/india/social-media/1785870/the-promotion-and-regulation-of-online-gaming-act-2025-and-the-promotion-and-regulation-of-online-gaming-rules-2026">Mondaq: the Act and the 2026 Rules</a></li>
+    <li>In this repo: <code>contracts/src/food/</code>, <code>contracts/README.md</code>, the game design notes</li>
+  </ul>
+</details>
+
+<footer>Draft for the founder. All prices, splits and rates are launch values to tune in play, not results.</footer>
+
+</main>
+</body>
+</html>
