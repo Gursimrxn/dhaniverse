@@ -1,0 +1,63 @@
+# Dhaniverse contracts. Versions are pinned on purpose; change them only on purpose.
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+
+# Same compiler as Uniswap v4, which FoodHook plugs into (decision 10).
+solc_version = "0.8.26"
+# Uniswap v4 needs transient storage, which arrived with Cancun.
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+# via-IR stays off: Solidity 0.8.26's serious known bugs only affect via-IR builds.
+via_ir = false
+
+# Scripts read ENS's Sepolia addresses (script/names), Uniswap's bytecode for anvil (script/anvil), and read and
+# write deployments/<network>.json.
+fs_permissions = [
+  { access = "read", path = "./script" },
+  { access = "read-write", path = "./deployments" },
+]
+
+remappings = [
+  "forge-std/=lib/forge-std/src/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@uniswap/v4-core/=lib/v4-core/",
+]
+
+[fuzz]
+runs = 512
+
+[profile.ci.fuzz]
+runs = 5000
+
+# The money invariants (test/money/MoneyInvariants.t.sol) drive the whole town; keep a local run under a minute.
+[invariant]
+runs = 64
+depth = 40
+fail_on_revert = false
+
+[profile.ci.invariant]
+runs = 512
+depth = 100
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+quote_style = "double"
+number_underscore = "thousands"
+
+[lint]
+# Contracts are held to every lint (CI runs `forge lint -D warnings src`). Tests aren't: they use literal numbers on
+# purpose, so they read like the plan's examples. Building doesn't lint, so `forge test` output stays readable.
+ignore = ["test/**"]
+lint_on_build = false
+
+[rpc_endpoints]
+# Set these in your shell (never in a file). Tests that need them are skipped when they're missing.
+sepolia = "${SEPOLIA_RPC_URL}"
