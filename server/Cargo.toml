@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["crates/rules", "crates/agents", "crates/server", "crates/chain", "crates/tallyport"]
+
+[workspace.package]
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+rules = { path = "crates/rules" }
+agents = { path = "crates/agents" }
+serde = { version = "1", features = ["derive"] }
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+# Money must never wrap silently, in any build.
+[profile.release]
+overflow-checks = true
+
+# D: is short on space: keep line numbers for backtraces, drop the rest of the debug info.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.test]
+debug = "line-tables-only"
