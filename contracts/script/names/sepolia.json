@@ -1,0 +1,10 @@
+{
+  "_source": "ENSv2 on Sepolia: ENS docs deployments page and github.com/ensdomains/contracts-v2 tag v2-mainnet-deployment-1 (deployed 1 Oct 2026). Checked on chain 29 Oct 2026: the Universal Resolver's root points to the same .eth registry the registrar uses. The scripts re-check this every run.",
+  "universalResolver": "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe",
+  "registrar": "0xf633e7fc17e2bbe0d0965d18ec1821dcb754a3d3",
+  "factory": "0xda70306c98e97ece36f997a21368e53298572991",
+  "userRegistryImpl": "0x9bd8a88719068d09ecee662f36c0e3856708366a",
+  "resolverImpl": "0x115eb53f0c60696633855f90b138178fb40b2b2c",
+  "paymentToken": "0x240b0316df57887dbbe58b586508b19e633a14aa",
+  "reverseAdapter": "0x36f97328e843e37520cbf530e9402791c2754066"
+}
