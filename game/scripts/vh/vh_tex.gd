@@ -35,3 +35,21 @@ static func get_tex(tex_name: String) -> ImageTexture:
 	var t := ImageTexture.create_from_image(img)
 	_cache[tex_name] = t
 	return t
+
+## The lamps lit around the player, for vh.gdshaderinc's vh_lamps: each one's position + range and its linear colour x
+## intensity (Colors), up to LAMP_MAX, as a LAMP_MAX x 2 float texture (global vh_lamp_tex), with their count in vh_lamp_n.
+const LAMP_MAX := 12
+static var _lamp_img: Image
+static var _lamp_tex: ImageTexture
+
+static func set_lamps(pos: Array, col: Array) -> void:
+	if _lamp_tex == null:
+		_lamp_img = Image.create(LAMP_MAX, 2, false, Image.FORMAT_RGBAF)
+		_lamp_tex = ImageTexture.create_from_image(_lamp_img)
+	RenderingServer.global_shader_parameter_set("vh_lamp_tex", _lamp_tex)
+	var n := mini(pos.size(), LAMP_MAX)
+	for i in n:
+		_lamp_img.set_pixel(i, 0, pos[i])
+		_lamp_img.set_pixel(i, 1, col[i])
+	if n > 0: _lamp_tex.update(_lamp_img)
+	RenderingServer.global_shader_parameter_set("vh_lamp_n", n)

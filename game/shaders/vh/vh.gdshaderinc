@@ -175,7 +175,8 @@ float vh_cloud_sh(vec3 wp) {
 float vh_sun_att(vec3 wp, float att) { return att * vh_cloud_sh(wp); }
 
 // Lamps: street lights, trail bollards and lit doorways in view around the player, filled in by
-// world.gd (16 slots; p = position + range, c = linear colour x intensity). They are shaded here and
+// world.gd (12 slots, in vh_lamp_tex: a loop over a texture rather than a copy of the lamp code a slot, which made
+// every surface shader slow to compile on the web). They are shaded here and
 // added to EMISSION rather than drawn as Godot lights: this renderer sRGB-encodes what its own lights
 // add, together with EMISSION, which would bend the sky light of every surface a lamp touches.
 // Lamps fade out between vh_lamp_fade.x and .y metres from vh_focus (the player); beyond that the
@@ -183,38 +184,7 @@ float vh_sun_att(vec3 wp, float att) { return att * vh_cloud_sh(wp); }
 global uniform vec3 vh_focus;
 global uniform vec4 vh_lamp_fade;
 global uniform int vh_lamp_n;
-global uniform vec4 vh_lamp_p0;
-global uniform vec4 vh_lamp_p1;
-global uniform vec4 vh_lamp_p2;
-global uniform vec4 vh_lamp_p3;
-global uniform vec4 vh_lamp_p4;
-global uniform vec4 vh_lamp_p5;
-global uniform vec4 vh_lamp_p6;
-global uniform vec4 vh_lamp_p7;
-global uniform vec4 vh_lamp_p8;
-global uniform vec4 vh_lamp_p9;
-global uniform vec4 vh_lamp_p10;
-global uniform vec4 vh_lamp_p11;
-global uniform vec4 vh_lamp_p12;
-global uniform vec4 vh_lamp_p13;
-global uniform vec4 vh_lamp_p14;
-global uniform vec4 vh_lamp_p15;
-global uniform vec4 vh_lamp_c0;
-global uniform vec4 vh_lamp_c1;
-global uniform vec4 vh_lamp_c2;
-global uniform vec4 vh_lamp_c3;
-global uniform vec4 vh_lamp_c4;
-global uniform vec4 vh_lamp_c5;
-global uniform vec4 vh_lamp_c6;
-global uniform vec4 vh_lamp_c7;
-global uniform vec4 vh_lamp_c8;
-global uniform vec4 vh_lamp_c9;
-global uniform vec4 vh_lamp_c10;
-global uniform vec4 vh_lamp_c11;
-global uniform vec4 vh_lamp_c12;
-global uniform vec4 vh_lamp_c13;
-global uniform vec4 vh_lamp_c14;
-global uniform vec4 vh_lamp_c15;
+global uniform sampler2D vh_lamp_tex;   // vh_lamp_n x 2 (VHTex.set_lamps): row 0 position + range, row 1 linear colour x intensity
 
 // One lamp: wrapped Lambert (wrap > 0 for foliage lit through its blades) and a GGX highlight, falling
 // off with the inverse square inside a smooth range window; the +1 m2 stands in for the bulb's size.
@@ -240,27 +210,8 @@ vec3 vh_lamps(vec3 wp, vec3 n, vec3 cam, float rough, vec3 albedo, float wrap) {
 	if (vh_lamp_n <= 0) return vec3(0.0);
 	vec3 v = normalize(cam - wp);
 	vec3 d = vec3(0.0), s = vec3(0.0);
-	vh_lamp(vh_lamp_p0, vh_lamp_c0, wp, n, v, rough, wrap, d, s);
-	vh_lamp(vh_lamp_p1, vh_lamp_c1, wp, n, v, rough, wrap, d, s);
-	vh_lamp(vh_lamp_p2, vh_lamp_c2, wp, n, v, rough, wrap, d, s);
-	vh_lamp(vh_lamp_p3, vh_lamp_c3, wp, n, v, rough, wrap, d, s);
-	if (vh_lamp_n > 4) {
-		vh_lamp(vh_lamp_p4, vh_lamp_c4, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p5, vh_lamp_c5, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p6, vh_lamp_c6, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p7, vh_lamp_c7, wp, n, v, rough, wrap, d, s);
-	}
-	if (vh_lamp_n > 8) {
-		vh_lamp(vh_lamp_p8, vh_lamp_c8, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p9, vh_lamp_c9, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p10, vh_lamp_c10, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p11, vh_lamp_c11, wp, n, v, rough, wrap, d, s);
-	}
-	if (vh_lamp_n > 12) {
-		vh_lamp(vh_lamp_p12, vh_lamp_c12, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p13, vh_lamp_c13, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p14, vh_lamp_c14, wp, n, v, rough, wrap, d, s);
-		vh_lamp(vh_lamp_p15, vh_lamp_c15, wp, n, v, rough, wrap, d, s);
+	for (int i = 0; i < vh_lamp_n; i++) {
+		vh_lamp(texelFetch(vh_lamp_tex, ivec2(i, 0), 0), texelFetch(vh_lamp_tex, ivec2(i, 1), 0), wp, n, v, rough, wrap, d, s);
 	}
 	return d * albedo * (1.0 / PI) + s;
 }

@@ -8,18 +8,12 @@ uniform vec4 room_lo[9];            // xyz: the room's low corner, w: how much s
 uniform vec4 room_hi[9];            // xyz: the high corner, w: how bright its light is (0: no room)
 uniform vec3 room_light : source_color = vec3(1.0, 0.8, 0.58);
 
-// MeshStandardMaterial equivalent for props: colour (x vertex/instance colour), roughness, metalness,
-// optional world triplanar texture (shaderlib.ts createTriplanarMaterial), optional flat shading.
+// MeshStandardMaterial equivalent for props: colour (x vertex/instance colour), roughness, metalness. (shaders/vh/pbr.gdshader's
+// triplanar texture and flat shading are left out: nothing in the town uses them, and they made the shader slow to compile on the web.)
 uniform vec3 albedo : source_color = vec3(1.0);
 uniform float rough = 0.85;
 uniform float metal = 0.0;
 uniform bool use_vcol = false;
-uniform bool vcol_srgb = false;    // vertex colours authored as sRGB (kit pieces)
-uniform bool flat_shade = false;
-uniform sampler2D tri_tex : source_color, hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
-uniform sampler2D tri_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
-uniform float tri_scale = 0.0;     // > 0: triplanar texture at this world scale
-uniform float tri_ns = 1.0;
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;
 
@@ -34,19 +28,8 @@ void vertex() {
 void fragment() {
 	vh_clip(wpos, CAMERA_POSITION_WORLD);
 	vec3 col = vh_lin(albedo);
-	if (use_vcol) col *= vcol_srgb ? vh_lin(COLOR.rgb) : COLOR.rgb;
+	if (use_vcol) col *= COLOR.rgb;
 	vec3 n = normalize(wn);
-	if (flat_shade) {
-		vec3 fv = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
-		NORMAL = dot(fv, NORMAL) < 0.0 ? -fv : fv;
-		n = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
-	}
-	if (tri_scale > 0.0) {
-		vec3 b = vh_tri_w(n);
-		col *= vh_lin(vh_tri_albedo(tri_tex, wpos, b, tri_scale)) * 1.9;
-		n = vh_tri_normal(tri_n, wpos, n, b, tri_scale, tri_ns);
-		NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-	}
 	ALBEDO = col;
 	ROUGHNESS = rough;
 	METALLIC = metal;
