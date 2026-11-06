@@ -176,7 +176,8 @@ async function start() {
         expires_at: Number(rp.expires_at),
         signature: rp.signature,
       },
-      allow_legacy_proofs: s.allow_legacy_proofs ?? true,
+      // The server decides (WORLD_ALLOW_LEGACY_PROOFS, off by default) and enforces the same on POST /verify.
+      allow_legacy_proofs: s.allow_legacy_proofs ?? false,
       environment: s.environment || "production",
       action_description: "Get your Tallyport Town Pass",
     }).preset(IDKit.proofOfHuman({ signal: s.wallet }));

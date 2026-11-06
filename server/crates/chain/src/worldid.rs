@@ -9,6 +9,10 @@
 //!    issued for this wallet (unexpired, used once), our action, and a signal hash binding it to the wallet. After,
 //!    the answer's `environment` must match `WORLD_ENVIRONMENT`. The human id is the nullifier.
 //!
+//! Only uniqueness proofs for our action count (a session proof has no action and no `nullifier`), and only protocol
+//! 4.0 unless `WORLD_ALLOW_LEGACY_PROOFS` is on (see [`WorldIdConfig::allow_legacy_proofs`]). A result whose own
+//! `environment` differs from ours is refused before it reaches the API, as World's docs ask.
+//!
 //! The signal is the player's wallet address; the verify page passes it as IDKit's `signal`. Both IDKit encodings
 //! of an address signal are accepted: `hashToField(20 address bytes)` and `hashToField(utf8 address string)`.
 
@@ -126,6 +130,8 @@ pub struct RpContext {
     pub action: String,
     pub app_id: Option<String>,
     pub environment: String,
+    /// What the page passes as IDKit's `allow_legacy_proofs`; the server enforces the same.
+    pub allow_legacy_proofs: bool,
 }
 
 struct Issued {
@@ -238,6 +244,7 @@ impl WorldIdVerifier {
             action: self.cfg.action.clone(),
             app_id: self.cfg.app_id.clone(),
             environment: self.cfg.environment.clone(),
+            allow_legacy_proofs: self.cfg.allow_legacy_proofs,
         })
     }
 
@@ -265,11 +272,29 @@ impl WorldIdVerifier {
         if (self.clock)() > issued.expires_at {
             return Err("the verify session expired; start again".into());
         }
-        if let Some(a) = result.get("action").and_then(Value::as_str) {
-            if a != self.cfg.action {
+        match result.get("protocol_version").and_then(Value::as_str) {
+            Some("4.0") => {}
+            Some("3.0") if self.cfg.allow_legacy_proofs => {}
+            Some("3.0") => {
+                return Err("this town takes World ID 4.0 proofs only: update the World App".into())
+            }
+            other => return Err(format!("unsupported World ID protocol version {other:?}")),
+        }
+        match result.get("action").and_then(Value::as_str) {
+            Some(a) if a == self.cfg.action => {}
+            Some(a) => {
                 return Err(format!(
                     "the proof is for action {a:?}, not {:?}",
                     self.cfg.action
+                ))
+            }
+            None => return Err("the result has no action: only a Town Pass uniqueness proof counts".into()),
+        }
+        if let Some(env) = result.get("environment").and_then(Value::as_str) {
+            if env != self.cfg.environment {
+                return Err(format!(
+                    "the proof is from World ID {env}, but this server runs {}",
+                    self.cfg.environment
                 ));
             }
         }
@@ -288,6 +313,9 @@ impl WorldIdVerifier {
                 .ok_or("a response has no signal hash")?;
             if !wanted.contains(&s) {
                 return Err("the proof's signal isn't this wallet".into());
+            }
+            if r.get("nullifier").and_then(field).is_none() {
+                return Err("a response has no nullifier: only a uniqueness proof counts".into());
             }
         }
         let sent: Vec<B256> = responses
@@ -325,6 +353,11 @@ impl WorldIdVerifier {
                 _ if detail.is_empty() => format!("World ID refused the proof ({status} {code})"),
                 _ => format!("World ID refused the proof ({status} {code}: {detail})"),
             });
+        }
+        if let Some(a) = resp.get("action").and_then(Value::as_str) {
+            if a != self.cfg.action {
+                return Err(format!("World ID verified action {a:?}, not {:?}", self.cfg.action));
+            }
         }
         let env = resp
             .get("environment")
@@ -569,6 +602,75 @@ mod tests {
             .verify(WALLET, &result_for(&ctx, signal_hashes(WALLET).unwrap()[0]))
             .unwrap_err()
             .contains("expired"));
+    }
+
+    /// World's published RP-signature test vector (docs.world.org/world-id/idkit/signatures): key 0xab×32,
+    /// random bytes 0x00..0x1f, created_at 1700000000, ttl 300, action "test-action".
+    #[test]
+    fn rp_signature_matches_worlds_published_vector() {
+        let key = format!("0x{}", "ab".repeat(32));
+        let mut c = WorldIdConfig::new("rp_x", Key::parse("RP_SIGNING_KEY", &key).unwrap());
+        c.action = "test-action".into();
+        let v = WorldIdVerifier::with_http(
+            c,
+            Box::new(Mock {
+                reply: ok_reply(),
+                seen: Arc::default(),
+            }),
+        )
+        .with_clock(|| 1_700_000_000);
+        let entropy = B256::from(std::array::from_fn::<u8, 32, _>(|i| i as u8));
+        let ctx = v
+            .sign_context("asha", WALLET.parse().unwrap(), entropy)
+            .unwrap();
+        assert_eq!(
+            ctx.nonce,
+            "0x008ae1aa597fa146ebd3aa2ceddf360668dea5e526567e92b0321816a4e895bd"
+        );
+        assert_eq!(ctx.signature, "0x05594adb6c1495768a38d523d7d6ee6356b2c31231919198794ed022ade7d08f73753f83bd167067d99c9b969d28e9222315837c66af25867b041273a6d5056f1b");
+        assert!(!ctx.allow_legacy_proofs, "4.0 only by default");
+    }
+
+    #[test]
+    fn only_4_0_uniqueness_proofs_for_our_action_and_environment_count() {
+        let refused = |edit: &dyn Fn(&mut Value), want: &str| {
+            let (v, seen) = verifier(ok_reply());
+            let ctx = v.session_context("asha", WALLET).unwrap();
+            let mut r = result_for(&ctx, signal_hashes(WALLET).unwrap()[0]);
+            edit(&mut r);
+            let err = v.verify(WALLET, &r).unwrap_err();
+            assert!(err.contains(want), "{err} should mention {want}");
+            assert!(seen.lock().unwrap().is_empty(), "never reaches the API");
+        };
+        refused(&|r| r["protocol_version"] = json!("3.0"), "4.0 proofs only");
+        refused(&|r| r["protocol_version"] = json!("9.9"), "protocol version");
+        refused(&|r| { r.as_object_mut().unwrap().remove("action"); }, "no action");
+        refused(&|r| r["environment"] = json!("staging"), "staging");
+        refused(
+            &|r| {
+                let item = &mut r["responses"][0];
+                item.as_object_mut().unwrap().remove("nullifier");
+                item["session_nullifier"] = json!(["0x1", "0x2"]);
+            },
+            "no nullifier",
+        );
+
+        // Legacy 3.0 proofs pass only when the operator turns them on.
+        let mut c = cfg();
+        c.allow_legacy_proofs = true;
+        let v = WorldIdVerifier::with_http(
+            c,
+            Box::new(Mock {
+                reply: ok_reply(),
+                seen: Arc::default(),
+            }),
+        )
+        .with_clock(|| 1_000);
+        let ctx = v.session_context("asha", WALLET).unwrap();
+        assert!(ctx.allow_legacy_proofs);
+        let mut r = result_for(&ctx, signal_hashes(WALLET).unwrap()[0]);
+        r["protocol_version"] = json!("3.0");
+        assert!(v.verify(WALLET, &r).is_ok());
     }
 
     #[test]
