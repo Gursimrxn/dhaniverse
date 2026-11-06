@@ -16,6 +16,8 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Dhaniverse-Tallyport"
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0, 0, 0, 1)
 
 [autoload]
 
@@ -101,6 +103,8 @@ textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=4096
 viewport/hdr_2d=true
 anti_aliasing/quality/msaa_3d=1
+driver/depth_prepass/enable.web=false
+limits/opengl/max_lights_per_object.web=1
 textures/default_filters/anisotropic_filtering_level=4
 environment/defaults/default_clear_color=Color(0.98, 0.79, 0.66, 1)
 
@@ -298,133 +302,9 @@ vh_lamp_n={
 "type": "int",
 "value": 0
 }
-vh_lamp_p0={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p1={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p2={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p3={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p4={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p5={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p6={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p7={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p8={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p9={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p10={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p11={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p12={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p13={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p14={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_p15={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c0={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c1={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c2={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c3={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c4={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c5={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c6={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c7={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c8={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c9={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c10={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c11={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c12={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c13={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c14={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-vh_lamp_c15={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
+vh_lamp_tex={
+"type": "sampler2D",
+"value": ""
 }
 cloud_noise={
 "type": "sampler2D",
