@@ -328,6 +328,8 @@ abstract contract FoodRouterTest is FoodWorld {
     function _deployRouter() internal returns (FoodRouter deployed) {
         deployed = new FoodRouter(manager, hook, admin, TICK_SPACING);
         vm.label(address(deployed), "FoodRouter");
+        vm.prank(admin);
+        foodToken.setAllowed(address(deployed), true);
     }
 
     function _ref() internal returns (bytes32) {

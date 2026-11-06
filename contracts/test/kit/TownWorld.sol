@@ -128,6 +128,12 @@ abstract contract TownWorld is TestKit {
         usdc.mint(admin, dollars(10_000));
         vm.startPrank(admin);
         hook.setRouter(address(router));
+        // FOOD moves only between the game's own contracts, set once and locked, as script/Deploy.s.sol does.
+        foodToken.setAllowed(address(manager), true);
+        foodToken.setAllowed(address(router), true);
+        foodToken.setAllowed(address(mealCounter), true);
+        foodToken.setAllowed(address(farm), true);
+        foodToken.lockAllowlist();
         manager.initialize(router.poolKey(), _sqrtFor(BASE_PRICE));
         usdc.approve(address(router), type(uint256).max);
         foodToken.approve(address(router), type(uint256).max);

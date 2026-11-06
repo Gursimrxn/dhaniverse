@@ -58,6 +58,12 @@ abstract contract FoodWorld is TestKit {
         deployCodeTo("FoodToken.sol:FoodToken", abi.encode(admin, FOOD_SUPPLY), foodAddress());
         foodToken = FoodToken(foodAddress());
         vm.label(foodAddress(), "FOOD");
+        // These market tests trade straight from the two keys, so they're on FOOD's allowlist (left unlocked).
+        vm.startPrank(admin);
+        foodToken.setAllowed(address(manager), true);
+        foodToken.setAllowed(buyer, true);
+        foodToken.setAllowed(seller, true);
+        vm.stopPrank();
         foodFirst = foodAddress() < address(usdc);
         require(FOOD_SORTS_FIRST < address(usdc) && address(usdc) < FOOD_SORTS_SECOND, "USDC must sort in between");
     }

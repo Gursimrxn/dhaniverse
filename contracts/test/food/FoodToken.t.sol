@@ -59,8 +59,10 @@ contract FoodTokenTest is TestKit {
     }
 
     function test_burn_refusesMoreThanYouHave_withTheNumbers() public {
-        vm.prank(admin);
+        vm.startPrank(admin);
+        token.setAllowed(keeper, true);
         assertTrue(token.transfer(keeper, food(10)));
+        vm.stopPrank();
 
         vm.expectRevert(
             abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, keeper, food(10), food(11))
