@@ -5,13 +5,13 @@ import { createHash } from "node:crypto"
 import { i32, u64 } from "@arkiv-network/sdk/schema"
 import type { CampaignCard, Paper, Person, BoardRow } from "./city.ts"
 import { publicSwarmRef } from "./swarmRef.ts"
-import type { EntityType } from "./schemas.ts"
+import type { DraftType, EntityType } from "./schemas.ts"
 
 /** When an entity should stop existing. Resolved to an SDK expiration by the writer. */
 export type Expiry = { atMs: number } | { forSeconds: number }
 
 export type Draft = {
-  type: EntityType
+  type: DraftType
   /** Identity within (type, env): what the publisher dedupes and reconciles on. */
   id: string
   values: Record<string, unknown>

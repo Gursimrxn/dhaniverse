@@ -14,7 +14,7 @@ import { bytes, defineSchema, i32, str, u64 } from "@arkiv-network/sdk/schema"
 export const SCHEMA_VERSION = "v1"
 
 /** A live sponsor campaign, as the Bounty Board shows it. Expires at the campaign's end. */
-export const CampaignSchema = defineSchema("tallyport.campaign.v1", {
+export const CampaignSchema = defineSchema("dhaniverse.campaign.v1", {
   env: str().indexed(),
   campaignId: u64().indexed(),
   status: str().indexed(),
@@ -34,7 +34,7 @@ export const CampaignSchema = defineSchema("tallyport.campaign.v1", {
 })
 
 /** A closed day's Rush board: rank, name and title only (the server never publishes scores). 48 h. */
-export const RushBoardSchema = defineSchema("tallyport.rush_board.v1", {
+export const RushBoardSchema = defineSchema("dhaniverse.rush_board.v1", {
   env: str().indexed(),
   day: u64().indexed(),
   season: i32().indexed().optional(),
@@ -47,7 +47,7 @@ export const RushBoardSchema = defineSchema("tallyport.rush_board.v1", {
 })
 
 /** Five minutes of the FOOD price, one entity per batch. 7 days. */
-export const PriceTickSchema = defineSchema("tallyport.price_tick.v1", {
+export const PriceTickSchema = defineSchema("dhaniverse.price_tick.v1", {
   env: str().indexed(),
   /** Unix seconds, window start (inclusive) and end (exclusive). */
   startTs: u64().indexed(),
@@ -65,7 +65,7 @@ export const PriceTickSchema = defineSchema("tallyport.price_tick.v1", {
 })
 
 /** A player's public face: name, title, stamps, ENS name. Expires at season end; renewed. */
-export const ProfileSchema = defineSchema("tallyport.profile.v1", {
+export const ProfileSchema = defineSchema("dhaniverse.profile.v1", {
   env: str().indexed(),
   name: str().indexed(),
   season: i32().indexed().optional(),
@@ -77,7 +77,7 @@ export const ProfileSchema = defineSchema("tallyport.profile.v1", {
 })
 
 /** The morning paper's index entry. The body lives on Swarm (`bodyRef`); inline only if Swarm is off. 30 days. */
-export const PaperSchema = defineSchema("tallyport.paper.v1", {
+export const PaperSchema = defineSchema("dhaniverse.paper.v1", {
   env: str().indexed(),
   day: u64().indexed(),
   headline: str(),
@@ -88,11 +88,36 @@ export const PaperSchema = defineSchema("tallyport.paper.v1", {
 })
 
 /** A finished season: the reference of its snapshot on Swarm. Written only when Swarm is configured. */
-export const SeasonSchema = defineSchema("tallyport.season.v1", {
+export const SeasonSchema = defineSchema("dhaniverse.season.v1", {
   env: str().indexed(),
   season: i32().indexed(),
   endedDay: u64(),
   snapshotRef: str(),
+})
+
+/** One per town: the save's first line (seed, rules, quest book, chain mode), encrypted. 180 days, renewed. */
+export const CitySchema = defineSchema("dhaniverse.city.v1", {
+  env: str().indexed(),
+  townId: str().indexed(),
+  chain: str(),
+  rulesHash: str(),
+  startedAt: u64(),
+  /** nonce (12) + AES-256-GCM ciphertext + tag (16) of the setup line. */
+  payload: bytes(),
+})
+
+/** One per batch of save lines: gzipped JSONL, encrypted, hash-chained. 180 days, renewed. */
+export const LogSchema = defineSchema("dhaniverse.log.v1", {
+  env: str().indexed(),
+  townId: str().indexed(),
+  fromSeq: u64().indexed(),
+  toSeq: u64().indexed(),
+  /** SHA-256 hex of the previous batch's plaintext JSONL (64 zeros for the first). */
+  prevHash: str(),
+  /** SHA-256 hex of this batch's plaintext JSONL. */
+  hash: str(),
+  /** nonce (12) + AES-256-GCM(gzip(JSONL)) + tag (16). */
+  payload: bytes(),
 })
 
 export const SCHEMAS = {
@@ -105,3 +130,10 @@ export const SCHEMAS = {
 } as const
 
 export type EntityType = keyof typeof SCHEMAS
+
+/** The save's two entity types. They are written by the save mirror (`save.ts`), not tracked in the publisher's state. */
+export const SAVE_SCHEMAS = { city: CitySchema, log: LogSchema } as const
+export type SaveType = keyof typeof SAVE_SCHEMAS
+export const ALL_SCHEMAS = { ...SCHEMAS, ...SAVE_SCHEMAS } as const
+export type DraftType = EntityType | SaveType
+export const isSaveType = (t: DraftType): t is SaveType => t === "city" || t === "log"

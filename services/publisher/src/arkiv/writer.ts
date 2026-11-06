@@ -4,7 +4,7 @@ import { ExpirationTime, type PublicArkivClient, type WalletArkivClient } from "
 import type { Hex } from "viem"
 import type { Draft, Expiry } from "../entities.ts"
 import { MAX_TTL_MS } from "../entities.ts"
-import { SCHEMAS, type EntityType } from "../schemas.ts"
+import { ALL_SCHEMAS, type EntityType } from "../schemas.ts"
 import { findExisting, type Existing } from "./queries.ts"
 
 export type Op =
@@ -49,7 +49,7 @@ export class SdkWriter implements ArkivWriter {
     const patches: unknown[] = []
     const extensions: unknown[] = []
     for (const op of ops) {
-      const schema = SCHEMAS[op.draft.type]
+      const schema = ALL_SCHEMAS[op.draft.type]
       if (op.kind === "create") {
         creates.push({ schema, values: op.draft.values, expiration: toExpiration(op.draft.expiry) })
       } else if (op.kind === "patch") {

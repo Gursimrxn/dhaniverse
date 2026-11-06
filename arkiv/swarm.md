@@ -8,9 +8,9 @@ the reference is all anyone needs to fetch and verify the content.
 
 | Content | On Swarm | On Arkiv | Also on chain |
 |---|---|---|---|
-| Campaign story + images | a collection: `index.json` + `image-N.{png,jpg,webp,gif}` | `tallyport.campaign.v1.metaHash` = the collection's reference | `CampaignEscrow` `CampaignParams.metaHash` (bytes32) = the same 32 bytes |
-| The morning paper | `paper-<day>.json` (headline + every story) | `tallyport.paper.v1.bodyRef`, plus `day`, `headline`, `stories` for listing | — |
-| A finished season | `season-<n>.json` (final Rush board, people with titles and stamps) | `tallyport.season.v1.snapshotRef` | — |
+| Campaign story + images | a collection: `index.json` + `image-N.{png,jpg,webp,gif}` | `dhaniverse.campaign.v1.metaHash` = the collection's reference | `CampaignEscrow` `CampaignParams.metaHash` (bytes32) = the same 32 bytes |
+| The morning paper | `paper-<day>.json` (headline + every story) | `dhaniverse.paper.v1.bodyRef`, plus `day`, `headline`, `stories` for listing | — |
+| A finished season | `season-<n>.json` (final Rush board, people with titles and stamps) | `dhaniverse.season.v1.snapshotRef` | — |
 
 What decides the side: anything a query filters or sorts on, or that should expire, is an Arkiv
 attribute. Anything long, binary, or worth keeping past the entity's lifetime is Swarm content. A

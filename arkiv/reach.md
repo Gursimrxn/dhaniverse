@@ -7,8 +7,8 @@ them; nothing here is an estimate dressed up as a metric.
 
 | Surface | Who | What they read from Arkiv |
 |---|---|---|
-| **Bounty Board** in the town square (in game) | every player who walks past it | live sponsor campaign cards (`tallyport.campaign.v1`) |
-| Phone "Boards" history (in game) | players | yesterday's and today's Rush boards (`tallyport.rush_board.v1`) |
+| **Bounty Board** in the town square (in game) | every player who walks past it | live sponsor campaign cards (`dhaniverse.campaign.v1`) |
+| Phone "Boards" history (in game) | players | yesterday's and today's Rush boards (`dhaniverse.rush_board.v1`) |
 | Town website | anyone with the link, no account | Rush boards, the food price chart (`price_tick`), profiles, the paper archive |
 | Sponsor console | sponsors | their campaign's card as players see it |
 | Anyone with `curl` | other builders | the same entities, by `arkiv_query`, owner-filtered |

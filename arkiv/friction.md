@@ -10,7 +10,7 @@ rehearsal that wrote to Rabdi with a funded key the same day (numbers in
 - **The package ships its TypeScript source** (`src/` next to `dist/`). When the docs didn't answer a
   question (batch return values, how a `Date` expiry is placed, the exact RPC shapes), reading the SDK
   answered it in minutes. Please keep doing this.
-- **Schemas are a good fit.** `defineSchema("tallyport.campaign.v1", { … })` gave typed writes, typed
+- **Schemas are a good fit.** `defineSchema("dhaniverse.campaign.v1", { … })` gave typed writes, typed
   reads, and a compile error when we tried to filter on a column we hadn't indexed. The automatic
   `arkiv.schema` tag made our queries short.
 - **Checks before the network.** A create that doesn't fit its schema, a string over 128 bytes or an

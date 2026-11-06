@@ -28,7 +28,7 @@ No key needed:
 ```sh
 curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d '{
   "jsonrpc":"2.0","id":1,"method":"arkiv_query",
-  "params":["arkiv.schema = str('\''tallyport.campaign.v1'\'') AND env = str('\''live'\'') AND status = str('\''live'\'') AND $owner = addr(0x584A19Fd7AbDe7aa89aE759CE4b8E018901eeF97)",
+  "params":["arkiv.schema = str('\''dhaniverse.campaign.v1'\'') AND env = str('\''live'\'') AND status = str('\''live'\'') AND $owner = addr(0x584A19Fd7AbDe7aa89aE759CE4b8E018901eeF97)",
             {"select":{"key":true,"owner":true,"expiresAt":true,"attributes":true},"limit":"0x64"}]}'
 ```
 
