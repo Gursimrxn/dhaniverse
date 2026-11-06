@@ -1,0 +1,26 @@
+{
+  "name": "@tallyport/publisher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Publishes Tallyport public data to Arkiv and content to Swarm; serves a read API over Arkiv.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/main.ts",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p .",
+    "query": "node --env-file-if-exists=.env scripts/query.ts",
+    "address": "node --env-file-if-exists=.env scripts/address.ts"
+  },
+  "dependencies": {
+    "@arkiv-network/sdk": "1.0.1",
+    "viem": "2.57.16"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}
