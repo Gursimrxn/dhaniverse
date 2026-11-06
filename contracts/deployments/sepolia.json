@@ -1,0 +1,69 @@
+{
+  "chainId": 11155111,
+  "contracts": {
+    "CampaignEscrow": "0xE15FCa1e8488A95B62789d85dd837445aB0E0411",
+    "Farm": "0x1018AedC8d419ab99876070747D43dC9E80f219D",
+    "FloatManager": "0xbeddb3f2F37649D7347ea4bc7799c83fA1BeF35C",
+    "FoodHook": "0x4aacDBD4f0876519BEe9d33dA72c30BbB998e8c0",
+    "FoodRouter": "0xE569B7388dCaa4E7853f6174cEa6b28B5b4Bc15B",
+    "FoodToken": "0x5212D7F61bDC6DA687c049b048d4868e6AbAf63D",
+    "HousePool": "0x3E4eb6a4253b50CcdC3B5f74bdC5eA32a6890436",
+    "LuckyLedger": "0xA3eD9a457b6253F363781266dfc22C7E6152994B",
+    "MealCounter": "0x5823e88df2b0CAD7C4f3130C2A854ff0B9e51373",
+    "MockYieldVault": "0x856d74191b45D99Dd865496cBeCa374E8946Bd00",
+    "QuestToken": "0xCA33Efa4d72d4cBb97559A914A506d463d3cd14D",
+    "SpiceMerchant": "0x5354a9c917Ae1fbb7cf67a6BE0A62675669bA53f",
+    "Treasury": "0x270843627Dfd88361FCbA927e4b1532857bC5b44"
+  },
+  "demoCampaignId": 1,
+  "ens": {
+    "coinType": 60,
+    "directory": "0x1773Cf32b204f1ff02ABF3FeFEa547e9f8ca6D53",
+    "factory": "0xDa70306C98E97eCe36F997a21368e53298572991",
+    "parent": "tallyport.eth",
+    "parentLabel": "tallyport",
+    "playerResolverSalt": "uint256(keccak256(abi.encode(\"tallyport.names.player.v1\", parentLabel, label)))",
+    "players": "per-player resolver: see playerResolverSalt",
+    "registry": "0xAa0113529adfa44CAA16ffE5de097A86dB6f8D52",
+    "resolverImpl": "0x115eb53F0c60696633855F90b138178Fb40b2b2C",
+    "reverseAdapter": "0x36f97328e843e37520cbF530e9402791c2754066",
+    "universalResolver": "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe"
+  },
+  "keys": {
+    "admin": "0x8e45A4B700E07331c387d2AEEb157D5cef724Ac2",
+    "keeper": "0x2707351cDC79d110592c0BC4f31a4EC75bA6dAFc",
+    "ops": "0xC06f40bBd3880B7275b5Ce6Fdbe8B512B9F884fC",
+    "team": "0x114C0E4B6F008725a6693C89147fEb61d3Adc651",
+    "ticketSigner": "0xD49B24fb9765F4aBD966811524A3d27C8092Bc89",
+    "voucherSigner": "0x84f8364912a29ECE085d48fFAFE02CCaB005dD2a"
+  },
+  "network": "sepolia",
+  "startBlock": 12079317,
+  "uniswap": {
+    "foodPool": {
+      "currency0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "currency1": "0x5212D7F61bDC6DA687c049b048d4868e6AbAf63D",
+      "fee": 0,
+      "hooks": "0x4aacDBD4f0876519BEe9d33dA72c30BbB998e8c0",
+      "poolId": "0xea904bcada3495130c2416729d431bd8950ddd87caf460843d2f956d8acab96c",
+      "tickSpacing": 60
+    },
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+    "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+    "questPool": {
+      "currency0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "currency1": "0xCA33Efa4d72d4cBb97559A914A506d463d3cd14D",
+      "fee": 3000,
+      "hooks": "0x0000000000000000000000000000000000000000",
+      "poolId": "0x8f0636415d960e24857034d4817a136b600754244e0da4557c573f0ba544d9bf",
+      "positionId": 41468,
+      "tickSpacing": 60
+    },
+    "quoter": "0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244",
+    "stateView": "0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C",
+    "universalRouter": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b"
+  },
+  "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "usdcIsMock": false
+}

@@ -48,8 +48,13 @@ forge build && forge test                              # ENS fork tests skip wit
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com forge test --match-path "test/names/*"
 forge fmt --check && forge lint -D warnings src && python tools/spec_check.py
 script/dev_chain.sh                                    # local chain; prints the server's env
-forge script script/Deploy.s.sol --rpc-url sepolia --broadcast   # Sepolia (keys from env, see the script)
+forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --slow --gas-estimate-multiplier 900   # Sepolia
 ```
+
+**Sepolia gas (Nov 2026):** Sepolia's current gas schedule charges about 7× what Foundry's local simulation
+predicts for contract creation (CampaignEscrow needs about 22.7M gas; forge estimates 3.2M). Without
+`--gas-estimate-multiplier 900` the first deploy runs out of gas. Unused gas isn't charged; the 7 Nov 2026 deploy paid
+0.0065 ETH in all. Check a single creation with `cast rpc eth_estimateGas` if in doubt.
 
 ## How we write code here
 
