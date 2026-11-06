@@ -196,12 +196,12 @@ func _show_contents(e: Dictionary) -> void:
 	var tier := str(e.get("tier", "wood"))
 	var rows := []
 	var drop := int(c.get("golden_drop", 0))
-	if drop > 0:
-		rows.append({"title": "A golden drop", "sub": "USDC from the town's surprise pool" + ("" if bool(client.you.get("human", false)) else ". Held for you until you get your Town Pass"), "figure": Usdc.text(drop)})
+	if drop > 0:     # the weekly strongbox's USDC comes in golden_drop too (rules/src/chest.rs): there it's the streak bonus
+		var held := "" if bool(client.you.get("human", false)) else ". Held for you until you get your Town Pass"
+		rows.append({"title": "Your streak bonus" if weekly else "A golden drop", "sub": ("USDC for coming back" if weekly else "USDC from the town's surprise pool") + held, "figure": Usdc.text(drop)})
 	if int(c.get("energy", 0)) > 0: rows.append({"title": "Energy", "sub": "straight into you", "figure": "+%d" % int(c.energy)})
 	if int(c.get("tickets", 0)) > 0: rows.append({"title": "Tickets", "sub": "for this week's draw", "figure": "+%d" % int(c.tickets)})
 	if bool(c.get("voucher", false)): rows.append({"title": "A meal voucher", "sub": "a thali on the town, at the Common Table", "figure": "+1"})
-	if c.has("usdc") and int(c.usdc) > 0: rows.append({"title": "Your streak bonus", "sub": "USDC for coming back", "figure": Usdc.text(int(c.usdc))})
 	var chest: Dictionary = client.you.get("chest", {})
 	var pity := "%d of %d chests since your last golden drop: the %dth always has one." % [int(chest.get("pity", 0)), int(chest.get("pity_every", 10)), int(chest.get("pity_every", 10))]
 	sheet.set_words("Your door · the Homes" if not weekly else "Your door · the weekly strongbox", ("The weekly strongbox" if weekly else str(TIER_WORDS.get(tier, "Your chest"))) + (", opened." if not weekly else ", opened."), "" if weekly else pity)
