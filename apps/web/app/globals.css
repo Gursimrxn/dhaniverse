@@ -1,0 +1,32 @@
+/* Brand values come from DESIGN.md: ink #262727, cream #FFF8E3, Satoshi.
+   TODO: only Satoshi Bold is bundled (public/fonts, from game/assets/fonts). Add Regular and Medium when the files are added. */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: block;
+}
+
+:root {
+  --ink: #262727;
+  --cream: #fff8e3;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: var(--cream);
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-weight: 700;
+}
+
+/* The game fills the window. */
+.stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
