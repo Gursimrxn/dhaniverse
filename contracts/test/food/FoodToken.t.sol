@@ -37,7 +37,7 @@ contract FoodTokenTest is TestKit {
     }
 
     function test_deploy_refusesNoHolder() public {
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        vm.expectRevert(FoodToken.FoodToken__ZeroHolder.selector);
         new FoodToken(address(0), SUPPLY);
     }
 

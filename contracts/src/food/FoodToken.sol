@@ -32,6 +32,8 @@ contract FoodToken is ERC20 {
 
     /// @notice A deploy with no FOOD at all is a mistake, so it is refused.
     error FoodToken__ZeroSupply();
+    /// @notice The holder sets the allowlist, so it can't be the zero address.
+    error FoodToken__ZeroHolder();
     /// @notice FOOD can't move to or from this address: it isn't part of the game.
     error FoodToken__NotAllowed(address account);
     /// @notice Only the allowlister may change the allowlist.
@@ -39,10 +41,10 @@ contract FoodToken is ERC20 {
     /// @notice The allowlist is locked and can never change again.
     error FoodToken__AllowlistLocked();
 
-    /// @param holder Receives the whole supply, is on the allowlist and sets the rest of it. OpenZeppelin refuses the
-    ///        zero address (ERC20InvalidReceiver).
+    /// @param holder Receives the whole supply, is on the allowlist and sets the rest of it.
     /// @param supply Every FOOD there will ever be, in base units (6 decimals).
     constructor(address holder, uint256 supply) ERC20("Dhaniverse Food", "FOOD") {
+        if (holder == address(0)) revert FoodToken__ZeroHolder();
         if (supply == 0) revert FoodToken__ZeroSupply();
         ALLOWLISTER = holder;
         allowed[holder] = true;
