@@ -2,6 +2,7 @@
 //! chain and World ID. See PROTOCOL.md.
 
 pub mod app;
+pub mod arkiv;
 pub mod boards;
 pub mod feed;
 pub mod http;

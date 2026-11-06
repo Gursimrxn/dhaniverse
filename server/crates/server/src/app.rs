@@ -18,7 +18,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const DEFAULT_ADDR: &str = "127.0.0.1:7878";
 const DEFAULT_HEARTBEAT_MS: u64 = 5000;
 const DEFAULT_PUBLISHER: &str = "http://127.0.0.1:8787";
-const VALUE_FLAGS: [&str; 15] = [
+const VALUE_FLAGS: [&str; 17] = [
     "--config",
     "--addr",
     "--save",
@@ -34,6 +34,8 @@ const VALUE_FLAGS: [&str; 15] = [
     "--public-url",
     "--public-rpc-url",
     "--world-app-id",
+    "--arkiv",
+    "--town",
 ];
 const SWITCHES: [&str; 3] = ["--debug", "--new-if-incompatible", "--behind-proxy"];
 pub const USAGE: &str = "server [flags]
@@ -56,6 +58,10 @@ pub const USAGE: &str = "server [flags]
                            (default PUBLIC_URL or http://<addr>)
   --public-rpc-url <url>   a keyless read RPC the pages may use (default PUBLIC_RPC_URL)
   --world-app-id <id>      the World ID app id the pages show (default WORLD_APP_ID)
+  --arkiv <url>            before starting, bring the save up to date from Arkiv through the publisher's
+                           GET /log at this http:// URL on this machine (needs DHANIVERSE_RESTORE_TOKEN).
+                           A missing save is rebuilt whole; a broken chain stops the server
+  --town <id>              the town to rebuild with --arkiv when the save is missing
   --debug                  allow the rehearsal commands in PROTOCOL.md
   --speed <n>              run the clock faster; needs --debug (default 1)
   --heartbeat-ms <n>       how often the clock moves; 0 stops it (default 5000)
@@ -80,6 +86,8 @@ struct FileConfig {
     public_url: Option<String>,
     public_rpc_url: Option<String>,
     world_app_id: Option<String>,
+    arkiv: Option<String>,
+    town: Option<String>,
     heartbeat_ms: Option<u64>,
     debug: Option<bool>,
     behind_proxy: Option<bool>,
@@ -101,6 +109,10 @@ pub struct ServerConfig {
     pub new_if_incompatible: bool,
     pub public_url: Option<String>,
     pub http: HttpConfig,
+    /// `--arkiv`: the publisher to restore the save from before opening it.
+    pub arkiv: Option<String>,
+    /// `--town`: which town `--arkiv` rebuilds when there is no save.
+    pub town: Option<String>,
 }
 
 impl ServerConfig {
@@ -216,11 +228,20 @@ pub fn parse_args(args: &[String]) -> Result<Option<ServerConfig>, String> {
             .or(file.public_url)
             .or_else(|| env("PUBLIC_URL")),
         http,
+        arkiv: value("--arkiv").or(file.arkiv),
+        town: value("--town").or(file.town),
     }))
 }
 
 /// Opens the save, or starts a new city from the config's files.
 pub fn open_save(config: &ServerConfig) -> Result<(Log, World), String> {
+    if let Some(publisher) = &config.arkiv {
+        let done = crate::arkiv::restore_from_env(&config.save, publisher, config.town.as_deref())?;
+        println!(
+            "restored from Arkiv: town {}, {} new line(s), Arkiv holds lines up to {}, the save had {}",
+            done.town, done.lines, done.tip, done.had
+        );
+    }
     let rules = std::fs::read_to_string(&config.rules)
         .map_err(|e| format!("{}: {e}", config.rules.display()))?;
     let quests = match std::fs::read_to_string(&config.quests) {
