@@ -1,0 +1,162 @@
+{
+  "name": "Founders' Quay",
+  "notes": "Compact layout matched to reference/visual/v4-concepts/01_river_neighborhood.png. Buildings are the original masters at 0.62 scale so the quarter is as dense as the concept. Bank on the plaza, market behind it to the right, Common Table as the cafe, houses and library stepping up the hillside, pond + waterfall in front. Axes: +X east, +Z south (towards camera), metres. Edit this file, not code.",
+  "seed": 1207,
+  "bounds": {"x0": -100, "z0": -110, "w": 200, "d": 170, "res": 1.0},
+
+  "terrain": {
+    "base_height": 0.7,
+    "noise_amp": 0.55,
+    "rise_north": {"from_z": -50, "slope": 0.2, "max": 16},
+    "rise_east": {"from_x": 66, "slope": 0.14, "max": 10},
+    "rise_west": {"from_x": -66, "slope": 0.14, "max": 10}
+  },
+
+  "water": {
+    "level": -0.4,
+    "pools": [
+      {"c": [20, 29], "r": 12.5},
+      {"c": [3, 27], "r": 8.0},
+      {"c": [33, 22], "r": 6.5}
+    ],
+    "river": {"half_width": 7.0, "points": [[4, 34], [-20, 42], [-60, 50], [-100, 58]]},
+    "shelf": 1.3,
+    "depth": 2.4
+  },
+
+  "upper_water": {
+    "level": 2.7,
+    "river": {"half_width": 3.2, "points": [[38, 13], [46, 12], [58, 11], [80, 8], [104, 4]]},
+    "terrace_height": 3.4
+  },
+
+  "waterfall": {"top": [38.5, 2.7, 13.5], "bottom": [31.5, -0.4, 18.5], "width": 4.4, "steps": 3},
+
+  "terraces": [
+    {"id": "plaza", "c": [-2, -3], "half": [34, 19], "radius": 5, "height": 1.0, "wall": "all"},
+    {"id": "arrival", "c": [-50, -3], "half": [16, 14], "radius": 3, "height": 1.0, "wall": "all"},
+    {"id": "homes_north", "c": [-2, -39], "half": [38, 10], "radius": 4, "height": 3.4, "wall": "all"},
+    {"id": "east", "c": [52, -14], "half": [14, 14], "radius": 4, "height": 3.0, "wall": "all"},
+    {"id": "east_bank", "c": [52, 12], "half": [14, 9], "radius": 4, "height": 3.4, "wall": "all"}
+  ],
+
+  "stairs": [
+    {"from": [-26, -21], "to": [-26, -30], "width": 3.0},
+    {"from": [-7, -21], "to": [-7, -30], "width": 3.4},
+    {"from": [24, -21], "to": [24, -30], "width": 3.0},
+    {"from": [31, -12], "to": [39, -12], "width": 3.0},
+    {"from": [31, 8], "to": [39, 8], "width": 2.6}
+  ],
+
+  "paths": [],
+
+  "paving": [
+    {"c": [-2, -2], "half": [28, 2.3], "radius": 2},
+    {"c": [-4, 12.5], "half": [28, 1.8], "radius": 1},
+    {"c": [-2, 5], "half": [1.9, 8], "radius": 1},
+    {"c": [-22, -3], "half": [9, 3.6], "radius": 2},
+    {"c": [12, -3], "half": [15, 3.4], "radius": 2},
+    {"c": [-19, 6], "half": [3, 5], "radius": 2},
+    {"c": [8, 11], "half": [4.5, 3], "radius": 2},
+    {"c": [-43, -3], "half": [8, 2.3], "radius": 2},
+    {"c": [-52, -3], "half": [4, 10], "radius": 2},
+    {"c": [-7, -13], "half": [2.1, 8.5], "radius": 1},
+    {"c": [28, -11], "half": [3, 10], "radius": 1},
+    {"c": [-2, -31], "half": [36, 1.8], "radius": 1},
+    {"c": [41, -14], "half": [2.4, 12], "radius": 1}
+  ],
+
+  "sites": [
+    {"id": "dv02", "glb": "dv02_bank.glb", "name": "Bank", "pos": [-22, -12], "face": [0, 1], "scale": 0.62, "role": "bank", "terrace": "plaza"},
+    {"id": "dv03", "glb": "dv03_market.glb", "name": "Market Hall", "pos": [12, -13], "face": [0, 1], "scale": 0.62, "role": "market", "terrace": "plaza"},
+    {"id": "dv04", "glb": "dv04_common_table.glb", "name": "Common Table", "pos": [-27, 6], "face": [1, 0], "scale": 0.62, "role": "food", "terrace": "plaza"},
+    {"id": "dv01", "glb": "dv01_arrival.glb", "name": "Arrival Hall", "pos": [-56, -3], "face": [1, 0], "scale": 0.62, "role": "arrival", "terrace": "arrival"},
+    {"id": "dv05", "glb": "dv05_housing.glb", "name": "Quay Court Homes", "pos": [-20, -39], "face": [0, 1], "scale": 0.62, "role": "home", "terrace": "homes_north"},
+    {"id": "dv23", "glb": "dv23_garden_homes.glb", "name": "Garden Homes", "pos": [6, -40], "face": [0, 1], "scale": 0.62, "role": "home", "terrace": "homes_north"},
+    {"id": "dv19", "glb": "dv19_library.glb", "name": "Library", "pos": [27, -39], "face": [0, 1], "scale": 0.62, "role": "library", "terrace": "homes_north"},
+    {"id": "dv22", "glb": "dv22_apartments.glb", "name": "Courtyard Apartments", "pos": [52, -14], "face": [-1, 0], "scale": 0.62, "role": "home", "terrace": "east"}
+  ],
+
+  "houses": [],
+
+  "props": [
+    {"kit": "dock", "pos": [8, 14.2], "face": [0, 1], "cfg": {"length": 9, "width": 3.2}},
+    {"kit": "rowboat", "pos": [13, 22], "face": [0.35, 1], "cfg": {"length": 3.4, "paint": "8a6746"}},
+    {"kit": "lamp", "pos": [-13, -1]}, {"kit": "lamp", "pos": [3, -1]}, {"kit": "lamp", "pos": [-30, 3]},
+    {"kit": "lamp", "pos": [26, -1]}, {"kit": "lamp", "pos": [-2, 13]}, {"kit": "lamp", "pos": [-19, 13]},
+    {"kit": "cafe_table", "pos": [-18, 2.5], "cfg": {"seed": 1, "chairs": 3, "parasol": true, "parasol_style": "cream"}},
+    {"kit": "cafe_table", "pos": [-18, 9.5], "cfg": {"seed": 2, "chairs": 2, "parasol": false}},
+    {"kit": "planter", "pos": [-9, 3], "cfg": {"seed": 1}},
+    {"kit": "planter", "pos": [1, 3.5], "cfg": {"seed": 2}},
+    {"kit": "planter", "pos": [-24, -6.5], "cfg": {"seed": 3}},
+    {"kit": "planter", "pos": [10, 8], "cfg": {"seed": 4}},
+    {"glb": "slatted_public_bench", "pos": [-12, 12], "face": [0, 1]},
+    {"glb": "slatted_public_bench", "pos": [6, 13], "face": [0, 1]},
+    {"glb": "covered_jobs_and_town_noticeboard", "pos": [-6, -5], "face": [0, 1]},
+    {"glb": "four_cycle_stand", "pos": [-15, 3], "face": [1, 0]},
+    {"glb": "commuter_bicycle", "pos": [-15, 4], "face": [1, 0]},
+    {"glb": "public_postbox", "pos": [-9, -4], "face": [0, 1]},
+    {"glb": "river_walk_direction_marker", "pos": [-2, 14], "face": [0, 1]},
+    {"glb": "produce_pushcart", "pos": [6, -2], "face": [0.3, 1]},
+    {"glb": "slatted_market_crate", "pos": [8, -2], "face": [0, 1]},
+    {"glb": "slatted_market_crate", "pos": [8.8, -1.6], "face": [0.4, 1]},
+    {"glb": "counter_weighing_scale", "pos": [4.6, -2.2], "face": [0, 1], "y_offset": 0.9},
+    {"glb": "market_handtruck", "pos": [20, -2], "face": [-0.3, 1]},
+    {"glb": "market_cloth_tote", "pos": [18.4, -1.4], "face": [0, 1]},
+    {"glb": "parcel_collection_cabinet", "pos": [-13, -6], "face": [0, 1]}
+  ],
+
+  "fences": [
+    {"style": "rope", "points": [[-32, 15.2], [-18, 15.2], [-4, 15.2], [4, 15.2]]},
+    {"style": "rope", "points": [[13, 15.2], [22, 15.2], [30, 15.2]]},
+    {"style": "rail", "points": [[30, 6], [30, 0], [30, -6]]}
+  ],
+
+  "landmark_trees": [
+    {"species": "broad", "pos": [-12, 8], "scale": 0.7},
+    {"species": "broad", "pos": [15, 8], "scale": 0.65},
+    {"species": "broad", "pos": [-17, -31], "scale": 0.9},
+    {"species": "blossom", "pos": [18, -31], "scale": 0.8},
+    {"species": "willow", "pos": [-2, 19], "scale": 1.2},
+    {"species": "willow", "pos": [24, 15], "scale": 1.0},
+    {"species": "pine", "pos": [-27, 21], "scale": 2.3},
+    {"species": "pine", "pos": [-31, 31], "scale": 2.0},
+    {"species": "broad", "pos": [39, 30], "scale": 2.1},
+    {"species": "pine", "pos": [58, 28], "scale": 2.2},
+    {"species": "broad", "pos": [60, 2], "scale": 1.6},
+    {"species": "pine", "pos": [-38, -30], "scale": 2.0},
+    {"species": "pine", "pos": [38, -34], "scale": 1.9}
+  ],
+
+  "scatter": {
+    "keep_clear": [{"c": [-2, 3], "half": [33, 23]}, {"c": [-2, -21], "half": [5, 9]}],
+    "step": 3.3,
+    "town_center": [0, -10],
+    "density_town": 0.85,
+    "density_wild": 0.95,
+    "wild_from": 40,
+    "wild_full": 58,
+    "species": {
+      "default": {"pine": 0.65, "broad": 0.3, "bush": 0.05},
+      "river": {"bush": 0.25, "flower_bush": 0.2, "willow": 0.1, "broad": 0.25, "pine": 0.2},
+      "terrace": {"broad": 0.4, "flower_bush": 0.25, "bush": 0.15, "pine": 0.2}
+    },
+    "scale": [1.0, 1.6],
+    "ferns": {"density": 0.9, "near_water": 10, "near_trees": 4},
+    "shrubs": {"density": 0.25},
+    "flowers": {"density": 4.0},
+    "grass": {"density": 5.0, "x0": -80, "z0": -66, "w": 165, "d": 125}
+  },
+
+  "spawn": [-40, 6],
+
+  "hero_camera": {"focus": [3, 1, 1], "yaw": 0, "pitch": -33, "distance": 58, "fov": 38},
+
+  "intro": [
+    {"pos": [70, 34, 76], "look": [10, 2, 0], "t": 0.0},
+    {"pos": [44, 14, 40], "look": [32, 2, 18], "t": 4.0},
+    {"pos": [4, 12, 34], "look": [-2, 1, 0], "t": 8.0},
+    {"pos": [-30, 14, 16], "look": [-22, 5, -10], "t": 12.0},
+    {"pos": [-44, 16, 24], "look": [-40, 1, 6], "t": 15.5}
+  ]
+}

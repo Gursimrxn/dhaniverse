@@ -1,0 +1,639 @@
+{
+ "notes": "Geometry only: each site paints these in its palette (quarter.json palettes). Footprint [w, d]: w across the front, d deep; the front faces the site's `face`. Row buildings leave their side walls blank (party walls).",
+ "buildings": [
+  {
+   "id": "test_house",
+   "kind": "house",
+   "footprint": [
+    8.0,
+    7.0
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "gable",
+    "pitch": 35,
+    "overhang": 0.45
+   },
+   "faces": {
+    "front": [
+     "W D .",
+     "W B ."
+    ],
+    "back": [
+     "W W",
+     "W W"
+    ],
+    "left": [
+     ". W",
+     "W"
+    ],
+    "right": [
+     "W",
+     "W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "slats",
+     "face": "front",
+     "from": 0.68,
+     "to": 0.96
+    },
+    {
+     "kind": "chimney",
+     "x": 2.0
+    }
+   ],
+   "shutters": true,
+   "flowerboxes": true
+  },
+  {
+   "id": "arrival_hall",
+   "kind": "civic",
+   "footprint": [
+    18.0,
+    12.5
+   ],
+   "floors": 2,
+   "floor_h": 3.4,
+   "plinth_h": 0.6,
+   "roof": {
+    "type": "gable",
+    "pitch": 34,
+    "overhang": 0.55
+   },
+   "faces": {
+    "front": [
+     "T S G S T",
+     "W B W B W"
+    ],
+    "back": [
+     "W T D T W",
+     "W W W W W"
+    ],
+    "left": [
+     "T W",
+     "W W"
+    ],
+    "right": [
+     "T W",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "slats",
+     "face": "front",
+     "from": 0.0,
+     "to": 0.09
+    },
+    {
+     "kind": "slats",
+     "face": "front",
+     "from": 0.91,
+     "to": 1.0
+    },
+    {
+     "kind": "cross_gable",
+     "from": 0.36,
+     "to": 0.64
+    },
+    {
+     "kind": "porch",
+     "face": "front",
+     "from": 0.4,
+     "to": 0.6,
+     "depth": 2.6,
+     "posts": "wood"
+    },
+    {
+     "kind": "cupola",
+     "size": 1.8
+    }
+   ],
+   "flowerboxes": true
+  },
+  {
+   "id": "market_hall",
+   "kind": "market",
+   "footprint": [
+    26.0,
+    15.0
+   ],
+   "floors": 1,
+   "floor_h": 4.6,
+   "frame": "wood",
+   "roof": {
+    "type": "gables",
+    "count": 3,
+    "pitch": 40,
+    "overhang": 0.35
+   },
+   "faces": {
+    "front": [
+     "S G S S G S"
+    ],
+    "back": [
+     "S G G S"
+    ],
+    "left": [
+     "T T T"
+    ],
+    "right": [
+     "T T T"
+    ]
+   }
+  },
+  {
+   "id": "corner_house",
+   "kind": "shop",
+   "footprint": [
+    12.0,
+    10.0
+   ],
+   "floors": 3,
+   "roof": {
+    "type": "hip",
+    "pitch": 28,
+    "overhang": 0.5
+   },
+   "faces": {
+    "front": [
+     "S D S",
+     "W B W",
+     "W W W"
+    ],
+    "left": [
+     "S S",
+     "W W",
+     "W W"
+    ],
+    "right": [
+     "W W",
+     "W W",
+     "W W"
+    ],
+    "back": [
+     "W D W",
+     "W W W",
+     "W W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "chimney",
+     "x": -3.0
+    }
+   ],
+   "shutters": true,
+   "flowerboxes": true
+  },
+  {
+   "id": "tally_house",
+   "kind": "civic",
+   "footprint": [
+    11.0,
+    10.0
+   ],
+   "floors": 2,
+   "floor_h": 3.4,
+   "plinth_h": 0.9,
+   "roof": {
+    "type": "hip",
+    "pitch": 32,
+    "overhang": 0.5
+   },
+   "faces": {
+    "front": [
+     "T G T",
+     "W W W"
+    ],
+    "left": [
+     "T T",
+     "W W"
+    ],
+    "right": [
+     "T T",
+     "W W"
+    ],
+    "back": [
+     "W W W",
+     "W W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "chimney",
+     "x": 3.0
+    }
+   ]
+  },
+  {
+   "id": "shop_gable",
+   "kind": "shop",
+   "footprint": [
+    6.5,
+    9.0
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "gable",
+    "ridge": "y",
+    "pitch": 46,
+    "overhang": 0.35
+   },
+   "faces": {
+    "front": [
+     "S",
+     "W W"
+    ],
+    "back": [
+     "W D",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "chimney",
+     "x": 1.6
+    }
+   ],
+   "flowerboxes": true
+  },
+  {
+   "id": "shop_gable_shut",
+   "kind": "shop",
+   "footprint": [
+    6.5,
+    9.0
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "gable",
+    "ridge": "y",
+    "pitch": 46,
+    "overhang": 0.35
+   },
+   "faces": {
+    "front": [
+     "R",
+     "W W"
+    ],
+    "back": [
+     "W D",
+     "W W"
+    ]
+   },
+   "shutters": true
+  },
+  {
+   "id": "shop_flat",
+   "kind": "shop",
+   "footprint": [
+    5.5,
+    8.5
+   ],
+   "floors": 3,
+   "roof": {
+    "type": "flat"
+   },
+   "faces": {
+    "front": [
+     "S D",
+     "W W",
+     "B"
+    ],
+    "back": [
+     "W W",
+     "W W",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "rooftop"
+    }
+   ],
+   "flowerboxes": true
+  },
+  {
+   "id": "shop_hip",
+   "kind": "shop",
+   "footprint": [
+    7.0,
+    8.0
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "hip",
+    "pitch": 30,
+    "overhang": 0.45
+   },
+   "faces": {
+    "front": [
+     "S S",
+     "B W"
+    ],
+    "back": [
+     "D W",
+     "W W"
+    ]
+   },
+   "shutters": true
+  },
+  {
+   "id": "house_gable",
+   "kind": "house",
+   "footprint": [
+    6.0,
+    8.5
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "gable",
+    "pitch": 38,
+    "overhang": 0.4
+   },
+   "faces": {
+    "front": [
+     "W D",
+     "W W"
+    ],
+    "back": [
+     "W D",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "chimney",
+     "x": -1.8
+    }
+   ],
+   "shutters": true,
+   "flowerboxes": true
+  },
+  {
+   "id": "house_tall",
+   "kind": "house",
+   "footprint": [
+    6.5,
+    9.0
+   ],
+   "floors": 3,
+   "roof": {
+    "type": "gable",
+    "ridge": "y",
+    "pitch": 48,
+    "overhang": 0.35
+   },
+   "faces": {
+    "front": [
+     "D W",
+     "W W",
+     "B"
+    ],
+    "back": [
+     "W W",
+     "W W",
+     "W W"
+    ]
+   },
+   "flowerboxes": true
+  },
+  {
+   "id": "house_porch",
+   "kind": "house",
+   "footprint": [
+    8.0,
+    8.0
+   ],
+   "floors": 2,
+   "roof": {
+    "type": "hip",
+    "pitch": 30,
+    "overhang": 0.45
+   },
+   "faces": {
+    "front": [
+     "W D W",
+     "W W W"
+    ],
+    "back": [
+     "W D W",
+     "W W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "porch",
+     "face": "front",
+     "from": 0.3,
+     "to": 0.7,
+     "depth": 1.8,
+     "posts": "wood"
+    }
+   ],
+   "shutters": true
+  },
+  {
+   "id": "housing_west",
+   "kind": "home",
+   "footprint": [
+    24.0,
+    10.0
+   ],
+   "floors": 3,
+   "roof": {
+    "type": "gable",
+    "pitch": 30,
+    "overhang": 0.5
+   },
+   "faces": {
+    "front": [
+     "D W D W D W D W",
+     "D W D W D W D W",
+     "D W D W D W D W"
+    ],
+    "back": [
+     "W . W . W . W .",
+     "W . W . W . W .",
+     "W . W . W . W ."
+    ],
+    "left": [
+     "W W",
+     "W W",
+     "W W"
+    ],
+    "right": [
+     "W W",
+     "W W",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "gallery",
+     "face": "front",
+     "floors": [
+      1,
+      2
+     ],
+     "depth": 1.5
+    },
+    {
+     "kind": "chimney",
+     "x": -7.0
+    },
+    {
+     "kind": "chimney",
+     "x": 7.0
+    }
+   ]
+  },
+  {
+   "id": "housing_south",
+   "kind": "home",
+   "footprint": [
+    22.0,
+    9.0
+   ],
+   "floors": 3,
+   "roof": {
+    "type": "gable",
+    "pitch": 30,
+    "overhang": 0.5
+   },
+   "faces": {
+    "front": [
+     "D W D W D W D",
+     "D W D W D W D",
+     "D W D W D W D"
+    ],
+    "back": [
+     "W . W . W . W",
+     "W . W . W . W",
+     "W . W . W . W"
+    ],
+    "left": [
+     "W W",
+     "W W",
+     "W W"
+    ],
+    "right": [
+     "W W",
+     "W W",
+     "W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "gallery",
+     "face": "front",
+     "floors": [
+      1,
+      2
+     ],
+     "depth": 1.5
+    },
+    {
+     "kind": "chimney",
+     "x": 5.0
+    }
+   ]
+  },
+  {
+   "id": "library",
+   "kind": "civic",
+   "footprint": [
+    20.0,
+    13.0
+   ],
+   "floors": 2,
+   "floor_h": 3.8,
+   "plinth_h": 1.0,
+   "roof": {
+    "type": "hip",
+    "pitch": 28,
+    "overhang": 0.6
+   },
+   "faces": {
+    "front": [
+     "T T D T T",
+     "T T T T T"
+    ],
+    "back": [
+     "T T T T T",
+     "W W W W W"
+    ],
+    "left": [
+     "T T T",
+     "W W W"
+    ],
+    "right": [
+     "T T T",
+     "W W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "porch",
+     "face": "front",
+     "from": 0.25,
+     "to": 0.75,
+     "depth": 2.6
+    },
+    {
+     "kind": "cupola",
+     "size": 2.2
+    }
+   ]
+  },
+  {
+   "id": "boathouse",
+   "kind": "boathouse",
+   "footprint": [
+    10.0,
+    12.0
+   ],
+   "floors": 1,
+   "floor_h": 4.4,
+   "plinth_h": 0.3,
+   "frame": "wood",
+   "roof": {
+    "type": "gable",
+    "ridge": "y",
+    "pitch": 40,
+    "overhang": 0.45
+   },
+   "faces": {
+    "front": [
+     "W G W"
+    ],
+    "back": [
+     "D W"
+    ],
+    "left": [
+     "W W W"
+    ],
+    "right": [
+     "W W W"
+    ]
+   },
+   "extras": [
+    {
+     "kind": "slats",
+     "face": "left",
+     "from": 0.0,
+     "to": 1.0
+    },
+    {
+     "kind": "slats",
+     "face": "right",
+     "from": 0.0,
+     "to": 1.0
+    }
+   ]
+  }
+ ]
+}
