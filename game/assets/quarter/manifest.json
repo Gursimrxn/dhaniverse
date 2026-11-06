@@ -1,0 +1,343 @@
+{
+ "units": "metres",
+ "up": "+Y (glTF)",
+ "origin": "footprint centre at ground (min y = 0)",
+ "buildings": {
+  "test_house": {
+   "file": "test_house.glb",
+   "footprint_xz_m": [
+    8.0,
+    7.0
+   ],
+   "height_m": 9.1,
+   "triangles": 7252,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     4.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "arrival_hall": {
+   "file": "arrival_hall.glb",
+   "footprint_xz_m": [
+    18.0,
+    12.5
+   ],
+   "height_m": 15.31,
+   "triangles": 14054,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     7.15
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "market_hall": {
+   "file": "market_hall.glb",
+   "footprint_xz_m": [
+    26.0,
+    15.0
+   ],
+   "height_m": 8.69,
+   "triangles": 8036,
+   "entrance": {
+    "position": [
+     -6.5,
+     0.0,
+     8.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "corner_house": {
+   "file": "corner_house.glb",
+   "footprint_xz_m": [
+    12.0,
+    10.0
+   ],
+   "height_m": 12.41,
+   "triangles": 15816,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     5.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "tally_house": {
+   "file": "tally_house.glb",
+   "footprint_xz_m": [
+    11.0,
+    10.0
+   ],
+   "height_m": 10.82,
+   "triangles": 5644,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     5.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "shop_gable": {
+   "file": "shop_gable.glb",
+   "footprint_xz_m": [
+    6.5,
+    9.0
+   ],
+   "height_m": 10.02,
+   "triangles": 4092,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     5.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "shop_gable_shut": {
+   "file": "shop_gable_shut.glb",
+   "footprint_xz_m": [
+    6.5,
+    9.0
+   ],
+   "height_m": 10.02,
+   "triangles": 3236,
+   "entrance": {
+    "position": [
+     0.0,
+     0.45,
+     5.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "shop_flat": {
+   "file": "shop_flat.glb",
+   "footprint_xz_m": [
+    5.5,
+    8.5
+   ],
+   "height_m": 10.35,
+   "triangles": 6020,
+   "entrance": {
+    "position": [
+     1.38,
+     0.0,
+     5.15
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "shop_hip": {
+   "file": "shop_hip.glb",
+   "footprint_xz_m": [
+    7.0,
+    8.0
+   ],
+   "height_m": 8.67,
+   "triangles": 4044,
+   "entrance": {
+    "position": [
+     -1.75,
+     0.0,
+     4.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "house_gable": {
+   "file": "house_gable.glb",
+   "footprint_xz_m": [
+    6.0,
+    8.5
+   ],
+   "height_m": 9.97,
+   "triangles": 4784,
+   "entrance": {
+    "position": [
+     1.5,
+     0.0,
+     5.15
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "house_tall": {
+   "file": "house_tall.glb",
+   "footprint_xz_m": [
+    6.5,
+    9.0
+   ],
+   "height_m": 13.36,
+   "triangles": 5748,
+   "entrance": {
+    "position": [
+     -1.62,
+     0.0,
+     5.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "house_porch": {
+   "file": "house_porch.glb",
+   "footprint_xz_m": [
+    8.0,
+    8.0
+   ],
+   "height_m": 8.96,
+   "triangles": 5198,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     4.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "housing_west": {
+   "file": "housing_west.glb",
+   "footprint_xz_m": [
+    24.0,
+    10.0
+   ],
+   "height_m": 12.64,
+   "triangles": 15972,
+   "entrance": {
+    "position": [
+     -10.5,
+     0.0,
+     5.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "housing_south": {
+   "file": "housing_south.glb",
+   "footprint_xz_m": [
+    22.0,
+    9.0
+   ],
+   "height_m": 12.35,
+   "triangles": 15020,
+   "entrance": {
+    "position": [
+     -9.43,
+     0.0,
+     5.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "library": {
+   "file": "library.glb",
+   "footprint_xz_m": [
+    20.0,
+    13.0
+   ],
+   "height_m": 16.41,
+   "triangles": 9318,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     7.4
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "boathouse": {
+   "file": "boathouse.glb",
+   "footprint_xz_m": [
+    10.0,
+    12.0
+   ],
+   "height_m": 8.9,
+   "triangles": 13388,
+   "entrance": {
+    "position": [
+     0.0,
+     0.0,
+     6.9
+    ],
+    "front_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   }
+  }
+ }
+}

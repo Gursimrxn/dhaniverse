@@ -1,0 +1,622 @@
+{
+  "units": "metres",
+  "up": "+Y (glTF)",
+  "origin": "footprint centre at ground (min y = 0)",
+  "coords": "local glTF [x, y, z]; entrance.front_dir = outward facade normal",
+  "buildings": {
+    "dv01_arrival": {
+      "file": "dv01_arrival.glb",
+      "source_collection": "BUILDING | DV-01 | Arrival civic hall",
+      "bytes": 18607116,
+      "footprint_xz_m": [
+        25.2,
+        23.2
+      ],
+      "height_m": 14.11,
+      "triangles": 290682,
+      "primitives": 33,
+      "primitives_with_COLOR_0": 11,
+      "entrance": {
+        "position": [
+          -10.86,
+          0.0,
+          -8.64
+        ],
+        "front_dir": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "method": "widest ground-level glazed panel on front facade",
+        "estimated": true
+      },
+      "sockets": {
+        "DV-01 arrival information": [
+          3.8,
+          0.26,
+          -2.15
+        ],
+        "DV-01 public jobs": [
+          -6.85,
+          0.26,
+          -7.85
+        ]
+      }
+    },
+    "dv02_bank": {
+      "file": "dv02_bank.glb",
+      "source_collection": "BUILDING | DV-02 | Bank",
+      "bytes": 6378728,
+      "footprint_xz_m": [
+        25.62,
+        22.28
+      ],
+      "height_m": 16.45,
+      "triangles": 108184,
+      "primitives": 49,
+      "primitives_with_COLOR_0": 18,
+      "entrance": {
+        "position": [
+          -0.19,
+          0.2,
+          -7.1
+        ],
+        "front_dir": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "method": "foot of the entry stairs (centre)",
+        "estimated": true
+      },
+      "sockets": {}
+    },
+    "dv03_market": {
+      "file": "dv03_market.glb",
+      "source_collection": "BUILDING | DV-03 | Market",
+      "bytes": 11908516,
+      "footprint_xz_m": [
+        40.0,
+        26.0
+      ],
+      "height_m": 11.24,
+      "triangles": 142454,
+      "primitives": 35,
+      "primitives_with_COLOR_0": 11,
+      "entrance": {
+        "position": [
+          0.0,
+          0.24,
+          7.9
+        ],
+        "front_dir": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "method": "central portal (socket 'DV-03 market hall')",
+        "estimated": true
+      },
+      "sockets": {
+        "DV-03-S06": [
+          10.43,
+          0.24,
+          7.25
+        ],
+        "DV-03 market hall": [
+          0.0,
+          0.24,
+          7.9
+        ],
+        "DV-03-S01": [
+          -16.04,
+          0.24,
+          7.25
+        ],
+        "DV-03-S07": [
+          14.01,
+          0.24,
+          7.25
+        ],
+        "DV-03-S02": [
+          -12.47,
+          0.24,
+          7.25
+        ],
+        "DV-03-S03": [
+          -8.89,
+          0.24,
+          7.25
+        ],
+        "DV-03 loading approach": [
+          0.0,
+          0.24,
+          -10.25
+        ],
+        "DV-03-S04": [
+          -5.32,
+          0.24,
+          7.25
+        ],
+        "DV-03-S08": [
+          17.58,
+          0.24,
+          7.25
+        ],
+        "DV-03-S05": [
+          6.86,
+          0.24,
+          7.25
+        ]
+      }
+    },
+    "dv04_common_table": {
+      "file": "dv04_common_table.glb",
+      "source_collection": "BUILDING | DV-04 | Common Table",
+      "bytes": 11816644,
+      "footprint_xz_m": [
+        23.2,
+        19.2
+      ],
+      "height_m": 8.55,
+      "triangles": 218726,
+      "primitives": 59,
+      "primitives_with_COLOR_0": 38,
+      "entrance": {
+        "position": [
+          2.52,
+          0.0,
+          -4.69
+        ],
+        "front_dir": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "method": "widest ground-level glazed panel on front facade",
+        "estimated": true
+      },
+      "sockets": {
+        "DV-04 Common Table counter": [
+          6.65,
+          0.28,
+          -5.75
+        ]
+      }
+    },
+    "dv05_housing": {
+      "file": "dv05_housing.glb",
+      "source_collection": "BUILDING | DV-05 | Courtyard housing",
+      "bytes": 23652024,
+      "footprint_xz_m": [
+        37.2,
+        22.2
+      ],
+      "height_m": 12.55,
+      "triangles": 270444,
+      "primitives": 35,
+      "primitives_with_COLOR_0": 7,
+      "entrance": {
+        "position": [
+          0.0,
+          0.2,
+          -11.1
+        ],
+        "front_dir": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "method": "open courtyard mouth, front centre",
+        "estimated": true
+      },
+      "sockets": {
+        "DV-05-U006": [
+          10.13,
+          3.64,
+          -0.43
+        ],
+        "DV-05-U007": [
+          -10.13,
+          3.64,
+          6.73
+        ],
+        "DV-05-U008": [
+          -10.13,
+          3.64,
+          -0.42
+        ],
+        "DV-05 housing office": [
+          13.2,
+          0.24,
+          -7.5
+        ],
+        "DV-05-U009": [
+          10.13,
+          7.04,
+          6.72
+        ],
+        "DV-05-U001": [
+          10.13,
+          0.24,
+          6.72
+        ],
+        "DV-05-U010": [
+          10.13,
+          7.04,
+          -0.43
+        ],
+        "DV-05-U002": [
+          10.13,
+          0.24,
+          -0.43
+        ],
+        "DV-05-U011": [
+          -10.13,
+          7.04,
+          6.73
+        ],
+        "DV-05-U003": [
+          -10.13,
+          0.24,
+          6.73
+        ],
+        "DV-05-U012": [
+          -10.13,
+          7.04,
+          -0.42
+        ],
+        "DV-05-U004": [
+          -10.13,
+          0.24,
+          -0.42
+        ],
+        "DV-05-U005": [
+          10.13,
+          3.64,
+          6.72
+        ]
+      }
+    },
+    "court_shelter": {
+      "file": "court_shelter.glb",
+      "source_collection": "BUILDING | Court shelter and shopfront passages",
+      "bytes": 698492,
+      "footprint_xz_m": [
+        38.95,
+        33.65
+      ],
+      "height_m": 5.18,
+      "triangles": 7008,
+      "primitives": 1,
+      "primitives_with_COLOR_0": 1,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv06_grocery": {
+      "file": "dv06_grocery.glb",
+      "source_collection": "BUILDING | DV-06 | Grocery hall",
+      "bytes": 1778660,
+      "footprint_xz_m": [
+        21.48,
+        17.59
+      ],
+      "height_m": 7.04,
+      "triangles": 18412,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv07_laundry": {
+      "file": "dv07_laundry.glb",
+      "source_collection": "BUILDING | DV-07 | Clothing and laundry court",
+      "bytes": 3804048,
+      "footprint_xz_m": [
+        19.1,
+        15.69
+      ],
+      "height_m": 7.47,
+      "triangles": 36256,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv08_repair": {
+      "file": "dv08_repair.glb",
+      "source_collection": "BUILDING | DV-08 | Telecom repair shop",
+      "bytes": 2070468,
+      "footprint_xz_m": [
+        19.65,
+        14.65
+      ],
+      "height_m": 9.52,
+      "triangles": 20904,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv09_broker": {
+      "file": "dv09_broker.glb",
+      "source_collection": "BUILDING | DV-09 | Broker offices",
+      "bytes": 1785660,
+      "footprint_xz_m": [
+        18.3,
+        16.49
+      ],
+      "height_m": 8.2,
+      "triangles": 18788,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv10_pawn": {
+      "file": "dv10_pawn.glb",
+      "source_collection": "BUILDING | DV-10 | Pawn workshop",
+      "bytes": 1716096,
+      "footprint_xz_m": [
+        17.28,
+        17.49
+      ],
+      "height_m": 8.69,
+      "triangles": 18440,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv19_library": {
+      "file": "dv19_library.glb",
+      "source_collection": "BUILDING | DV-19 | Library",
+      "bytes": 2149564,
+      "footprint_xz_m": [
+        22.28,
+        20.54
+      ],
+      "height_m": 6.85,
+      "triangles": 22700,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv22_apartments": {
+      "file": "dv22_apartments.glb",
+      "source_collection": "BUILDING | DV-22 | Courtyard apartments",
+      "bytes": 6492576,
+      "footprint_xz_m": [
+        33.2,
+        28.15
+      ],
+      "height_m": 7.34,
+      "triangles": 64544,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    },
+    "dv23_garden_homes": {
+      "file": "dv23_garden_homes.glb",
+      "source_collection": "BUILDING | DV-23 | Garden homes",
+      "bytes": 2661776,
+      "footprint_xz_m": [
+        26.0,
+        26.79
+      ],
+      "height_m": 4.33,
+      "triangles": 27972,
+      "primitives": 3,
+      "primitives_with_COLOR_0": 3,
+      "entrance": null,
+      "sockets": {}
+    }
+  },
+  "props": {
+    "commuter_bicycle": {
+      "file": "../props/commuter_bicycle.glb",
+      "source": "commuter bicycle",
+      "bytes": 984028,
+      "footprint_xz_m": [
+        1.87,
+        0.57
+      ],
+      "height_m": 1.16,
+      "triangles": 9632,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "counter_weighing_scale": {
+      "file": "../props/counter_weighing_scale.glb",
+      "source": "counter weighing scale",
+      "bytes": 70752,
+      "footprint_xz_m": [
+        0.55,
+        0.47
+      ],
+      "height_m": 0.56,
+      "triangles": 712,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "covered_jobs_and_town_noticeboard": {
+      "file": "../props/covered_jobs_and_town_noticeboard.glb",
+      "source": "covered jobs and town noticeboard",
+      "bytes": 371916,
+      "footprint_xz_m": [
+        2.71,
+        1.39
+      ],
+      "height_m": 2.91,
+      "triangles": 3584,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "covered_recycling_sort_station": {
+      "file": "../props/covered_recycling_sort_station.glb",
+      "source": "covered recycling sort station",
+      "bytes": 399512,
+      "footprint_xz_m": [
+        3.12,
+        1.7
+      ],
+      "height_m": 2.48,
+      "triangles": 4212,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "four_cycle_stand": {
+      "file": "../props/four_cycle_stand.glb",
+      "source": "four cycle stand",
+      "bytes": 284348,
+      "footprint_xz_m": [
+        0.85,
+        3.1
+      ],
+      "height_m": 0.61,
+      "triangles": 2748,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "market_cloth_tote": {
+      "file": "../props/market_cloth_tote.glb",
+      "source": "market cloth tote",
+      "bytes": 77852,
+      "footprint_xz_m": [
+        0.37,
+        0.22
+      ],
+      "height_m": 0.67,
+      "triangles": 768,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "market_handtruck": {
+      "file": "../props/market_handtruck.glb",
+      "source": "market handtruck",
+      "bytes": 266624,
+      "footprint_xz_m": [
+        0.76,
+        0.81
+      ],
+      "height_m": 1.35,
+      "triangles": 2512,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "parcel_collection_cabinet": {
+      "file": "../props/parcel_collection_cabinet.glb",
+      "source": "parcel collection cabinet",
+      "bytes": 215964,
+      "footprint_xz_m": [
+        1.86,
+        0.72
+      ],
+      "height_m": 1.98,
+      "triangles": 2268,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "produce_pushcart": {
+      "file": "../props/produce_pushcart.glb",
+      "source": "produce pushcart",
+      "bytes": 772404,
+      "footprint_xz_m": [
+        2.02,
+        2.26
+      ],
+      "height_m": 1.44,
+      "triangles": 7356,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "public_postbox": {
+      "file": "../props/public_postbox.glb",
+      "source": "public postbox",
+      "bytes": 62940,
+      "footprint_xz_m": [
+        0.67,
+        0.52
+      ],
+      "height_m": 1.93,
+      "triangles": 648,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "river_walk_direction_marker": {
+      "file": "../props/river_walk_direction_marker.glb",
+      "source": "river walk direction marker",
+      "bytes": 56600,
+      "footprint_xz_m": [
+        0.64,
+        0.35
+      ],
+      "height_m": 1.9,
+      "triangles": 541,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "road_edge_grated_drain": {
+      "file": "../props/road_edge_grated_drain.glb",
+      "source": "road edge grated drain",
+      "bytes": 144076,
+      "footprint_xz_m": [
+        0.63,
+        1.25
+      ],
+      "height_m": 0.09,
+      "triangles": 1512,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "slatted_market_crate": {
+      "file": "../props/slatted_market_crate.glb",
+      "source": "slatted market crate",
+      "bytes": 199112,
+      "footprint_xz_m": [
+        0.86,
+        0.65
+      ],
+      "height_m": 0.56,
+      "triangles": 2052,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "slatted_public_bench": {
+      "file": "../props/slatted_public_bench.glb",
+      "source": "slatted public bench",
+      "bytes": 134880,
+      "footprint_xz_m": [
+        0.69,
+        2.06
+      ],
+      "height_m": 1.05,
+      "triangles": 1404,
+      "primitives_with_COLOR_0": "1/1"
+    },
+    "stone_open_end_gutter": {
+      "file": "../props/stone_open_end_gutter.glb",
+      "source": "stone open end gutter",
+      "bytes": 32100,
+      "footprint_xz_m": [
+        0.54,
+        2.0
+      ],
+      "height_m": 0.14,
+      "triangles": 324,
+      "primitives_with_COLOR_0": "1/1"
+    }
+  },
+  "kit_skipped_empty": [
+    "KIT | bollard",
+    "KIT | commuter_bicycle",
+    "KIT | cycle_stand",
+    "KIT | delivery_cartons",
+    "KIT | delivery_pallet",
+    "KIT | drain_grate",
+    "KIT | empty_crate",
+    "KIT | garden_wall",
+    "KIT | grain_sack",
+    "KIT | hand_trolley",
+    "KIT | produce_crate",
+    "KIT | recycling_pair",
+    "KIT | shop_chalkboard",
+    "KIT | slatted_bench",
+    "KIT | terracotta_pot",
+    "KIT | utility_cabinet",
+    "KIT | wayfinding_post",
+    "TOWN KIT | compost_box",
+    "TOWN KIT | garden_picnic_table",
+    "TOWN KIT | river_stone_cluster",
+    "TOWN KIT | watering_can"
+  ]
+}
