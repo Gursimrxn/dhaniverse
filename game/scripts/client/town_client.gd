@@ -33,6 +33,8 @@ var debug := false                 # a rehearsal server: rehearse() works on it
 var player := ""                   # who this is: nothing connects until there is a name
 var secret := ""                   # proves it, to the server: made once, kept on this machine
 var _nameless := false             # connected with no name yet: all it can do is claim one
+var trying: bool:                  # it means to be connected: with a name, or nameless for the ticket
+	get: return player != "" or _nameless or kicked
 var url := DEFAULT_URL
 var _ws: WebSocketPeer
 var _said_hello := false

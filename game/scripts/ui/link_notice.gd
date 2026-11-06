@@ -31,7 +31,7 @@ func _ready() -> void:
 	visible = false
 
 func _process(delta: float) -> void:
-	_down_for = 0.0 if client.up or client.player == "" else _down_for + delta
+	_down_for = 0.0 if client.up or not client.trying else _down_for + delta
 	visible = _down_for > GRACE
 	if not visible: return
 	_label.text = KICKED if client.kicked else DOWN
