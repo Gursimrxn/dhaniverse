@@ -39,6 +39,8 @@ const config: NextConfig = {
       { source: '/:path*', headers: [{ key: 'Content-Security-Policy', value: csp }] },
       // Later rules win for the same header.
       { source: '/godot/:path*', headers: [{ key: 'Content-Security-Policy', value: godotCsp }] },
+      // The export's files keep their names between builds, so revalidate (a 304 once cached) rather than cache blind.
+      { source: '/godot/:path*', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
     ]
   },
 }
