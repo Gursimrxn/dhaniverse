@@ -9,9 +9,16 @@ extends Node3D
 const MODEL := "res://assets/characters/cozy_boy/cozy_boy.glb"
 const SCALE := 0.4375            # 3.28 units -> 1.43 m, as the chibi characters
 const HEIGHT := 1.0              # how tall he is, against that 1.43 m: the one value to change (-- --height=1.15 tries one)
-const GAIT := {"Walk": 1.001, "Run": 2.179}   # m/s at speed 1 (the chibi legs, which he keeps)
-const WALK_UNTIL := 1.45         # m/s: faster than this the clips would run
-const FADE := 0.22
+# Locomotion as the three.js client had it (packages/engine/src/actors/anim.ts, player.ts): Idle, Walk and Run blended by the
+# real ground speed on one shared phase, the phase moved on by the measured stride so the feet don't slide; one-shots and the
+# fall pose crossfaded over about 0.15 s; the feet put onto sloping ground by two-bone IK after the clips.
+const WALK_CLIP_SPEED := 0.98    # m/s of ground at playback rate 1, from the planted foot (game-core tuning.rs)
+const RUN_CLIP_SPEED := 1.89     # (the left foot: the clip's right foot skates)
+const CONTACT := Vector2(0.12, 0.22)   # where in the cycle the right foot lands, walk and run (the left half a cycle on)
+const SHOT_FADE := 0.15          # s a one-shot takes to fade in or out (three.js FADE_RATE 16/s)
+const FALL_AFTER := 0.1          # s in the air before the fall pose (game-core: 6 ticks)
+const FALL_AT := 0.45            # of the Jump clip: mid-air
+const STAND_IN := {"Interact": "PickUp"}   # one-shots this body has no clip for
 const SHADER := preload("res://shaders/valley/character.gdshader")
 const CARRY_FADE := 0.14         # s for the arm to come up to carry, or to drop
 # carrying: his right arm as a waiter's, the upper arm out and down, the forearm up and forward, the thing on his palm where
@@ -31,9 +38,15 @@ var _ap: AnimationPlayer
 var _sk: Skeleton3D
 var _head := -1
 var _neck := -1
-var _clip := ""
-var _once := ""
-var gait: Gait                   # how he moves: no clips for that any more
+var _tree: AnimationTree
+var _shot: AnimationNodeAnimation
+var _model: Node3D
+var _legs: Array = []            # [upper, lower, foot] bone indices, right leg first (foot 0 lands first)
+var _foot_dy := PackedFloat32Array([0.0, 0.0])   # m each foot is moved off the clip to meet the ground
+var _hips := 0.0                 # m the body is lowered so the lower foot reaches
+var _fall := 0.0
+var _cycle_m := Vector2(1.225, 1.654)   # m per walk and run cycle (clip speed x clip length), set from the clips
+var gait: Gait                   # the procedural legs: only while sitting (a scooter); clips walk him otherwise
 var floor_exclude := RID()       # the body's own collider, when it has one
 var _sitting := false
 var _look := Vector2.ZERO
@@ -71,9 +84,12 @@ func _ready() -> void:
 	_sk = n.find_children("*", "Skeleton3D", true, false)[0]
 	_head = _sk.find_bone("Head")
 	_neck = _sk.find_bone("Neck")
+	_model = n
 	_ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	_ap.active = false               # the tree below plays his clips
 	for c in ["Idle", "Walk", "Run"]:
 		if _ap.has_animation(c): _ap.get_animation(c).loop_mode = Animation.LOOP_LINEAR
+	_build_tree()
 	var mats := {}
 	for node in n.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
@@ -92,8 +108,8 @@ func _ready() -> void:
 					_trailing.append(mats[key])
 			mi.set_surface_override_material(i, mats[key])
 		parts.append(mi)
-	_ap.play("Idle")
-	_clip = "Idle"
+	for side in ["R", "L"]:
+		_legs.append([_sk.find_bone("UpperLeg." + side), _sk.find_bone("LowerLeg." + side), _sk.find_bone("Foot." + side)])
 	_upper = _sk.find_bone("UpperArm.R")
 	_lower = _sk.find_bone("LowerArm.R")
 	_hands = BoneAttachment3D.new()
@@ -105,6 +121,63 @@ func _ready() -> void:
 		if floor_exclude.is_valid(): q.exclude = [floor_exclude]
 		var hit := get_world_3d().direct_space_state.intersect_ray(q)
 		return hit.position.y if hit else INF
+
+## idle -+
+##       move -- air -- shot -- out      phase seeks walk and run together (each stretched to a 1 s timeline)
+## walk -+                               so the run's share is a blend on one stride, never a clip switch
+##   stride -- phase -+
+## run --+
+func _build_tree() -> void:
+	var bt := AnimationNodeBlendTree.new()
+	var anim := func(clip: String) -> AnimationNodeAnimation:
+		var a := AnimationNodeAnimation.new()
+		a.animation = clip
+		return a
+	var cycle := func(clip: String) -> AnimationNodeAnimation:
+		var a: AnimationNodeAnimation = anim.call(clip)
+		a.use_custom_timeline = true
+		a.timeline_length = 1.0
+		a.stretch_time_scale = true
+		a.loop_mode = Animation.LOOP_LINEAR
+		return a
+	bt.add_node("idle", anim.call("Idle"))
+	bt.add_node("walk", cycle.call("Walk"))
+	bt.add_node("run", cycle.call("Run"))
+	bt.add_node("stride", AnimationNodeBlend2.new())
+	bt.add_node("phase", AnimationNodeTimeSeek.new())
+	bt.add_node("move", AnimationNodeBlend2.new())
+	bt.add_node("jump", anim.call("Jump"))
+	bt.add_node("hang", AnimationNodeTimeScale.new())
+	bt.add_node("fall_at", AnimationNodeTimeSeek.new())
+	bt.add_node("air", AnimationNodeBlend2.new())
+	_shot = anim.call("Victory")
+	bt.add_node("gesture", _shot)
+	var one := AnimationNodeOneShot.new()
+	one.fadein_time = SHOT_FADE
+	one.fadeout_time = SHOT_FADE
+	bt.add_node("shot", one)
+	bt.connect_node("stride", 0, "walk")
+	bt.connect_node("stride", 1, "run")
+	bt.connect_node("phase", 0, "stride")
+	bt.connect_node("move", 0, "idle")
+	bt.connect_node("move", 1, "phase")
+	bt.connect_node("hang", 0, "jump")
+	bt.connect_node("fall_at", 0, "hang")
+	bt.connect_node("air", 0, "move")
+	bt.connect_node("air", 1, "fall_at")
+	bt.connect_node("shot", 0, "air")
+	bt.connect_node("shot", 1, "gesture")
+	bt.connect_node("output", 0, "shot")
+	_tree = AnimationTree.new()
+	_tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	_ap.get_parent().add_child(_tree)     # beside the player, so the tracks' paths resolve from the same root
+	_tree.tree_root = bt
+	_tree.anim_player = _tree.get_path_to(_ap)
+	_tree.set("parameters/hang/scale", 0.0)
+	_tree.active = true
+	for i in 2:
+		var c: String = ["Walk", "Run"][i]
+		if _ap.has_animation(c): _cycle_m[i] = [WALK_CLIP_SPEED, RUN_CLIP_SPEED][i] * _ap.get_animation(c).length
 
 ## Arm up to carry, or down.
 func set_carrying(on: bool) -> void:
@@ -185,19 +258,33 @@ func set_part_visible(group: String, on: bool) -> void:
 	for mi in parts:
 		if String(mi.name) == group or String(mi.name).begins_with(group + "_"): mi.visible = on
 
-## Advance the body by delta at a travel speed (m/s).
-func step(speed: float, delta: float) -> void:
-	if _ap == null: return
-	if _once != "" and (not _ap.is_playing() or _ap.current_animation != _once):
-		_once = ""
-		_ap.play("Idle", FADE)
-		_clip = "Idle"
-	_ap.speed_scale = 1.0
-	_ap.advance(delta)
-	_phase = fmod(_phase + delta * _ap.speed_scale / maxf(_ap.current_animation_length, 0.01), 1.0)
-	if _once == "" and gait:
+## Advance the body by delta at a travel speed (m/s); `air`: s since the feet left the ground (0 on it).
+func step(speed: float, delta: float, air := 0.0) -> void:
+	if _tree == null: return
+	if not gait.enabled or gait.sitting > 0.0: speed = 0.0     # lying, or sat: the clips stand still under him
+	var run := smoothstep(1.0, 1.8, speed)
+	var from := _phase
+	if speed >= 0.05:
+		_phase += speed * delta / (lerpf(_cycle_m.x, _cycle_m.y, run) * height)
+		var c := lerpf(CONTACT.x, CONTACT.y, run)
+		for foot in 2:
+			var at := c + foot * 0.5
+			if ((from < at and _phase >= at) or (from < at + 1.0 and _phase >= at + 1.0)) and air <= 0.0 and speed > 0.3:
+				gait.stepped.emit(_sk.to_global(_sk.get_bone_global_pose(_legs[foot][2]).origin), clampf(speed / Gait.SPEED_FAST, 0.0, 1.0))
+				break
+		_phase = fmod(_phase, 1.0)
+	_fall = lerpf(_fall, 1.0 if air > FALL_AFTER and gait.enabled else 0.0, 1.0 - exp(-16.0 * delta))
+	_tree.set("parameters/move/blend_amount", smoothstep(0.05, 0.5, speed))
+	_tree.set("parameters/stride/blend_amount", run)
+	_tree.set("parameters/phase/seek_request", _phase)
+	_tree.set("parameters/air/blend_amount", _fall)
+	if _fall > 0.001: _tree.set("parameters/fall_at/seek_request", FALL_AT * _ap.get_animation("Jump").length)
+	_tree.advance(delta)
+	if gait.sitting > 0.0:
 		gait.carrying_right = _carrying or _reach_t >= 0.0 or _carry > 0.0
 		gait.update(delta)
+	else:
+		_plant_feet(delta, air <= 0.0)
 	_pose_arm(delta)
 	_lean_to_reach(delta)
 	_held_k = minf(_held_k + delta / (REACH_OUT + REACH_BACK * 0.5), 1.0)
@@ -224,6 +311,42 @@ func step(speed: float, delta: float) -> void:
 		if _neck >= 0:
 			_sk.set_bone_pose_rotation(_neck, Quaternion(Vector3.UP, _look.x * 0.4) * Quaternion(Vector3.RIGHT, -_look.y * 0.4) * _sk.get_bone_pose_rotation(_neck))
 
+## The legs' IK (three.js player.ts plantFeet): each foot onto the floor under it, the hips lowered as far as the lower foot
+## needs. Only standing on what is under the body's middle: on a kerb's edge the collider has the feet already.
+func _plant_feet(delta: float, grounded: bool) -> void:
+	var k := 1.0 - exp(-15.0 * delta)
+	var at := global_position
+	var base: float = gait.floor_ray.call(at + Vector3.UP * 0.7, at + Vector3.DOWN * 0.9)
+	var on := grounded and base != INF and absf(base - at.y) < 0.1
+	for i in 2:
+		var want := 0.0
+		if on:
+			var p := _sk.to_global(_sk.get_bone_global_pose(_legs[i][2]).origin)
+			var y: float = gait.floor_ray.call(Vector3(p.x, base + 0.7, p.z), Vector3(p.x, base - 0.9, p.z))
+			if y != INF: want = clampf(y - base, -0.25, 0.25)
+		_foot_dy[i] = lerpf(_foot_dy[i], want, k)
+	_hips = lerpf(_hips, minf(0.0, minf(_foot_dy[0], _foot_dy[1])), k)
+	_model.position.y = _hips
+	if absf(_foot_dy[0]) + absf(_foot_dy[1]) < 0.005: return
+	var to_sk := _sk.global_basis.inverse()
+	for i in 2:
+		var leg: Array = _legs[i]
+		var hip := _sk.get_bone_global_pose(leg[0]).origin
+		var knee := _sk.get_bone_global_pose(leg[1]).origin
+		var ankle := _sk.get_bone_global_pose(leg[2]).origin
+		var target := ankle + to_sk * (Vector3.UP * (_foot_dy[i] - _hips))
+		var a := knee.distance_to(hip)
+		var b := ankle.distance_to(knee)
+		var to := target - hip
+		var d := clampf(to.length(), absf(a - b) + 0.001, a + b - 0.001)
+		var dir := to.normalized()
+		var bend := (knee - hip) - dir * (knee - hip).dot(dir)    # the knee stays in the plane it bends in now
+		if bend.length_squared() < 1e-10: continue                 # a straight leg has no plane: leave the clip's pose
+		var along := (d * d + a * a - b * b) / (2.0 * d)
+		var new_knee := hip + dir * along + bend.normalized() * sqrt(maxf(a * a - along * along, 0.0))
+		_aim(leg[0], new_knee - hip, 1.0)
+		_aim(leg[1], hip + dir * d - new_knee, 1.0)
+
 ## Sit and stay sat (a scooter), or get up.
 func set_sitting(on: bool) -> void:
 	_sitting = on
@@ -239,9 +362,7 @@ func ride_pose(foot_y: float, forward: float, grips: Array, lean: float) -> void
 ## Lying down: the feet have nothing to plant on, and the clip has him.
 func set_lying(on: bool) -> void:
 	gait.enabled = not on
-	if on:
-		gait.sitting = 0.0
-		_ap.play("Idle", FADE)
+	if on: gait.sitting = 0.0
 
 ## A bite of what's in his hand: to his mouth and back.
 func bite() -> void:
@@ -264,10 +385,12 @@ func _swing_hem(delta: float) -> void:
 
 ## A clip played once over the gait.
 func gesture(clip: String) -> void:
-	if _ap == null or not _ap.has_animation(clip): return
+	if _tree == null: return
+	if not _ap.has_animation(clip): clip = STAND_IN.get(clip, "")
+	if clip == "": return
 	_ap.get_animation(clip).loop_mode = Animation.LOOP_NONE
-	_once = clip
-	_ap.play(clip, FADE)
+	_shot.animation = clip
+	_tree.set("parameters/shot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 func wave() -> void:
 	gesture("Victory")
