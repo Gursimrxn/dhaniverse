@@ -300,6 +300,10 @@
           "means": "A token with no supply is a mistake."
         },
         {
+          "sig": "FoodToken__ZeroHolder",
+          "means": "The holder sets the allowlist, so it can't be the zero address."
+        },
+        {
           "sig": "FoodToken__NotAllowed(account)",
           "means": "FOOD can't move to or from an address outside the game."
         },
