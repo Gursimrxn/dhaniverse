@@ -1,6 +1,7 @@
 // Every setting comes from the environment. Secrets are registered with the logger before anything
 // else runs, so no later log line can print them.
 
+import { parseKey } from "./crypto.ts"
 import { addSecret } from "./log.ts"
 
 export type ArkivConfig = {
@@ -43,6 +44,13 @@ export type Config = {
   uploadsPerHour: number
   uploadsPerDay: number
   logLevel: string
+  /** The server's `--save` file, to mirror onto Arkiv. Absent: no mirror. */
+  savePath: string | undefined
+  /** `DHANIVERSE_LOG_KEY`, 32 bytes. Absent: the mirror and `GET /log` are off. */
+  logKey: Buffer | undefined
+  /** `DHANIVERSE_RESTORE_TOKEN`: bearer token for `GET /log`. Absent: that route does not exist. */
+  restoreToken: string | undefined
+  restoreAllowRemote: boolean
   arkiv: ArkivConfig
   bee: BeeConfig
 }
@@ -109,6 +117,21 @@ export function loadConfig(env: Env = process.env): Config {
     privateKey = hex as `0x${string}`
   }
 
+  const rawLogKey = optional(env, "DHANIVERSE_LOG_KEY")
+  addSecret(rawLogKey)
+  let logKey: Buffer | undefined
+  if (rawLogKey !== undefined) {
+    try {
+      logKey = parseKey(rawLogKey)
+    } catch {
+      throw new ConfigError("DHANIVERSE_LOG_KEY must be 32 bytes of hex (64 hex characters)")
+    }
+  }
+
+  const restoreToken = optional(env, "DHANIVERSE_RESTORE_TOKEN")
+  addSecret(restoreToken)
+  if (restoreToken !== undefined && restoreToken.length < 32) throw new ConfigError("DHANIVERSE_RESTORE_TOKEN must be at least 32 characters")
+
   const writer = optional(env, "ARKIV_WRITER_ADDRESS")
   if (writer !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(writer)) {
     throw new ConfigError("ARKIV_WRITER_ADDRESS must be a 0x-prefixed 20-byte address")
@@ -147,6 +170,10 @@ export function loadConfig(env: Env = process.env): Config {
     uploadsPerHour: int(env, "UPLOADS_PER_HOUR", 12, 0, 10_000),
     uploadsPerDay: int(env, "UPLOADS_PER_DAY", 200, 0, 100_000),
     logLevel: str(env, "LOG_LEVEL", "info"),
+    savePath: optional(env, "SAVE_PATH"),
+    logKey,
+    restoreToken,
+    restoreAllowRemote: bool(env, "RESTORE_ALLOW_REMOTE", false),
     arkiv: {
       privateKey,
       accessKey: str(env, "ARKIV_ACCESS_KEY", ""),

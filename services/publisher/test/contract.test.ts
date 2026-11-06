@@ -4,12 +4,17 @@
 // indexed, this fails.
 
 import assert from "node:assert/strict"
+import { mkdtempSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { test } from "node:test"
 import { makeClients } from "../src/arkiv/client.ts"
 import { bountyBoardQueryText, makeReader } from "../src/arkiv/queries.ts"
 import { SdkWriter } from "../src/arkiv/writer.ts"
 import type { CampaignCard } from "../src/city.ts"
 import { campaignDraft, paperDraft, priceTickDraft, profileDraft, rushBoardDraft, seasonDraft } from "../src/entities.ts"
+import { parseKey } from "../src/crypto.ts"
+import { SaveMirror } from "../src/save.ts"
 import { FakeArkiv } from "./fakeArkiv.ts"
 import { REF_A, REF_B, arkivConfig } from "./helpers.ts"
 
@@ -41,7 +46,7 @@ function card(over: Partial<CampaignCard> = {}): CampaignCard {
 
 /** The wire shape of each schema: attribute → [type, indexed]. Mirrors arkiv/schema.md. */
 const SHAPES: Record<string, Record<string, [string, boolean]>> = {
-  "tallyport.campaign.v1": {
+  "dhaniverse.campaign.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     campaignId: ["u64", true],
@@ -56,7 +61,7 @@ const SHAPES: Record<string, Record<string, [string, boolean]>> = {
     metaHash: ["str", false],
     fp: ["str", false],
   },
-  "tallyport.rush_board.v1": {
+  "dhaniverse.rush_board.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     day: ["u64", true],
@@ -66,7 +71,7 @@ const SHAPES: Record<string, Record<string, [string, boolean]>> = {
     entries: ["i32", false],
     top: ["bytes", false],
   },
-  "tallyport.price_tick.v1": {
+  "dhaniverse.price_tick.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     startTs: ["u64", true],
@@ -80,7 +85,7 @@ const SHAPES: Record<string, Record<string, [string, boolean]>> = {
     series: ["bytes", false],
     shock: ["str", false],
   },
-  "tallyport.profile.v1": {
+  "dhaniverse.profile.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     name: ["str", true],
@@ -90,7 +95,7 @@ const SHAPES: Record<string, Record<string, [string, boolean]>> = {
     ens: ["str", false],
     fp: ["str", false],
   },
-  "tallyport.paper.v1": {
+  "dhaniverse.paper.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     day: ["u64", true],
@@ -98,7 +103,7 @@ const SHAPES: Record<string, Record<string, [string, boolean]>> = {
     stories: ["i32", false],
     bodyRef: ["str", false],
   },
-  "tallyport.season.v1": {
+  "dhaniverse.season.v1": {
     "arkiv.schema": ["str", true],
     env: ["str", true],
     season: ["i32", true],
@@ -142,10 +147,10 @@ test("expirations: campaign end, 48 h, 7 days, 30 days", async () => {
   const at = fake.block
   const life = (tag: string) => (fake.ofSchema(tag)[0]?.expiresAt ?? 0n) - at
   const near = (got: bigint, want: bigint) => assert.ok(got >= want - 3n && got <= want + 3n, `${got} ≈ ${want}`)
-  near(life("tallyport.campaign.v1"), 10n * BLOCKS_PER_HOUR)
-  near(life("tallyport.rush_board.v1"), 48n * BLOCKS_PER_HOUR)
-  near(life("tallyport.price_tick.v1"), 7n * 24n * BLOCKS_PER_HOUR)
-  near(life("tallyport.paper.v1"), 30n * 24n * BLOCKS_PER_HOUR)
+  near(life("dhaniverse.campaign.v1"), 10n * BLOCKS_PER_HOUR)
+  near(life("dhaniverse.rush_board.v1"), 48n * BLOCKS_PER_HOUR)
+  near(life("dhaniverse.price_tick.v1"), 7n * 24n * BLOCKS_PER_HOUR)
+  near(life("dhaniverse.paper.v1"), 30n * 24n * BLOCKS_PER_HOUR)
 })
 
 test("the Bounty Board query: live, slots left, not ended, ours, soonest first", async () => {
@@ -190,7 +195,7 @@ test("the Bounty Board query: live, slots left, not ended, ours, soonest first",
     },
   )
   const q = fake.queries.at(-1)!.query
-  assert.match(q, /^arkiv\.schema = str\('tallyport\.campaign\.v1'\) AND /)
+  assert.match(q, /^arkiv\.schema = str\('dhaniverse.campaign\.v1'\) AND /)
   assert.match(q, new RegExp(`\\$owner = addr\\(${writer.address}\\)`, "i"))
   assert.match(q, /env = str\('test'\)/)
   assert.match(q, /ORDER BY endsAt:u64 ASC$/)
@@ -282,8 +287,47 @@ test("strings are cut to Arkiv's 128-byte limit without breaking a character", a
   const now = Date.now()
   const long = "मुंबई ".repeat(40)
   await writer.execute([{ kind: "create", draft: campaignDraft(card({ title: long }), "test", now)! }])
-  const title = fake.ofSchema("tallyport.campaign.v1")[0]!.attributes.get("title")!.value as string
+  const title = fake.ofSchema("dhaniverse.campaign.v1")[0]!.attributes.get("title")!.value as string
   assert.ok(new TextEncoder().encode(title).length <= 128)
   assert.ok(title.endsWith("…"))
   assert.ok(!title.includes("�"))
+})
+
+test("the save's schemas go on the wire with the documented attributes, types, indexes and 180-day expiry", async () => {
+  const { fake, clients, writer } = setup()
+  const path = join(mkdtempSync(join(tmpdir(), "contract-")), "save.jsonl")
+  writeFileSync(path, `${JSON.stringify({ seed: 1, rules: "r", quests: "q", chain: "offline", town_id: "t1" })}\n${JSON.stringify({ seq: 1, input: {}, events: [] })}\n`)
+  const mirror = new SaveMirror({ path, key: parseKey("cd".repeat(32)), env: "test" }, clients.publicClient, writer.address)
+  const ops = await mirror.plan(Date.now())
+  assert.equal(ops.length, 2, "the city and the first batch")
+  await writer.execute(ops)
+  const SAVE_SHAPES: Record<string, Record<string, [string, boolean]>> = {
+    "dhaniverse.city.v1": {
+      "arkiv.schema": ["str", true],
+      env: ["str", true],
+      townId: ["str", true],
+      chain: ["str", false],
+      rulesHash: ["str", false],
+      startedAt: ["u64", false],
+      payload: ["bytes", false],
+    },
+    "dhaniverse.log.v1": {
+      "arkiv.schema": ["str", true],
+      env: ["str", true],
+      townId: ["str", true],
+      fromSeq: ["u64", true],
+      toSeq: ["u64", true],
+      prevHash: ["str", false],
+      hash: ["str", false],
+      payload: ["bytes", false],
+    },
+  }
+  for (const [tag, shape] of Object.entries(SAVE_SHAPES)) {
+    const [e] = fake.ofSchema(tag)
+    assert.ok(e, `${tag} was written`)
+    assert.deepEqual(Object.fromEntries([...e.attributes].map(([n, a]) => [n, [a.type, a.indexed]])), shape, `${tag} wire shape`)
+    assert.equal(e.owner, writer.address.toLowerCase())
+    const life = e.expiresAt - fake.block
+    assert.ok(life >= 180n * 24n * BLOCKS_PER_HOUR - 3n && life <= 180n * 24n * BLOCKS_PER_HOUR + 3n, `${tag} lives 180 days, got ${life} blocks`)
+  }
 })

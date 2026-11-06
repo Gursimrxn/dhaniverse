@@ -9,6 +9,7 @@ import { ConfigError, loadConfig } from "./config.ts"
 import { log, setLevel, throttled } from "./log.ts"
 import { Publisher } from "./publisher.ts"
 import { makeReadApi } from "./readapi.ts"
+import { createSaveMirror, restoreLines } from "./save.ts"
 import { FileStateStore } from "./state.ts"
 import { Swarm } from "./swarm.ts"
 
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
   }
 
   const store = new FileStateStore(resolve(cfg.stateDir), cfg.env, writer?.address ?? null)
+  const saveMirror = createSaveMirror(cfg, clients.publicClient, writer?.address ?? null)
   const publisher = new Publisher(
     {
       env: cfg.env,
@@ -59,6 +61,8 @@ async function main(): Promise<void> {
     writer,
     swarm,
     store,
+    Date.now,
+    saveMirror,
   )
   await publisher.init()
 
@@ -70,6 +74,12 @@ async function main(): Promise<void> {
     cacheMs: cfg.readCacheMs,
     queryTimeoutMs: cfg.arkiv.queryTimeoutMs,
     corsOrigins: cfg.corsOrigins,
+    restoreToken: cfg.restoreToken ?? null,
+    restoreAllowRemote: cfg.restoreAllowRemote,
+    restore:
+      clients.trusted && cfg.logKey
+        ? (town, from) => restoreLines(clients.publicClient, clients.trusted as `0x${string}`, cfg.env, cfg.logKey as Buffer, town, from)
+        : null,
     uploadsPerHour: cfg.uploadsPerHour,
     uploadsPerDay: cfg.uploadsPerDay,
     queryInfo: () =>
@@ -99,6 +109,7 @@ async function main(): Promise<void> {
         waiting_records: publisher.pendingCount,
         written: publisher.stats.entitiesWritten,
       },
+      save: saveMirror ? saveMirror.status() : { state: "off" },
       swarm: { uploads: swarm.configured, reads: swarm.readable, uploaded: publisher.stats.swarmUploads, last_error: publisher.stats.lastSwarmError },
     }),
   })

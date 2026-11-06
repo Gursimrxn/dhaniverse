@@ -70,17 +70,17 @@ test("campaign cards: created, patched when slots change, marked ended when they
   await p.init()
   p.observe(at(clock, { bounty: [card(), card({ id: "2", title: "Paint your sign", template: "paint_sign" })] }))
   assert.equal((await p.flush()).sent, 2)
-  assert.equal(fake.ofSchema("tallyport.campaign.v1").length, 2)
+  assert.equal(fake.ofSchema("dhaniverse.campaign.v1").length, 2)
 
   p.observe(at(clock, { bounty: [card(), card({ id: "2", title: "Paint your sign", template: "paint_sign" })] }))
   assert.equal((await p.flush()).sent, 0, "nothing changed, nothing written")
 
   p.observe(at(clock, { bounty: [card({ slotsLeft: 39 })] }))
   assert.equal((await p.flush()).sent, 2)
-  const byId = (id: bigint) => fake.ofSchema("tallyport.campaign.v1").find((e) => e.attributes.get("campaignId")?.value === id)!
+  const byId = (id: bigint) => fake.ofSchema("dhaniverse.campaign.v1").find((e) => e.attributes.get("campaignId")?.value === id)!
   assert.equal(byId(1n).attributes.get("slotsLeft")?.value, 39)
   assert.equal(byId(2n).attributes.get("status")?.value, "ended")
-  assert.equal(fake.ofSchema("tallyport.campaign.v1").length, 2, "patched in place, no duplicates")
+  assert.equal(fake.ofSchema("dhaniverse.campaign.v1").length, 2, "patched in place, no duplicates")
 })
 
 test("price: one entity per five-minute batch, written after the window closes", async () => {
@@ -98,7 +98,7 @@ test("price: one entity per five-minute batch, written after the window closes",
   clock.t = start + 300_000 + 1_000
   p.observe(at(clock, { price: 4200 }))
   assert.equal((await p.flush()).sent, 1)
-  const [tick] = fake.ofSchema("tallyport.price_tick.v1")
+  const [tick] = fake.ofSchema("dhaniverse.price_tick.v1")
   assert.equal(tick?.attributes.get("startTs")?.value, BigInt(start / 1000))
   assert.equal(tick?.attributes.get("open")?.value, 4000n)
   assert.equal(tick?.attributes.get("high")?.value, 4100n)
@@ -114,11 +114,11 @@ test("a closed day writes that day's Rush board, as last seen; an empty board is
   p.observe(at(clock, { day: 10, rush: { board: "rush", rows: [] } }))
   p.observe(at(clock, { day: 10, rush: { board: "rush", rows } }))
   await p.flush()
-  assert.equal(fake.ofSchema("tallyport.rush_board.v1").length, 0, "day 10 not closed yet")
+  assert.equal(fake.ofSchema("dhaniverse.rush_board.v1").length, 0, "day 10 not closed yet")
   p.observe(at(clock, { day: 11, rush: { board: "rush", rows: [] } }))
   p.observe(at(clock, { day: 12, rush: { board: "rush", rows: [] } }))
   await p.flush()
-  const boards = fake.ofSchema("tallyport.rush_board.v1")
+  const boards = fake.ofSchema("dhaniverse.rush_board.v1")
   assert.deepEqual(boards.map((b) => b.attributes.get("day")?.value), [10n])
   assert.equal(boards[0]?.attributes.get("leader")?.value, "asha")
 })
@@ -137,7 +137,7 @@ test("Arkiv down: the poll path carries on, records are kept, writes resume with
   assert.deepEqual(await p.flush(), { sent: 0, more: false }, "still backing off")
   clock.t += 10 * 60_000
   assert.equal((await p.flush()).sent, 2)
-  assert.equal(fake.ofSchema("tallyport.rush_board.v1").length, 1)
+  assert.equal(fake.ofSchema("dhaniverse.rush_board.v1").length, 1)
   assert.equal(store.state.pending.length, 0)
 })
 
@@ -148,11 +148,11 @@ test("a transaction that lands but times out is not written twice", async () => 
   p.observe(at(clock, { bounty: [card()] }))
   fake.swallowReceipts = true
   assert.equal((await p.flush()).sent, 0)
-  assert.equal(fake.ofSchema("tallyport.campaign.v1").length, 1, "it landed")
+  assert.equal(fake.ofSchema("dhaniverse.campaign.v1").length, 1, "it landed")
   fake.swallowReceipts = false
   clock.t += 10 * 60_000
   await p.flush()
-  assert.equal(fake.ofSchema("tallyport.campaign.v1").length, 1, "reconciled, not re-created")
+  assert.equal(fake.ofSchema("dhaniverse.campaign.v1").length, 1, "reconciled, not re-created")
   assert.ok(logs.some((l) => l.includes("found entities already on Arkiv")))
 })
 
@@ -176,7 +176,7 @@ test("the paper's body goes to Swarm and its reference onto the entity", async (
   await p.init()
   p.observe(at(clock, { paper: { day: 10, headline: "Drought hits the farms", stories: ["Prices rise."] } }))
   assert.equal((await p.flush()).sent, 1)
-  const [paper] = fake.ofSchema("tallyport.paper.v1")
+  const [paper] = fake.ofSchema("dhaniverse.paper.v1")
   const ref = paper?.attributes.get("bodyRef")?.value as string
   assert.match(ref, /^[0-9a-f]{64}$/)
   assert.equal(paper?.attributes.has("body"), false)
@@ -198,7 +198,7 @@ test("Swarm down: the paper waits, then goes up inline after five tries; never a
     clock.t += 10 * 60_000
   }
   assert.equal((await p.flush()).sent, 1)
-  const [paper] = fake.ofSchema("tallyport.paper.v1")
+  const [paper] = fake.ofSchema("dhaniverse.paper.v1")
   assert.equal(paper?.attributes.has("bodyRef"), false)
   assert.ok(paper?.attributes.has("body"))
 })
@@ -211,8 +211,8 @@ test("Bee not configured: papers inline, season snapshots skipped", async () => 
   p.observe(at(clock, { season: { number: 2, endsDay: 336 } }))
   await p.flush()
   assert.equal(fakeBee.requests.length, 0)
-  assert.equal(fake.ofSchema("tallyport.paper.v1").length, 1)
-  assert.equal(fake.ofSchema("tallyport.season.v1").length, 0)
+  assert.equal(fake.ofSchema("dhaniverse.paper.v1").length, 1)
+  assert.equal(fake.ofSchema("dhaniverse.season.v1").length, 0)
 })
 
 test("a finished season is snapshotted to Swarm and indexed on Arkiv", async () => {
@@ -223,7 +223,7 @@ test("a finished season is snapshotted to Swarm and indexed on Arkiv", async () 
   p.observe(at(clock, { day: 167, season: { number: 1, endsDay: 168 }, people, rush: { board: "rush", rows: [{ rank: 1, name: "asha", title: "Regular" }] } }))
   p.observe(at(clock, { day: 168, season: { number: 2, endsDay: 336 }, people }))
   while ((await p.flush()).more);
-  const [season] = fake.ofSchema("tallyport.season.v1")
+  const [season] = fake.ofSchema("dhaniverse.season.v1")
   const ref = season?.attributes.get("snapshotRef")?.value as string
   const snap = JSON.parse(new TextDecoder().decode(fakeBee.stored.get(ref)?.get("season-1.json")?.data))
   assert.equal(snap.season, 1)
@@ -240,16 +240,16 @@ test("profiles: created, patched on a title or stamp change, renewed toward seas
   assert.equal((await p.flush()).sent, 1)
   p.observe(at(clock, { day: 166, season: { number: 1, endsDay: 168 }, people: [{ ...asha, title: "Regular", stamps: ["town_pass"] }] }))
   assert.equal((await p.flush()).sent, 1)
-  const [e] = fake.ofSchema("tallyport.profile.v1")
+  const [e] = fake.ofSchema("dhaniverse.profile.v1")
   assert.equal(e?.attributes.get("title")?.value, "Regular")
   assert.equal(e?.attributes.get("stamps")?.value, "town_pass")
   const before = e!.expiresAt
   // The next season starts; the profile is renewed to its end.
   p.observe(at(clock, { day: 168, season: { number: 2, endsDay: 336 }, people: [{ ...asha, title: "Regular", stamps: ["town_pass"] }] }))
   await p.flush()
-  const [after] = fake.ofSchema("tallyport.profile.v1")
+  const [after] = fake.ofSchema("dhaniverse.profile.v1")
   assert.ok(after!.expiresAt > before + 100_000n, "extended by about a season")
-  assert.equal(fake.ofSchema("tallyport.profile.v1").length, 1)
+  assert.equal(fake.ofSchema("dhaniverse.profile.v1").length, 1)
 })
 
 test("a backlog goes out in batches of maxOpsPerTx", async () => {
@@ -265,7 +265,7 @@ test("a backlog goes out in batches of maxOpsPerTx", async () => {
     if (!r.more) break
   }
   assert.deepEqual(sent, [3, 3, 1])
-  assert.equal(fake.ofSchema("tallyport.profile.v1").length, 7)
+  assert.equal(fake.ofSchema("dhaniverse.profile.v1").length, 7)
 })
 
 test("the private key never appears in the logs", async () => {

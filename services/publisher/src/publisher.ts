@@ -24,7 +24,8 @@ import {
 import type { ArkivWriter, Op } from "./arkiv/writer.ts"
 import { log, throttled } from "./log.ts"
 import { Backoff, TimeoutError, withTimeout } from "./retry.ts"
-import type { EntityType } from "./schemas.ts"
+import type { SaveMirror } from "./save.ts"
+import { isSaveType, type EntityType } from "./schemas.ts"
 import type { State, StateStore, Pending } from "./state.ts"
 import type { Swarm } from "./swarm.ts"
 
@@ -80,6 +81,7 @@ export class Publisher {
   private readonly swarm: Swarm
   private readonly store: StateStore
   private readonly now: () => number
+  private readonly save: SaveMirror | null
   private readonly unsynced = new Set<EntityType>(ORDER)
   private readonly arkivBackoff: Backoff
   private readonly swarmBackoff: Backoff
@@ -87,8 +89,10 @@ export class Publisher {
   private flushing = false
   private dirty = false
 
-  constructor(opts: PublisherOptions, writer: ArkivWriter | null, swarm: Swarm, store: StateStore, now: () => number = Date.now) {
+  constructor(opts: PublisherOptions, writer: ArkivWriter | null, swarm: Swarm, store: StateStore, now: () => number = Date.now, save: SaveMirror | null = null) {
     this.opts = opts
+    // The save goes on Arkiv through the same writer, so without one there is nothing to mirror.
+    this.save = writer ? save : null
     this.writer = writer
     this.swarm = swarm
     this.store = store
@@ -222,13 +226,15 @@ export class Publisher {
       }
       const batch = planned.slice(0, this.opts.maxOpsPerTx)
       const types = new Set(batch.map((b) => b.op.draft.type))
+      const sentSave = batch.some((b) => isSaveType(b.op.draft.type))
       let result: Awaited<ReturnType<ArkivWriter["execute"]>>
       const sentAt = Date.now()
       try {
         result = await withTimeout(this.writer.execute(batch.map((b) => b.op)), this.opts.txTimeoutMs, "Arkiv transaction")
       } catch (err) {
         // Unclear whether it landed: ask Arkiv before creating any of these again.
-        for (const t of types) this.unsynced.add(t)
+        for (const t of types) if (!isSaveType(t)) this.unsynced.add(t)
+        if (sentSave) this.save?.failed()
         for (const b of batch) if (b.pending) b.pending.attempts += 1
         let wait = this.arkivBackoff.failed()
         if (err instanceof TimeoutError && wait < 90_000) {
@@ -259,7 +265,7 @@ export class Publisher {
       })
       this.dirty = true
       await this.persist()
-      return { sent: batch.length, more: planned.length > batch.length }
+      return { sent: batch.length, more: planned.length > batch.length || (sentSave && this.save?.hasMore === true) }
     } catch (err) {
       // Reconciliation reads failed, or a Swarm prepare threw unexpectedly.
       const wait = this.arkivBackoff.failed()
@@ -275,6 +281,13 @@ export class Publisher {
     let c = 0
     for (const { op, pending } of batch) {
       const { type, id } = op.draft
+      if (isSaveType(type)) {
+        // The save mirror keeps its own books (it asks Arkiv again after a restart); only a create has a new key.
+        if (op.kind === "create") c++
+        this.save?.landed(op)
+        this.stats.entitiesWritten[`${type}:${op.kind}`] = (this.stats.entitiesWritten[`${type}:${op.kind}`] ?? 0) + 1
+        continue
+      }
       const prev = this.state.tracked[type][id]
       if (op.kind === "create") {
         const key = created[c++]
@@ -351,6 +364,9 @@ export class Publisher {
       }
     }
 
+    // 5. The save on Arkiv: after everything public.
+    if (this.save) out.push(...(await this.save.plan(now)).map((op) => ({ op, pending: null })))
+
     return out
   }
 
@@ -361,6 +377,7 @@ export class Publisher {
 
   /** create, patch, extend or nothing, for a mutable entity. */
   private diff(draft: Draft, now: number): Op | null {
+    if (isSaveType(draft.type)) return null
     const t = this.state.tracked[draft.type][draft.id]
     if (!t || t.expiresAtMs <= now) return { kind: "create", draft }
     const later = draft.expiresAtMs > t.expiresAtMs + 60_000
