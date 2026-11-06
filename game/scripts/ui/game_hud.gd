@@ -13,6 +13,7 @@ const SETTLE := 0.3              # s a slot put away takes to settle
 const SQUASH := 0.94             # a press
 const RING_WAY := [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]   # the ring's sides, clockwise from the top
 const PLACE_ROLL := 16.0         # px the place name rolls
+const PLACE_NEAR := 6.0          # m from a building's footprint: you're at it
 const TOAST_AT := 78.0           # px from the top
 const TOAST_FOR := 6.0           # s
 const CAP_EDGE := Color("9d9477")
@@ -440,16 +441,19 @@ func _process(delta: float) -> void:
 		var here := _where_am_i()
 		if here != _place.text: _roll_place(here)
 
-## The name of the place you're nearest, read from the world's own sites.
+## The name of the place you're at: the landing, the square, or the building you're in or by (world.json's sites); else the town.
 func _where_am_i() -> String:
-	var best := "Tallyport"
-	var nearest := 30.0
 	var p: Vector3 = world.player.global_position
-	for site in world.sites:
-		var d := p.distance_to(site.door)
+	var at := Vector2(p.x, p.z)
+	if at.distance_to(Vector2(Opening.JETTY_AT.x, Opening.JETTY_AT.z)) < PLACE_NEAR * 2.5: return "The Landing"
+	if at.distance_to(Vector2(Tallyport.PLACES.square.x, Tallyport.PLACES.square.z)) < PLACE_NEAR * 2.0: return "Tally Square"
+	var best := "Tallyport"
+	var nearest := PLACE_NEAR
+	for site in world.data.d.get("sites", []):
+		var d := ((at - WorldData.v2(site.pos)).abs() - WorldData.v2(site.half)).max(Vector2.ZERO).length()   # 0 inside its footprint
 		if d < nearest:
 			nearest = d
-			best = str(site.def.get("name", best))
+			best = str(site.get("name", best))
 	return best
 
 func _unhandled_key_input(e: InputEvent) -> void:
