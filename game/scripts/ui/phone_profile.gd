@@ -29,7 +29,7 @@ func _draw_page() -> void:
 	add_child(words(str(you.get("name", "")), 30))
 	if you.get("ens") != null: add_child(words(str(you.ens), 14, Brand.MAGENTA))
 	if str(you.get("title", "")) != "": add_child(words(str(you.title), 16, MUTED))
-	if str(you.get("sign", "")) != "": add_child(words("\"%s\"" % str(you.sign), 15, Brand.CREAM))
+	if str(you.get("sign", "")) != "": add_child(words("\"%s\"" % str(you.sign), 15, INK))
 	add_child(_fact("Reputation", str(_card.get("reputation", "New in town"))))
 	add_child(_fact("Days in town", str(int(_card.get("days_active", 0)))))
 	add_child(_fact("Best Market Rush", str(int(you.get("best_run", 0)))))
@@ -69,5 +69,5 @@ func _fact(what: String, value: String) -> Control:
 	var label := words(what, 15, MUTED, false)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(label)
-	line.add_child(words(value, 15, Brand.CREAM, false))
+	line.add_child(words(value, 15, INK, false))
 	return line

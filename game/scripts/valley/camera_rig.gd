@@ -1,3 +1,4 @@
+class_name CameraRig
 extends Node3D
 ## Player camera with three views, cycled with C:
 ##   top   - the high follow camera looking down on the town: rotate (Z/X or right-drag), wheel zoom
@@ -103,6 +104,9 @@ func _ready() -> void:
 		_follow = _target_pos() + Vector3(0, _height, 0)
 		global_position = _follow
 
+static var look_speed := 1.0         # Settings: how far the view turns for the mouse
+static var invert_y := false
+
 func _input(e: InputEvent) -> void:
 	if e is InputEventKey or e is InputEventMouseButton or (e is InputEventMouseMotion and e.relative.length() > 2.0): _idle_for = 0.0
 
@@ -114,13 +118,13 @@ func _unhandled_input(e: InputEvent) -> void:
 			if _skip_motion > 0:
 				_skip_motion -= 1      # the jump of the cursor being warped to the centre on capture
 				return
-			var rel: Vector2 = e.relative.limit_length(150.0)
+			var rel: Vector2 = e.relative.limit_length(150.0) * look_speed
 			yaw -= rel.x * MOUSE_LOOK
-			pitch = _clamp_pitch(pitch - rel.y * MOUSE_LOOK)
+			pitch = _clamp_pitch(pitch - rel.y * MOUSE_LOOK * (-1.0 if invert_y else 1.0))
 			_manual = 0.0
 		elif _drag:
-			yaw -= e.relative.x * 0.006
-			pitch = _clamp_pitch(pitch - e.relative.y * 0.004)
+			yaw -= e.relative.x * 0.006 * look_speed
+			pitch = _clamp_pitch(pitch - e.relative.y * 0.004 * look_speed * (-1.0 if invert_y else 1.0))
 			_manual = 0.0
 	elif e is InputEventMouseButton:
 		if e.button_index == MOUSE_BUTTON_WHEEL_UP and e.pressed: _zoom(0.9)

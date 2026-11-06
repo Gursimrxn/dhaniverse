@@ -43,6 +43,7 @@ var _toast := PanelContainer.new()
 var _toast_title := Label.new()
 var _toast_sub := Label.new()
 var _toast_bar := Control.new()
+var _bar_column: Control          # the slot bar and its name: faded while the phone is out
 var _toast_left := 0.0
 var _last_shock := ""
 var _place := Label.new()
@@ -57,8 +58,10 @@ func _ready() -> void:
 	_build_ticker()
 	_build_bar()
 	_build_keys()
+	_keys.visible = false     # no standing key list: keys show on the thing they act on, and all of them in Esc > Controls
 	_build_toast()
 	_build_map()
+	if phone: phone.toggled.connect(func(out: bool): create_tween().tween_property(_bar_column, "modulate:a", 0.0 if out else 1.0, 0.2))
 	client.you_changed.connect(_refresh)
 	client.city_changed.connect(_refresh)
 	client.synced.connect(_refresh)
@@ -153,6 +156,7 @@ func _say_on_ticker(text: String, gain := "") -> void:
 
 func _build_bar() -> void:
 	var column := VBoxContainer.new()
+	_bar_column = column
 	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -398,6 +402,10 @@ func set_goal(at: Vector2) -> void:
 	if _map: _map.goal = at
 
 ## A new place: its name rolls up into view as the last one rolls away.
+## The place shown under the minimap.
+func place_name() -> String:
+	return _place.text
+
 func _roll_place(here: String) -> void:
 	if _place_roll: _place_roll.kill()
 	_place_old.text = _place.text

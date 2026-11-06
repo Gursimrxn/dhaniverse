@@ -32,7 +32,7 @@ func refresh() -> void:
 	fill.bg_color = Brand.GREEN
 	fill.set_corner_radius_all(5)
 	var track := StyleBoxFlat.new()
-	track.bg_color = ROW
+	track.bg_color = LINE
 	track.set_corner_radius_all(5)
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", track)
@@ -59,7 +59,7 @@ func refresh() -> void:
 	if rows.is_empty(): add_child(words("Nobody on the board yet this season.", 13, MUTED))
 	for e in rows: add_child(_entry(e))
 	var mine = you.get("ranks", {}).get("rush")
-	add_child(words("You: #%d" % int(mine) if mine != null else "You're on it after your first run", 14, Brand.ORANGE))
+	add_child(words("You: #%d" % int(mine) if mine != null else "You're on it after your first run", 14, WARN))
 	var call = you.get("price_call")
 	add_child(words("Price Call", 16))
 	add_child(words("Today you called %s. It settles when the next city day opens." % str(call.call) if call is Dictionary else "Call tomorrow's food price at the board in Tally Square.", 13, MUTED))
@@ -76,7 +76,7 @@ func refresh() -> void:
 			if who != "": client.send({"type": "Refer", "player": who}))
 		line.add_child(b)
 		add_child(line)
-		add_child(words(_said if _said != "" else "When you have your Town Pass and a quest done, you both get tickets.", 12, MUTED if _said == "" else Brand.ORANGE))
+		add_child(words(_said if _said != "" else "When you have your Town Pass and a quest done, you both get tickets.", 12, MUTED if _said == "" else WARN))
 
 func listen() -> void:
 	client.refused.connect(func(command: Dictionary, refusal: Dictionary):
@@ -89,17 +89,17 @@ func _fact(what: String, value: String) -> Control:
 	var label := words(what, 14, MUTED, false)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(label)
-	line.add_child(words(value, 14, Brand.CREAM, false))
+	line.add_child(words(value, 14, INK, false))
 	return line
 
 func _entry(entry: Dictionary) -> Control:
 	var r := row()
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 10)
-	line.add_child(words(str(int(entry.get("rank", 0))), 16, Brand.CREAM, false))
+	line.add_child(words(str(int(entry.get("rank", 0))), 16, INK, false))
 	var who := VBoxContainer.new()
 	who.add_theme_constant_override("separation", 0)
-	who.add_child(words(str(entry.get("name", "")), 14, Brand.ORANGE if str(entry.get("name", "")) == client.player else Brand.CREAM, false))
+	who.add_child(words(str(entry.get("name", "")), 14, WARN if str(entry.get("name", "")) == client.player else INK, false))
 	if str(entry.get("title", "")) != "": who.add_child(words(str(entry.title), 12, MUTED, false))
 	line.add_child(who)
 	r.add_child(line)

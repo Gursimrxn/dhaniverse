@@ -379,6 +379,7 @@ func _process(delta: float) -> void:
 	if _taking >= 0: return
 	var held := _armed and Input.is_action_pressed("interact")
 	_hold = clampf(_hold + delta / HOLD if held else _hold - delta / (HOLD * 0.4), 0.0, 1.0)
+	if held and Access.tap_holds: _hold = 1.0
 	if Island.up: Island.up.board_hold(_hold)
 	if _hold >= 1.0: take(pick)
 

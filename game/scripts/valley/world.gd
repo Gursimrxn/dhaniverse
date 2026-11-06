@@ -58,6 +58,7 @@ var furniture: Array[Node3D] = []   # the bank's counter and the courtyard room:
 var moments: Moments
 var title: TitleScreen
 var settings: SettingsPanel
+var pause: PauseMenu
 var world_env: Environment
 var cinematic_on := true
 ## Steady frames: a machine that can't keep up with the screen gets an even half of it (30 on a 60 Hz screen) rather than
@@ -1540,6 +1541,11 @@ func _market() -> void:
 	settings.world = self
 	settings.cinema = cinema
 	ui.add_child(settings)
+	pause = PauseMenu.new()     # Esc in the town: Resume, Settings, Controls, Title, Quit
+	pause.world = self
+	pause.cinema = cinema
+	pause.settings = settings
+	ui.add_child(pause)
 	var rehearsal := TestPanel.new()     # F1, on a rehearsal server only
 	rehearsal.world = self
 	rehearsal.client = client
@@ -1632,7 +1638,7 @@ func surface_at(p: Vector3) -> String:
 
 ## Is a paper, the phone or anything like them up on screen?
 func any_sheet_open() -> bool:
-	return (settings and settings.is_open) or phone.is_open or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
+	return (settings and settings.is_open) or (pause and pause.is_open) or phone.is_open or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
 		or opening.letter._sheet.visible or food_counter.food_menu.is_open or BoardSheet.any_open()
 
 func _pace(delta: float) -> void:

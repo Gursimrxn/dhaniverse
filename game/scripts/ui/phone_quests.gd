@@ -27,7 +27,7 @@ func _quest(q: Dictionary) -> Control:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 5)
 	var head := HBoxContainer.new()
-	var title := words(str(q.get("title", "")), 17, Brand.CREAM, false)
+	var title := words(str(q.get("title", "")), 17, INK, false)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	head.add_child(words("%d/%d" % [TownState.steps_done(q), q.get("steps", []).size()], 13, MUTED, false))
@@ -43,13 +43,13 @@ func _quest(q: Dictionary) -> Control:
 		var is_open: bool = open.has(s)
 		var mark := "[x]" if done else ("[..]" if waiting else ("[ ]" if is_open else " · "))
 		var line := words("%s %s%s" % [mark, str(s.get("text", "")), "  (waiting for the chain)" if waiting else ""], 13,
-			MUTED if done else (Brand.ORANGE if waiting else (Brand.CREAM if is_open else MUTED)))
+			MUTED if done else (WARN if waiting else (INK if is_open else MUTED)))
 		line.custom_minimum_size.x = WIDTH - 24.0
 		column.add_child(line)
 	var hold = q.get("hold")
 	if hold is Dictionary:
 		var left := TownState.left_ms(hold.get("ends"), client.now_ms())
-		column.add_child(words("Held through %d check%s · %d to go · ends %s" % [int(hold.get("passed", 0)), "" if int(hold.get("passed", 0)) == 1 else "s", int(hold.get("checks_left", 0)), TownState.soon(left)], 13, Brand.MINT))
+		column.add_child(words("Held through %d check%s · %d to go · ends %s" % [int(hold.get("passed", 0)), "" if int(hold.get("passed", 0)) == 1 else "s", int(hold.get("checks_left", 0)), TownState.soon(left)], 13, GOOD))
 	if not next.is_empty():
 		var place := str(next.get("place", ""))
 		var where := words("Next: %s" % PLACE_WORDS.get(place, place), 13, Color("F0C33A"))

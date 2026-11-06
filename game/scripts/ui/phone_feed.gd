@@ -48,7 +48,7 @@ func refresh() -> void:
 	clear_page()
 	add_theme_constant_override("separation", 8)
 	if _said != "":
-		add_child(words(_said, 13, Brand.ORANGE))
+		add_child(words(_said, 13, WARN))
 		_said = ""
 	if _posts.is_empty():
 		add_child(words("Nothing yet. The town's news lands here as it happens.", 16, MUTED))

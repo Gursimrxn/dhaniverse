@@ -6,13 +6,14 @@ extends Control
 
 signal toggled(out: bool)
 
-const SIZE := Vector2(348, 590)   # the most it grows to
+const SIZE := Vector2(340, 600)   # the most it grows to
 const MARGIN := 21.0
 ## What it keeps clear of, on the 1280x720 canvas every screen is drawn at (canvas_items, expand): the island at the top, the minimap's
 ## column on the right (its plate and the place name under it, with the keys below them), and the slot bar at the bottom.
-const CLEAR_TOP := 100.0
-const CLEAR_RIGHT := 21.0 + 167.0 + 3.0 + 14.0    # the minimap's edge, its plate, its rim, a gap
-const CLEAR_BOTTOM := 21.0 + 102.0 + 13.0         # the bar's edge, the bar with its name over it, a gap
+const CLEAR_TOP := 104.0
+const CLEAR_RIGHT := 21.0 + 167.0 + 3.0 + 40.0    # the minimap's edge, its plate, its rim, room for the tilt
+const CLEAR_BOTTOM := 16.0         # the slot bar fades while the phone is out: its pages are on the phone's own tabs
+const TILT := -2.0                 # degrees: held in the hand, not pinned to the screen
 const SLIDE := 0.18              # s
 
 var client: TownClient
@@ -31,29 +32,43 @@ var _tween: Tween
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var look := StyleBoxFlat.new()
-	look.bg_color = Brand.PLATE
+	var look := StyleBoxFlat.new()     # the body: dark, a cream ring, as every plate
+	look.bg_color = Color("111111")
 	look.border_color = Brand.CREAM
 	look.set_border_width_all(3)
-	look.set_corner_radius_all(26)
-	look.content_margin_left = 18
-	look.content_margin_right = 18
-	look.content_margin_top = 16
-	look.content_margin_bottom = 14
-	look.shadow_color = Color(0, 0, 0, 0.3)
-	look.shadow_size = 16
-	look.shadow_offset = Vector2(0, 8)
+	look.set_corner_radius_all(44)
+	look.set_content_margin_all(10)
+	look.shadow_color = Color(0, 0, 0, 0.45)
+	look.shadow_size = 26
+	look.shadow_offset = Vector2(0, 14)
 	_frame.add_theme_stylebox_override("panel", look)
 	_frame.custom_minimum_size = SIZE
+	var screen := PanelContainer.new()  # the screen: the landing's light look
+	var glass := StyleBoxFlat.new()
+	glass.bg_color = Color("FBFBF9")
+	glass.set_corner_radius_all(35)
+	glass.content_margin_left = 14
+	glass.content_margin_right = 14
+	glass.content_margin_top = 14
+	glass.content_margin_bottom = 12
+	screen.add_theme_stylebox_override("panel", glass)
+	_frame.add_child(screen)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 12)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tabs.add_theme_constant_override("separation", 3)
+	_tabs.add_theme_constant_override("separation", 2)
 	_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	var tray := PanelContainer.new()    # the tabs sit in a soft tray at the top, as on the design
+	var tray_look := StyleBoxFlat.new()
+	tray_look.bg_color = Color(0, 0, 0, 0.06)
+	tray_look.set_corner_radius_all(99)
+	tray_look.set_content_margin_all(4)
+	tray.add_theme_stylebox_override("panel", tray_look)
+	tray.add_child(_tabs)
+	column.add_child(tray)
 	column.add_child(_scroll)
-	column.add_child(_tabs)
-	_frame.add_child(column)
+	screen.add_child(column)
 	_frame.visible = false
 	add_child(_frame)
 	for page in _pages:
@@ -74,7 +89,7 @@ func _build_tabs() -> void:
 		_tabs.remove_child(old)
 		old.queue_free()
 	for i in _names.size():
-		var c := PhonePage.chip(_names[i], i == _current)
+		var c := PhonePage.chip("%d %s" % [i + 1, _names[i]], i == _current)
 		c.pressed.connect(_show_page.bind(i))
 		_tabs.add_child(c)
 
@@ -106,12 +121,14 @@ func _slide() -> void:
 	var at := frame_rect(size)
 	_frame.custom_minimum_size = at.size
 	_frame.size = at.size
+	_frame.pivot_offset = at.size * 0.5
+	_frame.rotation_degrees = TILT
 	var shown := at.position
 	var hidden := Vector2(shown.x, size.y + MARGIN)
 	if _tween: _tween.kill()
 	_tween = create_tween()
 	_frame.position = hidden if is_open else _frame.position
-	_tween.tween_property(_frame, "position", shown if is_open else hidden, SLIDE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween.tween_property(_frame, "position", shown if is_open else hidden, SLIDE * 1.6).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	if not is_open: _tween.tween_callback(func(): _frame.visible = false)
 
 func _notification(what: int) -> void:

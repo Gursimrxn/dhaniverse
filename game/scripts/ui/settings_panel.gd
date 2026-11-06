@@ -10,7 +10,7 @@ const COLUMN_PAGE := 400.0
 const RIGHT := 50.0
 const EASE_ASIDE := 0.7            # the camera's horizontal offset, in metres
 const OPEN_TIME := 0.6             # s
-const SECTIONS := ["Picture", "Sound", "Controls", "Game"]
+const SECTIONS := ["Picture", "Sound", "Controls", "Game", "Access"]
 const FOV_BASE := 75
 const REBIND := [["Walk forward", "move_forward"], ["Walk back", "move_back"], ["Walk left", "move_left"], ["Walk right", "move_right"], ["Run", "sprint"], ["Use", "interact"], ["Change camera", "camera_mode"]]
 const FIXED_KEYS := {"Phone": "Tab", "Your mentor": "H", "The paper": "N", "Scooter": "F", "Settings": "Esc"}
@@ -126,6 +126,7 @@ func apply_saved() -> void:
 	Cinema.say_scale = float(world._setting("subtitle_size", 100)) / 100.0
 	world.rays_on = bool(world._setting("rays", true))
 	world.cinematic_on = bool(world._setting("cinematic", true))
+	_apply_access()
 
 func _layout() -> void:
 	var s := size
@@ -140,6 +141,11 @@ func _layout() -> void:
 	_page.size = Vector2(COLUMN_PAGE, s.y - 92)
 	_compare.position = Vector2(50, s.y - 110)
 	_sample.position = Vector2(50, s.y - 120)
+
+## Opens on one section: 0 Picture, 1 Sound, 2 Controls, 3 Game, 4 Access.
+func open_at(tab: int) -> void:
+	_tab = tab
+	open()
 
 func open() -> void:
 	if is_open: return
@@ -191,6 +197,7 @@ func _show(i: int) -> void:
 		1: _sound()
 		2: _controls()
 		3: _game()
+		4: _access()
 	for n in _page.get_child_count():
 		var part: Control = _page.get_child(n)
 		part.modulate.a = 0.0
@@ -435,6 +442,24 @@ func _game() -> void:
 		_show_sample())
 	_show_sample()
 
+func _access() -> void:
+	_lead("Make the town easier to read and to play.")
+	_slider("Text and UI size", "text_scale", 80, 140, 100, "%", func(v: int): _apply_access())
+	_toggle("Reduce motion", "No camera drift, rolls or slides; the big moments stay calm", "reduce_motion", false, func(_v: bool): _apply_access())
+	_toggle("Tap instead of hold", "One press does what holding E does", "tap_holds", false, func(_v: bool): _apply_access())
+	_slider("Look speed", "look_speed", 40, 200, 100, "%", func(v: int): _apply_access())
+	_toggle("Invert look up and down", "", "invert_y", false, func(_v: bool): _apply_access())
+
+func _apply_access() -> void:
+	Access.text_scale = float(world._setting("text_scale", 100)) / 100.0
+	Access.reduce_motion = bool(world._setting("reduce_motion", false))
+	Access.tap_holds = bool(world._setting("tap_holds", false))
+	CameraRig.look_speed = float(world._setting("look_speed", 100)) / 100.0
+	CameraRig.invert_y = bool(world._setting("invert_y", false))
+	get_tree().root.content_scale_factor = Access.text_scale
+	HudMotion.on = bool(world._setting("hud_motion", true)) and not Access.reduce_motion
+	world.cinematic_on = bool(world._setting("cinematic", true)) and not Access.reduce_motion
+
 func _show_sample() -> void:
 	_sample.add_theme_font_size_override("font_size", int(20.0 * float(world._setting("subtitle_size", 100)) / 100.0))
 	_sample.reset_size()
@@ -464,9 +489,6 @@ func _input(e: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if e.keycode != KEY_ESCAPE: return
-	if is_open:
+	if is_open:     # opening is the pause menu's: Esc in the town goes there first
 		close()
-		get_viewport().set_input_as_handled()
-	elif world.settings_may_open():
-		open()
 		get_viewport().set_input_as_handled()
