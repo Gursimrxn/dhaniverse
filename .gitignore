@@ -23,3 +23,12 @@ __pycache__/
 # local secrets (tools/make_keys.sh)
 .env.*
 !.env.example
+
+# website (Next.js) and the Godot web export copied into it
+.next/
+target/
+*.tsbuildinfo
+next-env.d.ts
+apps/web/AGENTS.md
+apps/web/public/godot/
+apps/web/test-results/
