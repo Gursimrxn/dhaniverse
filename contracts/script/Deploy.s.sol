@@ -180,6 +180,10 @@ contract Deploy is Script, QuestPool, CityNames {
         int24 tickSpacing = int24(int256(_uint(".market.tickSpacing")));
         town.router = new FoodRouter(IPoolManager(uni.poolManager), town.hook, keys.admin, tickSpacing);
         town.hook.setRouter(address(town.router));
+        // FOOD moves only between the game's own contracts (the admin, as holder, is on the list from the start).
+        // MealCounter and Farm join in _wire, which then locks the list for good.
+        town.food.setAllowed(uni.poolManager, true);
+        town.food.setAllowed(address(town.router), true);
 
         PoolKey memory key = town.router.poolKey();
         IPoolManager(uni.poolManager).initialize(key, _foodSqrtPrice(_uint(".market.baseUsdcPerFood")));
@@ -252,6 +256,10 @@ contract Deploy is Script, QuestPool, CityNames {
         town.mealCounter.setHousePool(address(town.housePool));
         town.floatManager.setEscrow(town.escrow);
         town.floatManager.setVenue(0, town.vault);
+
+        town.food.setAllowed(address(town.mealCounter), true);
+        town.food.setAllowed(address(town.farm), true);
+        town.food.lockAllowlist();
 
         uint256 ration = _uint(".market.rationFood");
         town.food.approve(address(town.mealCounter), ration);
