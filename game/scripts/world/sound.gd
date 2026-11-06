@@ -13,7 +13,7 @@ const FADE := 1.6                  # s for a place to take over
 const MUSIC_FADE := 3.5
 const WATER_NEAR := 4.0            # m from the river: as loud as it gets
 const WATER_FAR := 34.0            # m: gone
-const COIN_EVENTS := ["OrderServed", "MealEaten"]     # the till: an order handed over, a meal paid for
+const COIN_EVENTS := ["OrderServed", "MealEaten", "QuestDone", "RewardPaid"]     # the till: an order handed over, a meal paid for, pay
 const SAME_SOUND_GAP := 0.28       # s: the same sound again sooner than this is dropped
 const STREAK_WITHIN := 1.6         # s: a sound repeating this soon is a run of them (orders handed over in a hurry)
 const STREAK_EVERY := 3            # in a run, only every third is heard, quieter: the first says it, the rest are a trickle
@@ -98,7 +98,9 @@ func play(file: String, db := -4.0) -> void:
 
 func _on_event(e: Dictionary) -> void:
 	# your own, nobody else's
-	if e.type in COIN_EVENTS and str(e.get("account", "")) == world.client.player: play("coin", -8.0)
+	if str(e.get("account", "")) != world.client.player: return
+	if e.type in COIN_EVENTS: play("coin", -8.0)
+	elif e.type == "HumanVerified": play("stamp", -6.0)     # the Town Pass, stamped
 
 func _process(delta: float) -> void:
 	var p: Vector3 = world.player.global_position

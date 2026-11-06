@@ -5,6 +5,9 @@ extends VBoxContainer
 ## your chest is ready and what the town owes you. It only shows what the server gave it, counted down on the real clock between its words.
 
 const AT := Vector2(21, 21)
+const ROLL := 0.4                  # s the USDC figure takes to roll to a new amount
+const RISE := 0.9                  # s the gain beside it takes to rise and go
+const SPEND := Color("FF8A3D")
 
 var client: TownClient
 var energy := EnergyPips.new()
@@ -14,6 +17,12 @@ var _energy_line := RichTextLabel.new()
 var _wallet := PanelContainer.new()
 var _usdc := Label.new()
 var _usdc_note := Label.new()
+var _disc := Panel.new()           # the blue $ disc money always wears
+var _unit := Label.new()
+var _gain := Label.new()           # "+0.04", rising off the figure as it rolls
+var _target := -1                  # USDC units the figure is rolling to
+var _shown := 0.0
+var _rolling: Tween
 var _status := RichTextLabel.new()
 var _tick := 0.0
 var pass_waiting := Callable()     # true while a Town Pass link is open in the browser (TownPassDesk.waiting)
@@ -87,15 +96,37 @@ func _wallet_plate() -> Control:
 	column.add_theme_constant_override("separation", 5)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 7)
-	_usdc.add_theme_font_override("font", Brand.FONT_NUMBER)
-	_usdc.add_theme_font_size_override("font_size", 18)
+	_usdc.add_theme_font_override("font", Brand.FONT_BODY)    # money in Satoshi Bold: Bitroad's slashed zero misreads
+	_usdc.add_theme_font_size_override("font_size", 20)
 	_usdc.add_theme_color_override("font_color", Brand.CREAM)
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = Brand.BLUE
+	disc.set_corner_radius_all(11)
+	_disc.add_theme_stylebox_override("panel", disc)
+	_disc.custom_minimum_size = Vector2(22, 22)
+	_disc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var dollar := Label.new()
+	dollar.text = "$"
+	dollar.add_theme_font_override("font", Brand.FONT_BODY)
+	dollar.add_theme_font_size_override("font_size", 13)
+	dollar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dollar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	dollar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_disc.add_child(dollar)
+	_unit.text = "USDC"
+	_unit.add_theme_font_override("font", Brand.FONT_BODY)
+	_unit.add_theme_font_size_override("font_size", 11)
+	_unit.add_theme_color_override("font_color", Brand.CREAM_MUTED)
+	_unit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_gain.add_theme_font_override("font", Brand.FONT_BODY)
+	_gain.add_theme_font_size_override("font_size", 14)
+	_gain.modulate.a = 0.0
+	_unit.add_child(_gain)
 	_usdc_note.add_theme_font_override("font", Brand.FONT_BODY)
 	_usdc_note.add_theme_font_size_override("font_size", 11)
 	_usdc_note.add_theme_color_override("font_color", Brand.ORANGE)
 	_usdc_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	top.add_child(_usdc)
-	top.add_child(_usdc_note)
+	for part in [_disc, _usdc, _unit, _usdc_note]: top.add_child(part)
 	column.add_child(top)
 	column.add_child(small_print(_status))
 	_wallet.add_child(column)
@@ -126,7 +157,10 @@ func _read() -> void:
 
 func _write_wallet(you: Dictionary, now: int) -> void:
 	var usdc = you.get("usdc")
-	_usdc.text = Usdc.text(int(usdc)) if usdc != null else "Wallet coming"
+	_disc.visible = usdc != null
+	_unit.visible = usdc != null
+	if usdc == null: _usdc.text = "Wallet coming"
+	else: _roll_to(int(usdc))
 	var offline := str(client.city.get("chain", "offline")) == "offline"
 	_usdc_note.text = "REHEARSAL" if offline else ""
 	var mint := Brand.MINT.to_html(false)
@@ -156,3 +190,29 @@ func listen(to: TownClient) -> void:
 	client = to
 	client.you_changed.connect(_read)
 	client.synced.connect(_read)
+
+## A new amount: the figure rolls to it, and what changed rises off it, mint for money in, orange for money out.
+func _roll_to(units: int) -> void:
+	if units == _target: return
+	var from := _target
+	_target = units
+	if _rolling: _rolling.kill()
+	if from < 0 or not HudMotion.on:
+		_show(units)
+		return
+	_rolling = create_tween().set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	_rolling.tween_method(_show, _shown, float(units), ROLL)
+	var change := units - from
+	_gain.text = ("+" if change > 0 else "-") + Usdc.amount(absi(change))
+	_gain.add_theme_color_override("font_color", Brand.MINT if change > 0 else SPEND)
+	_gain.position = Vector2(_unit.size.x + 8.0, 0.0)
+	_gain.modulate.a = 1.0
+	var t := create_tween().set_parallel()
+	t.tween_property(_gain, "position:y", -18.0, RISE).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	t.tween_property(_gain, "modulate:a", 0.0, RISE * 0.45).set_delay(RISE * 0.55)
+
+## The figure at a point in its roll, to as many places as the amount it's rolling to has (at least two).
+func _show(units: float) -> void:
+	_shown = units
+	var places := maxi(Usdc.amount(_target).get_slice(".", 1).length(), 2)
+	_usdc.text = "%.*f" % [places, units / Usdc.UNITS]
