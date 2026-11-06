@@ -14,14 +14,14 @@ const OFF := Color(1.0, 0.973, 0.89, 0.15)
 const LEADER := Color(1.0, 0.973, 0.89, 0.35)
 const WARM := Color("FF9A5C")
 const BEST := Color("BDEDD0")
-const PLACE := "Tally Square"      # where the Common Table stands
+const PLACE := "Common Table"      # the counter's own name (world.json's food site)
+const KICKER := "TODAYS MENU · LIVE PRICES"   # Bitroad has no apostrophe
 
 var client: TownClient
 var player: CharacterBody3D
 var is_open: bool:
 	get: return visible
 
-var _cook := ""                   # who cooks here (Cast), or no one: then no quote
 var _items := []                   # city.menu, in its order
 var _pick := 0
 var _now := 0                      # energy now and after, for the pips
@@ -36,8 +36,6 @@ var _price_was := _text("", Brand.FONT_BODY, 1.3, Brand.CREAM_MUTED)
 var _note := _text("", Brand.FONT_BODY, 1.4, WARM)
 var _go := PanelContainer.new()
 var _go_words := _text("", Brand.FONT_BODY, 1.8, Brand.PLATE)
-var _quote := VBoxContainer.new()
-var _said := _text("", Brand.FONT_BODY, 1.8)
 var _box := StyleBoxFlat.new()
 var _wallet := _text("", Brand.FONT_BODY, 1.4, Brand.CREAM_MUTED)
 var _voucher := false              # V: pay with a meal voucher instead
@@ -63,17 +61,10 @@ func _ready() -> void:
 	back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(back)
-	for id in Cast.PEOPLE:
-		if Cast.PEOPLE[id].post == "food": _cook = id
-	var counter := ""
-	for site in MapData.SITES:
-		if site.role == "food": counter = site.name
-
 	var board := _column(6.4, 76.0, 2.4)
 	var head := _stack(0.8)
-	# the cook and the place, with no possessive: Bitroad has no apostrophe, and "MEIS KITCHEN" read as a typo
-	head.add_child(_eyebrow(("%s · %s" % [Cast.PEOPLE[_cook].name, PLACE] if _cook != "" else PLACE).to_upper()))
-	head.add_child(_text(counter, Brand.FONT_EDITORIAL_ITALIC, 8.0))
+	head.add_child(_eyebrow(KICKER))
+	head.add_child(_text(PLACE, Brand.FONT_EDITORIAL_ITALIC, 8.0))
 	var sub := HBoxContainer.new()
 	sub.add_theme_constant_override("separation", 0)
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -132,25 +123,6 @@ func _ready() -> void:
 	_note.custom_minimum_size.x = R * 40.0
 	side.add_child(_note)
 
-	_quote.add_theme_constant_override("separation", int(R * 0.8))
-	_quote.custom_minimum_size.x = R * 40.0
-	_quote.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_quote.offset_right = -R * 6.4
-	_quote.offset_left = -R * (6.4 + 40.0)
-	_quote.offset_bottom = -R * 5.6
-	_quote.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_quote.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_quote.visible = _cook != ""
-	if _cook != "":
-		var by := _eyebrow(("%s · %s" % [Cast.PEOPLE[_cook].name, counter]).to_upper())
-		by.modulate.a = 1.0
-		by.add_theme_color_override("font_color", WARM)
-		_quote.add_child(by)
-		_said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_said.custom_minimum_size.x = R * 40.0
-		_said.add_theme_constant_override("line_spacing", int(R * 0.4))
-		_quote.add_child(_said)
-	add_child(_quote)
 
 	var keys := HBoxContainer.new()
 	keys.add_theme_constant_override("separation", int(R * 1.6))
@@ -173,7 +145,6 @@ func open(food := "") -> void:
 	if not client.event.is_connected(_on_event):
 		client.event.connect(_on_event)
 		client.refused.connect(_on_refused)
-	if _cook != "": _said.text = "\"%s\"" % Cast.line(_cook, {"milestones": _firsts()})
 	visible = true
 	player.frozen = true
 	_fill()
@@ -202,7 +173,7 @@ func buy() -> void:
 	_sent = true
 	if bool(m.get("free", false)):
 		client.send({"type": "FreeMeal"})
-		_say("Asking Mei for the thali…", false)
+		_say("Asking for the thali…", false)
 		return
 	var c := {"type": "BuyMeal", "item": str(m.name)}
 	if _voucher: c["voucher"] = true
@@ -383,11 +354,6 @@ func _draw_pips() -> void:
 func _paint(at: Rect2, colour: Color) -> void:
 	_box.bg_color = colour
 	_pips.draw_style_box(_box, at)
-
-func _firsts() -> Dictionary:
-	var had := {}
-	for f in client.you.get("firsts", []): had[str(f.first)] = true
-	return had
 
 static func _label(m: Dictionary) -> String:
 	if bool(m.get("free", false)): return "Community thali"
