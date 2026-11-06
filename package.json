@@ -1,0 +1,12 @@
+{
+  "name": "dhaniverse",
+  "private": true,
+  "packageManager": "pnpm@10.26.1",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "pnpm -C apps/web dev",
+    "game": "node -e \"require('fs').cpSync('build/web','apps/web/public/godot',{recursive:true})\""
+  }
+}
