@@ -1,10 +1,10 @@
 class_name QuestMarks
 extends Node3D
-## Where your quests send you. Every open step that happens somewhere (PROTOCOL.md: a step's `place`, a place or a person) gets a gold
-## marker over that spot, and the ones the client reports itself (talk, visit, paper, cargo, strongbox) can be done there with the
-## interact key. Grandma's Ledger is different: its pages lie torn on the ground where the server says, and her strongbox waits at your
-## door. The minimap's gold marker points at the first quest's next step. What a step needs beyond walking there (the swap, the delivery,
-## the sign, the Town Pass) is done at its own thing in town (Tallyport); this only marks it.
+## Where your quests send you. Every open step that happens somewhere (PROTOCOL.md: a step's `place`, a place or a person) and that the
+## client reports itself (talk, visit, paper, cargo, strongbox) can be done there with the interact key. Grandma's Ledger is different:
+## its pages lie torn on the ground where the server says, and her strongbox waits at your door. The one gold marker, for the quest
+## you're tracking, is the Guide's. What a step needs beyond walking there (the swap, the delivery, the sign, the Town Pass) is done at
+## its own thing in town (Tallyport).
 
 const SPIN := 1.6                  # radians a second
 const BOB := 0.12                  # m
@@ -17,7 +17,6 @@ var town: Tallyport
 var client: TownClient
 var _marks := {}                   # place -> {node, thing}
 var _said := ""                    # what the marks were built for
-var _t := 0.0
 var _box: Node3D                   # Grandma's strongbox, at your door while her quest is on
 var _pages := {}                   # step id -> a torn page on the ground, for each of Grandma's pages still to find
 
@@ -45,7 +44,6 @@ func _rebuild() -> void:
 			if not _marks.has(place): _marks[place] = _make(place)
 	for place in _marks: _marks[place].open = by_place.get(place, [])
 	_lay_pages()
-	_goal()
 
 ## Grandma's pages still to find, each lying where the server says it is.
 func _lay_pages() -> void:
@@ -70,10 +68,6 @@ func _lay_pages() -> void:
 
 func _make(place: String) -> Dictionary:
 	var m := {"place": place, "open": []}
-	var node := Node3D.new()
-	add_child(node)
-	node.add_child(_diamond())
-	m.node = node
 	m.thing = town.things.add({"at": func(): return town.place_at(place), "reach": 2.6, "priority": 1,
 		"over": OVER_PERSON + 0.35 if town.is_person(place) else 1.6,
 		"hint": func(): return _hint(m), "press": func(): _press(m)})
@@ -82,7 +76,6 @@ func _make(place: String) -> Dictionary:
 func _drop(place: String) -> void:
 	var m: Dictionary = _marks[place]
 	town.things.remove(m.thing)
-	(m.node as Node3D).queue_free()
 	_marks.erase(place)
 
 ## The first of the open steps here that the client can report: its words on the hint.
@@ -123,21 +116,12 @@ static func step_words(step: Dictionary) -> String:
 		out = w if out == "" else out + " " + w
 	return out + "…"
 
-func _process(delta: float) -> void:
-	_t += delta
-	for place in _marks:
-		var node: Node3D = _marks[place].node
-		var at := town.place_at(place)
-		var over := OVER_PERSON if town.is_person(place) else OVER
-		node.global_position = at + Vector3.UP * (over + BOB * sin(_t * 2.2))
-		node.rotation.y = _t * SPIN
-		var waiting: bool = _marks[place].open.any(func(p): return bool(p[1].get("waiting", false)))
-		node.scale = Vector3.ONE * (0.75 if waiting else 1.0)
+func _process(_delta: float) -> void:
 	_strongbox()
 	_fan()
 
 ## A gold diamond: an octahedron, lit from inside so it reads at dusk.
-func _diamond() -> MeshInstance3D:
+static func diamond() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var s := SphereMesh.new()
 	s.radius = 0.2
@@ -218,17 +202,6 @@ func _fan() -> void:
 	for s in q.get("steps", []):
 		if bool(s.get("done", false)) and str(s.get("kind", "")) != "strongbox": found += 1
 	for i in 3: (_box.get_node("Page%d" % i) as Node3D).visible = i < found
-
-func _goal() -> void:
-	var at := Vector2.INF
-	for q in client.you.get("quests", []):
-		var s := TownState.next_step(q)
-		var place := str(s.get("place", ""))
-		if place != "" and town.knows(place):
-			var p := town.place_at(place)
-			at = Vector2(p.x, p.z)
-			break
-	town.set_goal(at)
 
 func _on_event(e: Dictionary) -> void:
 	if str(e.get("account", "")) != client.player: return

@@ -3,7 +3,9 @@ extends Control
 ## Top centre, as on the island boards (States, Main, Morph): the city day's clock in a dark pill, beside a dial with the sun where the
 ## world's sun really is. When something happens, a round lobe splits off the pill's left end, joined by a liquid neck, and says
 ## what it was: one at a time, a meal first, the town last, a dot under it for each still waiting. During a Market Rush run it holds
-## the run. Hover it with the cursor free, or hold Alt, and a card drops out of it: your energy, your best run, the day.
+## the run. Hover it with the cursor free, or hold Alt, and a card drops out of it: your energy, your best run, the day. At rest it
+## also says where to go next (the Guide: "Next · the Bounty Board · 120 m"). At the Bounty Board it becomes the board's bar: the
+## card's name, the energy it takes, its keys and the hold-E ring.
 ## One ColorRect draws every shape (shaders/ui/island.gdshader); the words are Labels over it.
 ## Board sizes are rem at 1440, so x REM px here.
 
@@ -20,6 +22,9 @@ const RUN_W := 46.0
 const MAX_W := 60.0
 const MENTOR_W := 38.0             # rem: the widest a mentor's line grows
 const MAX_TEXT := 40.0             # rem: a longer line is cut short
+const NEXT_TEXT := 26.0            # rem: the most of the Next line's words
+const NEXT_EVERY := 0.25           # s between reading the Guide
+const SAY_FOR := 3.0               # s a refusal shows in the board's bar
 const RING := 3.0                  # px
 const NECK := 18.0                 # px the union reaches: enough to bridge GAP with a neck
 const OPEN := 0.5                  # s
@@ -39,7 +44,7 @@ const SUN_LOW := Color("FF8A3D")
 const TOWN := Color("3a3b3b")
 const STALL := "Kofi's stall"
 # kind: [place in line, seconds up, the board's width in rem]. A meal goes ahead of anything waiting; the town waits for everyone.
-const KINDS := {"meal": [0, 3.0, 33.0], "rush": [1, 3.0, 33.0], "money": [1, 3.2, 34.0], "quest": [1, 3.6, 36.0], "mentor": [2, 8.0, 36.0], "town": [3, 3.0, 36.0]}
+const KINDS := {"paid": [0, 3.6, 36.0], "meal": [0, 3.0, 33.0], "rush": [1, 3.0, 33.0], "money": [1, 3.2, 34.0], "quest": [1, 3.6, 36.0], "mentor": [2, 8.0, 36.0], "town": [3, 3.0, 36.0]}
 const WHY := {"streak": "for coming back", "rush": "for a Rush run", "chest": "from your chest", "weekly chest": "from the weekly strongbox", "quest": "for a quest",
 	"price call": "for a right price call", "referral": "for a friend you brought"}
 const WAITING_FOR := {"town_pass": "waiting for your Town Pass", "budget": "the town's budget is spent today: tomorrow", "chain": "the chain refused it: tried again tomorrow"}
@@ -124,6 +129,24 @@ var _dots_n := 0
 var _energy_n := 0
 var _said_rest := false
 var _said_run := false
+var _rest_w := REST.x              # rem: the pill at rest, wider while there's a Next line
+var _next := HBoxContainer.new()
+var _next_words: Label
+var _next_far: Label
+var _next_in := 0.0
+var _next_said := ""
+var _board := HBoxContainer.new()  # the board's bar
+var _board_on := false
+var _kb := 0.0                     # 0 the island as it is, 1 the board's bar
+var _board_w := 40.0
+var _board_title: Label
+var _board_energy: Label
+var _ring := Control.new()
+var _ring_k := 0.0
+var _say_left := 0.0
+var _board_line := ""
+var _board_want := 40.0
+var _quest_paid_at := -100000
 
 ## Made and put on screen by world.gd; returned for the opening's plates.
 static func join(parent: Control, world_: Node, hud_: GameHud) -> Island:
@@ -160,6 +183,7 @@ func _ready() -> void:
 	_build_moment()
 	_build_dots()
 	_build_card()
+	_build_board()
 	for n in find_children("*", "Control", true, false): (n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	client.event.connect(_on_event)
@@ -198,6 +222,7 @@ func _on_event(e: Dictionary) -> void:
 			_add({"kind": "money", "head": "+%d ticket%s." % [int(e.tickets), "" if int(e.tickets) == 1 else "s"], "sub": [[str(WHY.get(str(e.get("why", "")), "")), ""]],
 				"fig": str(int(e.get("total", 0))), "note": [["this week", ""]], "lobe": "ticket", "fill": Brand.BLUE})
 		"RewardPaid":
+			if str(e.get("why", "")) == "quest" and Time.get_ticks_msec() - _quest_paid_at < 15000: return     # the quest's own moment said it
 			_add({"kind": "money", "head": "Paid.", "sub": [["%s · into your wallet" % str(e.get("why", "a reward")).capitalize(), ""]], "fig": "+" + Usdc.text(int(e.amount)),
 				"ink": Brand.MINT, "lobe": "coin", "fill": Brand.GREEN})
 		"RewardPending":
@@ -217,9 +242,13 @@ func _on_event(e: Dictionary) -> void:
 			_add({"kind": "quest", "head": "Didn't go through.", "sub": [[Refusals.reason(e.get("reason")), ""]], "note": [["try again", ""]], "lobe": "quest", "fill": Brand.PLATE})
 		"QuestDone":
 			var r: Dictionary = e.get("reward", {})
-			_add({"kind": "quest", "head": "Quest done!", "sub": [[str(e.get("title", "")) + ((" · " + str(r.title)) if r.get("title") != null and str(r.get("title", "")) != "" else ""), ""]],
-				"fig": "+" + Usdc.text(int(r.get("usdc", 0))) if int(r.get("usdc", 0)) > 0 else "", "ink": Brand.MINT,
-				"note": [["+%d ticket%s" % [int(r.get("tickets", 0)), "" if int(r.get("tickets", 0)) == 1 else "s"], ""]] if int(r.get("tickets", 0)) > 0 else [], "lobe": "quest", "fill": Brand.GREEN})
+			var usdc := int(r.get("usdc", 0))
+			var paid := usdc > 0 and bool(client.you.get("human", false))     # without the Town Pass it's held: RewardPending says so
+			if paid: _quest_paid_at = Time.get_ticks_msec()
+			_add({"kind": "paid", "head": "%s · %s" % ["Paid" if paid else "Done", str(e.get("title", "")).to_lower()],
+				"sub": [[("+%d ticket%s" % [int(r.get("tickets", 0)), "" if int(r.get("tickets", 0)) == 1 else "s"]) + ((" · " + str(r.title)) if r.get("title") != null and str(r.get("title", "")) != "" else ""), ""]],
+				"fig": "+" + Usdc.amount(usdc) if usdc > 0 else "", "ink": Brand.MINT if paid else Brand.CREAM,
+				"note": [["into your wallet" if paid else "held for your Town Pass", ""]] if usdc > 0 else [], "lobe": "coin" if paid else "quest", "fill": Brand.GREEN})
 		"QuestAbandoned": _add({"kind": "quest", "head": "Quest dropped.", "sub": [[TownState.quest_title(client.you, client.city, str(e.quest)), ""]], "lobe": "quest", "fill": TOWN})
 		"QuestFailed": _add({"kind": "quest", "head": "Quest failed.", "sub": [[Refusals.reason(e.get("reason")), ""]], "lobe": "quest", "fill": Brand.PLATE})
 		"PriceCalled": _add({"kind": "money", "head": "Called: %s." % str(e.get("call", "")), "sub": [["Settles when the next city day opens", ""]], "lobe": "coin", "fill": TOWN})
@@ -297,10 +326,13 @@ func _process(delta: float) -> void:
 	_tick_run(delta)
 	_tick_glance(delta)
 	_tick_moment(delta)
+	_tick_next(delta)
+	_tick_board(delta)
 	_place_shapes()
 
 func _hidden() -> bool:
 	if client.you.is_empty(): return true
+	if _board_on: return false
 	if (world.title and world.title.is_up) or world.opening.playing or world.director.busy or world.blast.playing: return true
 	if world.moments and world.moments.running: return true
 	return world.any_sheet_open() and not world.phone.is_open
@@ -357,7 +389,7 @@ func _tick_run(delta: float) -> void:
 
 func _tick_glance(delta: float) -> void:
 	var at := _root.get_local_mouse_position()
-	var want := Input.is_key_pressed(KEY_ALT) or (Input.mouse_mode == Input.MOUSE_MODE_VISIBLE and _hit().has_point(at))
+	var want := not _board_on and (Input.is_key_pressed(KEY_ALT) or (Input.mouse_mode == Input.MOUSE_MODE_VISIBLE and _hit().has_point(at)))
 	if want and _g == 0.0: _fill_card()
 	_g = move_toward(_g, 1.0 if want else 0.0, delta / GLANCE_IN)
 
@@ -371,7 +403,7 @@ func _hit() -> Rect2:
 func _tick_moment(delta: float) -> void:
 	if _m.is_empty():
 		_rest_in -= delta
-		if _rest_in <= 0.0 and not _q.is_empty() and _g == 0.0:
+		if _rest_in <= 0.0 and not _q.is_empty() and _g == 0.0 and _kb <= 0.0:
 			_open(_q.pop_front())
 		elif _b >= 1.0 and not _said_run:
 			_said_run = true
@@ -431,12 +463,19 @@ func _place_shapes() -> void:
 		lobe = lobe.lerp(_lobe_of(_w), k)
 	pill = _mix(pill, _rest_pill(), ge)
 	lobe = lobe.lerp(_rest_lobe(), ge)
+	var kb := smoothstep(0.0, 1.0, _kb)
+	if kb > 0.0:
+		pill = _mix(pill, Rect2(-_board_w * 0.5, 0.0, _board_w, H), kb)
+		lobe = lobe.lerp(Vector3(0.0, H * 0.5, 0.0), kb)
 	if (_phase == 0 and _b <= 0.0) or ge >= 1.0: lobe.z = 0.0    # at rest the lobe is folded into the pill
 	_pill_now = pill
 	_lobe_now = lobe
-	var a_rest := maxf(a_base * (1.0 - b), ge)
-	var a_run := a_base * b * (1.0 - ge)
-	a_m *= 1.0 - ge
+	var a_rest := maxf(a_base * (1.0 - b), ge) * (1.0 - kb)
+	var a_run := a_base * b * (1.0 - ge) * (1.0 - kb)
+	a_m *= (1.0 - ge) * (1.0 - kb)
+	var a_board := clampf((_kb - 0.45) / 0.55, 0.0, 1.0)
+	_board.modulate.a = a_board
+	_board.visible = a_board > 0.0
 	_rest.modulate.a = a_rest
 	_rest.visible = a_rest > 0.0
 	_run.modulate.a = a_run
@@ -472,8 +511,8 @@ func _place_shapes() -> void:
 
 # --- geometry, in rem from the island's top centre ---------------------------------------------------------------------
 
-static func _rest_pill() -> Rect2:
-	return Rect2(-REST.x * 0.5, 0.0, REST.x, REST.y)
+func _rest_pill() -> Rect2:
+	return Rect2(-_rest_w * 0.5, 0.0, _rest_w, REST.y)
 
 static func _rest_lobe() -> Vector3:
 	return Vector3(0.0, REST.y * 0.5, 1.6)
@@ -669,9 +708,19 @@ func _build_rest() -> void:
 	for part in [word, _day]:
 		part.size_flags_vertical = Control.SIZE_SHRINK_END
 		day.add_child(part)
-	for part in [_dial, _clock, _cap("LEFT"), sep, day]:
+	for part in [_dial, _clock, _cap("LEFT"), sep, day, _next]:
 		part.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_rest.add_child(part)
+	_next.add_theme_constant_override("separation", roundi(0.6 * REM))
+	var sep2 := ColorRect.new()
+	sep2.color = RULE
+	sep2.custom_minimum_size = Vector2(1.0, 2.2 * REM)
+	_next_words = _label(Brand.FONT_BODY, 1.3, Brand.CREAM)
+	_next_far = _label(Brand.FONT_NUMBER, 1.4, Brand.CREAM)
+	for part in [sep2, _cap("NEXT"), _next_words, _next_far]:
+		part.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_next.add_child(part)
+	_next.visible = false
 	_root.add_child(_rest)
 
 ## The board's dial: a dashed arc over the horizon, filled behind the sun as the day goes; the moon and two stars at night.
@@ -806,3 +855,103 @@ func _build_card() -> void:
 	_card.add_child(column)
 	_card.visible = false
 	_root.add_child(_card)
+
+# --- where to go next, at rest --------------------------------------------------------------------------------------------------------
+
+## The Guide's line, read a few times a second: the pill widens for it first, then the words come in.
+func _tick_next(delta: float) -> void:
+	_next_in -= delta
+	var guide: Guide = world.tallyport.guide if world.tallyport else null
+	if _next_in <= 0.0 and guide:
+		_next_in = NEXT_EVERY
+		var line := guide.next_line()
+		var said := "" if line.is_empty() else str(line[0]) + "|" + metres(float(line[1]))
+		if said != _next_said:
+			_next_said = said
+			if said != "":
+				_next_words.text = whole_words(str(line[0]), NEXT_TEXT * REM, Brand.FONT_BODY, roundi(1.3 * REM))
+				_next_far.text = metres(float(line[1]))
+				_next_far.visible = _next_far.text != ""
+	var on := _next_said != ""
+	var want := REST.x + ((_next.get_combined_minimum_size().x + REM) / REM if on else 0.0)
+	_rest_w = lerpf(_rest_w, want, 1.0 - exp(-12.0 * delta)) if visible else want
+	if not on: _next.visible = false
+	elif _rest_w > want - 0.4: _next.visible = true
+	_next.modulate.a = move_toward(_next.modulate.a, 1.0 if _next.visible else 0.0, delta / 0.15)
+	_rest.position = Vector2(-_rest_w * 0.5, 0.0) * REM
+	_rest.size = Vector2(_rest_w, REST.y) * REM
+
+## 7.4 -> "here", 63 -> "65 m", 312 -> "310 m"; nowhere -> "".
+static func metres(m: float) -> String:
+	if m < 0.0: return ""
+	if m < Guide.FOLD: return "here"
+	return "%d m" % (snappedi(roundi(m), 5) if m < 100.0 else snappedi(roundi(m), 10))
+
+# --- the Bounty Board's bar ---------------------------------------------------------------------------------------------------------
+
+## At the board: the island grows into its bar (BountyBoard), and back.
+func board_bar(on: bool) -> void:
+	_board_on = on
+	_say_left = 0.0
+	board_hold(0.0)
+	if on: _g = 0.0
+
+## The chosen card: its name and what it takes of your energy.
+func board_card(title: String, line: String) -> void:
+	_board_title.text = title
+	_board_line = line
+	if _say_left <= 0.0: _write_board_line(line, MUTED)
+
+## How far the hold-E ring has filled, 0 to 1.
+func board_hold(k: float) -> void:
+	if absf(k - _ring_k) < 0.001: return
+	_ring_k = k
+	_ring.queue_redraw()
+
+## A refusal, in the bar where the energy line was, for SAY_FOR s.
+func board_say(words: String) -> void:
+	_write_board_line(whole_words(words, MAX_TEXT * REM, Brand.FONT_BODY, roundi(1.3 * REM)), Brand.ORANGE)
+	_say_left = SAY_FOR
+
+func _write_board_line(text: String, ink: Color) -> void:
+	_board_energy.text = text
+	_board_energy.add_theme_color_override("font_color", ink)
+	_board_want = (_board.get_combined_minimum_size().x / REM) + 4.4
+
+func _tick_board(delta: float) -> void:
+	_kb = move_toward(_kb, 1.0 if _board_on else 0.0, delta / OPEN)
+	if _say_left > 0.0:
+		_say_left -= delta
+		if _say_left <= 0.0: _write_board_line(_board_line, MUTED)
+	_board_w = lerpf(_board_w, _board_want, 1.0 - exp(-14.0 * delta)) if _kb > 0.0 else _board_want
+	_board.position = Vector2(-_board_w * 0.5 + 2.2, 0.0) * REM
+	_board.size = Vector2(_board_w - 4.4, H) * REM
+
+func _build_board() -> void:
+	_board.alignment = BoxContainer.ALIGNMENT_CENTER
+	_board.add_theme_constant_override("separation", roundi(1.2 * REM))
+	_board_title = _label(Brand.FONT_EDITORIAL, 2.4, Brand.CREAM)
+	_board_energy = _label(Brand.FONT_BODY, 1.3, MUTED)
+	var sep := ColorRect.new()
+	sep.color = RULE
+	sep.custom_minimum_size = Vector2(1.0, 2.2 * REM)
+	var arrows := HBoxContainer.new()
+	arrows.add_theme_constant_override("separation", roundi(0.5 * REM))
+	for k in ["←", "→"]: arrows.add_child(GameHud.key_cap(k, roundi(1.3 * REM)))
+	_ring.custom_minimum_size = Vector2.ONE * 3.6 * REM
+	_ring.draw.connect(func():
+		var mid := _ring.size * 0.5
+		var r := _ring.size.x * 0.5 - 2.0
+		_ring.draw_arc(mid, r, 0.0, TAU, 48, RULE, 3.0, true)
+		if _ring_k > 0.0: _ring.draw_arc(mid, r, -PI * 0.5, -PI * 0.5 + TAU * _ring_k, 48, Brand.GREEN, 3.0, true))
+	var e := GameHud.key_cap("E", roundi(1.1 * REM))
+	e.custom_minimum_size = Vector2.ONE * 2.0 * REM
+	e.size = e.custom_minimum_size
+	e.position = (_ring.custom_minimum_size - e.size) * 0.5
+	_ring.add_child(e)
+	var hold := _label(Brand.FONT_BODY, 1.3, Brand.CREAM, "hold, tear it off")
+	for part in [_board_title, _board_energy, sep, arrows, _ring, hold, GameHud.key_cap("Esc", roundi(1.3 * REM))]:
+		part.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_board.add_child(part)
+	_board.visible = false
+	_root.add_child(_board)
