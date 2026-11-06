@@ -15,7 +15,7 @@ const PLACES := {
 	"strongbox": Vector3(-42.6, 0.0, 38.2),
 }
 const PEOPLE := ["harbourmaster", "kiosk", "spice-merchant", "painter", "stall", "hall"]
-const BOARD_AT := Vector3(-21.0, 0.0, -11.2)       # the Bounty Board, its face to the square
+const BOARD_AT := Vector3(-84.0, 0.0, -13.6)       # the Bounty Board: across the main street from the road up from the landing, its face down that road
 const PRICE_AT := Vector3(-31.5, 0.0, -11.2)       # the Price Call board
 const CHEST_AT := Vector3(-38.9, 0.0, 38.1)        # your chest, at your door
 const PAINTER_AT := Vector3(-26.0, 0.0, -13.2)
@@ -37,6 +37,7 @@ var keeper: Harbourmaster
 var hud: GameHud
 var things := TownThings.new()
 var marks := QuestMarks.new()
+var guide := Guide.new()
 var board := BountyBoard.new()
 var price_board := PriceBoard.new()
 var chest := DoorChest.new()
@@ -57,9 +58,10 @@ func setup(ui: Control, kiosks: Kiosks) -> void:
 		part.player = player
 		if "tell" in part: part.tell = tell
 		add_child(part)
+	board.world = world
 	board.global_position = _on_ground(BOARD_AT)
 	board.setup(ui)
-	things.add({"at": func(): return board.global_position + Vector3(0, 0, 1.0), "reach": 2.8, "over": 2.9, "hint": board.hint, "press": board.open})
+	things.add({"at": board.front, "reach": 3.6, "over": 2.2, "hint": board.hint, "press": board.open})
 	price_board.global_position = _on_ground(PRICE_AT)
 	price_board.setup(ui)
 	things.add({"at": func(): return price_board.global_position + Vector3(0, 0, 0.9), "reach": 2.4, "over": 2.4, "hint": price_board.hint, "press": price_board.open})
@@ -85,6 +87,12 @@ func setup(ui: Control, kiosks: Kiosks) -> void:
 	marks.town = self
 	marks.client = client
 	add_child(marks)
+	guide.town = self
+	guide.client = client
+	guide.player = player
+	guide.world = world
+	add_child(guide)
+	board.done_today = guide.done_today
 	board.paint = paint
 	for part in [board, price_board, chest, painter, desk]: paint(part)
 	chest.tier_look = _own_look.get(chest.tier_mat)
@@ -140,8 +148,9 @@ func paint(node: Node) -> void:
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		var sm := m.material_override as StandardMaterial3D
-		if sm == null or sm.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED or not m.mesh is PrimitiveMesh: continue
-		(m.mesh as PrimitiveMesh).material = sm
+		if sm == null or sm.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED or not (m.mesh is PrimitiveMesh or m.mesh is ArrayMesh): continue
+		if m.mesh is PrimitiveMesh: (m.mesh as PrimitiveMesh).material = sm
+		else: (m.mesh as ArrayMesh).surface_set_material(0, sm)
 		if sm.has_meta("own"):
 			if not _own_look.has(sm): _own_look[sm] = (world._town_mat(m.mesh, 0) as Material).duplicate()
 			m.material_override = _own_look[sm]
