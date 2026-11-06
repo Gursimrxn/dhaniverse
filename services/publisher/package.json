@@ -13,7 +13,8 @@
     "test": "node --test \"test/**/*.test.ts\"",
     "typecheck": "tsc -p .",
     "query": "node --env-file-if-exists=.env scripts/query.ts",
-    "address": "node --env-file-if-exists=.env scripts/address.ts"
+    "address": "node --env-file-if-exists=.env scripts/address.ts",
+    "drill": "node --env-file-if-exists=.env scripts/drill.ts"
   },
   "dependencies": {
     "@arkiv-network/sdk": "1.0.1",
