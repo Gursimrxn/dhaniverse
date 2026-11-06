@@ -52,7 +52,7 @@ var stall: MarketStall
 var food_counter: FoodCounter
 var keeper: Harbourmaster
 var kiosks: Kiosks
-var tallyport: Tallyport       # protocol 3's things in the world: the boards, the chest, the quests' stops
+var dhaniverse: Dhaniverse    # protocol 3's things in the world: the boards, the chest, the quests' stops
 var hud: GameHud
 var furniture: Array[Node3D] = []   # the bank's counter and the courtyard room: scenery, nothing to do at them
 var moments: Moments
@@ -1469,7 +1469,7 @@ func _market() -> void:
 	kiosks = Kiosks.new()
 	kiosks.world = self
 	kiosks.paint = _town_materials
-	kiosks.named = {Tallyport.EXCHANGE: "Exchange", Tallyport.SPICE: "Spice Merchant"}
+	kiosks.named = {Dhaniverse.EXCHANGE: "Exchange", Dhaniverse.SPICE: "Spice Merchant"}
 	add_child(kiosks)
 	kiosks.setup()
 	var interiors: Node3D = (load("res://assets/market/interiors.glb") as PackedScene).instantiate()
@@ -1563,18 +1563,18 @@ func _market() -> void:
 	moments.cinema = cinema
 	moments.sound = sound
 	add_child(moments)
-	tallyport = Tallyport.new()
-	tallyport.world = self
-	tallyport.client = client
-	tallyport.player = player
-	tallyport.cinema = cinema
-	tallyport.sound = sound
-	tallyport.keeper = keeper
-	tallyport.hud = hud
-	add_child(tallyport)
-	tallyport.setup(ui, kiosks)
-	phone.town_pass = tallyport.desk.ask
-	energy_plate.pass_waiting = func(): return tallyport.desk.waiting
+	dhaniverse = Dhaniverse.new()
+	dhaniverse.world = self
+	dhaniverse.client = client
+	dhaniverse.player = player
+	dhaniverse.cinema = cinema
+	dhaniverse.sound = sound
+	dhaniverse.keeper = keeper
+	dhaniverse.hud = hud
+	add_child(dhaniverse)
+	dhaniverse.setup(ui, kiosks)
+	phone.town_pass = dhaniverse.desk.ask
+	energy_plate.pass_waiting = func(): return dhaniverse.desk.waiting
 	_say_who()
 
 ## The bank's counter and the room in the Homes' courtyard, standing where they always have: nothing to do at them now.

@@ -1,5 +1,5 @@
 extends TestCase
-## The material-name convention new GLBs use (tools/blender/tallyport_arch.py) and site.gd reads.
+## The material-name convention new GLBs use (tools/blender/dhaniverse_arch.py) and site.gd reads.
 
 const Site := preload("res://scripts/world/site.gd")
 

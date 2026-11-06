@@ -35,7 +35,7 @@ var client: TownClient
 var player: CharacterBody3D
 var world: Node3D
 var tags: Control
-var paint := Callable()            # lights what's built here as the town is lit (Tallyport.paint)
+var paint := Callable()            # lights what's built here as the town is lit (Dhaniverse.paint)
 var is_open := false
 var pick := 0
 var done_today := Callable()       # quest id -> true when it was finished today (Guide)

@@ -861,7 +861,7 @@ func _build_card() -> void:
 ## The Guide's line, read a few times a second: the pill widens for it first, then the words come in.
 func _tick_next(delta: float) -> void:
 	_next_in -= delta
-	var guide: Guide = world.tallyport.guide if world.tallyport else null
+	var guide: Guide = world.dhaniverse.guide if world.dhaniverse else null
 	if _next_in <= 0.0 and guide:
 		_next_in = NEXT_EVERY
 		var line := guide.next_line()

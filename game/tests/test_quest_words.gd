@@ -22,7 +22,7 @@ func test_every_menu_item_has_food_on_the_ledge() -> void:
 
 func test_the_places_quests_name_are_in_town() -> void:
 	for place in ["market", "table", "bank", "homes", "square", "harbourmaster", "kiosk", "hall", "stall", "spice-merchant", "painter"]:
-		check(Tallyport.PLACES.has(place) or place in Tallyport.PEOPLE, "%s is a place in town" % place)
+		check(Dhaniverse.PLACES.has(place) or place in Dhaniverse.PEOPLE, "%s is a place in town" % place)
 
 func test_the_phone_keeps_clear_of_the_map_the_keys_and_the_bar() -> void:
 	var phone := Phone.new()

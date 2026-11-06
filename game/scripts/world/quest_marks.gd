@@ -13,7 +13,7 @@ const OVER_PERSON := 2.75          # m over a person's feet: over their head and
 const GOLD := Color("F0C33A")
 const PAGE := Color("f3ead2")
 
-var town: Tallyport
+var town: Dhaniverse
 var client: TownClient
 var _marks := {}                   # place -> {node, thing}
 var _said := ""                    # what the marks were built for

@@ -446,7 +446,7 @@ func _where_am_i() -> String:
 	var p: Vector3 = world.player.global_position
 	var at := Vector2(p.x, p.z)
 	if at.distance_to(Vector2(Opening.JETTY_AT.x, Opening.JETTY_AT.z)) < PLACE_NEAR * 2.5: return "The Landing"
-	if at.distance_to(Vector2(Tallyport.PLACES.square.x, Tallyport.PLACES.square.z)) < PLACE_NEAR * 2.0: return "Tally Square"
+	if at.distance_to(Vector2(Dhaniverse.PLACES.square.x, Dhaniverse.PLACES.square.z)) < PLACE_NEAR * 2.0: return "Tally Square"
 	var best := "Tallyport"
 	var nearest := PLACE_NEAR
 	for site in world.data.d.get("sites", []):

@@ -13,7 +13,7 @@ const FAR_FROM := 14.0             # m: past this the diamond grows with the dis
 const TRACKED := "tracked_quest"   # the settings key it's kept under
 const DONE := "done_today"         # the quests finished today on this machine, for the board's chalk
 
-var town: Tallyport
+var town: Dhaniverse
 var client: TownClient
 var player: CharacterBody3D
 var world: Node3D

@@ -3,7 +3,7 @@ extends SceneTree
 ## faucet and Town Pass, a paid thali, the free thali, a Market Rush run to the bell, the chest, an errand, a sponsor's new Spice Run end to
 ## end, a Price Call and a painted sign. Each step goes through the thing in the world (TownThings) or its sheet, and waits for the
 ## server's own events. Prints a line per check and quits 1 if any failed. Needs a server started with --debug.
-##   Godot --headless --path game -s res://dev/tallyport_drive.gd -- --arrive --player=drive1
+##   Godot --headless --path game -s res://dev/dhaniverse_drive.gd -- --arrive --player=drive1
 ##   (GUI, with --drive-shots=<dir>: a screenshot at each scene, the window maximised)
 
 var world: Node
@@ -79,7 +79,7 @@ func shot(name: String) -> void:
 	print("  shot %s/%s.png" % [shots, name])
 
 func _run() -> void:
-	while current_scene == null or current_scene.get_node_or_null("World") == null or current_scene.get_node("World").get("tallyport") == null:
+	while current_scene == null or current_scene.get_node_or_null("World") == null or current_scene.get_node("World").get("dhaniverse") == null:
 		await process_frame
 	world = current_scene.get_node("World")
 	TS = load("res://scripts/client/town_state.gd")
@@ -87,7 +87,7 @@ func _run() -> void:
 	world._capturing = true            # leave this machine's saved settings alone
 	world.cinematic_on = false         # no first-look flights over the drive
 	client = world.client
-	town = world.tallyport
+	town = world.dhaniverse
 	if shots != "": DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED)
 	client.event.connect(func(e: Dictionary): _events.append(e))
 	while not client.up: await process_frame

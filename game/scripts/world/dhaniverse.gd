@@ -1,4 +1,4 @@
-class_name Tallyport
+class_name Dhaniverse
 extends Node3D
 ## Tallyport's things in the world (protocol 3): the Bounty Board and the Price Call board in the square, your chest at your door, the
 ## exchange on the landing and the Spice Merchant in the Market Hall, the sign painter, the town hall's clerk, the bank's clerk, your

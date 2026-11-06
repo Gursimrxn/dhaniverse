@@ -598,7 +598,7 @@ func _plot(raw: Dictionary) -> void:
 		_place(n, front, f)
 	_sign(Strings.PLOT.get(str(raw.get("status", "lease")), Strings.PLOT.lease), Vector3(front.x, height_at(front.x, front.y) + 2.75, front.y) + Vector3(f.x, 0, f.y) * 0.25, f)
 
-# --- landmarks (docs/superpowers/specs/2026-10-29-tallyport-level-design.md) -------------------------------------
+# --- landmarks (docs/superpowers/specs/2026-10-29-dhaniverse-level-design.md) -------------------------------------
 var bakery: Node3D
 var cast_people := {}            # cast id -> Person
 

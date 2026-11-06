@@ -49,13 +49,13 @@ func press_at(at: Vector3) -> void:
 	if not near.is_empty(): near.press.call()
 
 func _run() -> void:
-	while current_scene == null or current_scene.get_node_or_null("World") == null or current_scene.get_node("World").get("tallyport") == null:
+	while current_scene == null or current_scene.get_node_or_null("World") == null or current_scene.get_node("World").get("dhaniverse") == null:
 		await process_frame
 	world = current_scene.get_node("World")
 	world._capturing = true
 	world.cinematic_on = false
 	client = world.client
-	town = world.tallyport
+	town = world.dhaniverse
 	client.event.connect(func(e: Dictionary): _events.append(e))
 	while not client.up: await process_frame
 	var until := Time.get_ticks_msec() + 15000

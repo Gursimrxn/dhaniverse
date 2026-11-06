@@ -67,7 +67,7 @@ func _placeholder() -> Node3D:
 	return n
 
 ## What each surface of a building is, from its material name (the convention of the quarter's GLBs,
-## tools/blender/tallyport_arch.py); shaders/foliage/building.gdshader paints each part in its site's colour.
+## tools/blender/dhaniverse_arch.py); shaders/foliage/building.gdshader paints each part in its site's colour.
 ## Surfaces whose names say none of these (the retained masters) are sorted by their vertex colours.
 const PART_WALL := 0
 const PART_TRIM := 1
