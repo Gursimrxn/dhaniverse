@@ -9,10 +9,12 @@
 //   GET  /profiles/:name                 a player's public profile
 //   GET  /papers/:day                    a day's paper index entry (`latest` for the newest)
 //   GET  /seasons                        finished seasons and their Swarm snapshots
+//   GET  /log?town=&from=                the town's save, restored from Arkiv: JSONL, setup line first when from=0
 //   GET  /query                          the Bounty Board's Arkiv query, for anyone to run
 //   POST /swarm/campaign-bundle          story JSON + images → Swarm reference (= metaHash)
 //   GET  /swarm/campaign-bundle/:ref     a bundle's index.json, read back through Bee
 
+import { timingSafeEqual } from "node:crypto"
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
 import type { Reader } from "./arkiv/queries.ts"
 import { BundleError, LIMITS, buildBundle, parseBundleForm, uploadBundle } from "./bundle.ts"
@@ -33,10 +35,19 @@ export type ReadApiDeps = {
   /** The live Bounty Board query text and the RPC it runs on, for /query. */
   queryInfo: () => { query: string; rpc: string; chainId: number; owner: string | null; env: string } | null
   health: () => Record<string, unknown>
+  /** The save's lines from Arkiv (see `restoreLines`); absent when there is no log key or no Arkiv to read. */
+  restore?: ((town: string, from: number) => AsyncIterable<string>) | null
+  /** Bearer token for `GET /log` (32+ chars). Absent: the route does not exist (404). */
+  restoreToken?: string | null
+  /** Let non-loopback addresses use `GET /log` (still needs the token). */
+  restoreAllowRemote?: boolean
+  /** The caller's address; tests replace it. */
+  peer?: (req: IncomingMessage) => string | undefined
   now?: () => number
 }
 
 const MAX_RANGE_S = 7 * 24 * 3600
+const TOWN = /^[A-Za-z0-9_-]{1,128}$/
 const NAME = /^[A-Za-z0-9 _.\-]{1,64}$/
 
 class HttpError extends Error {
@@ -86,7 +97,7 @@ export function makeReadApi(deps: ReadApiDeps): Server {
   const uploads = new RateLimiter(deps.uploadsPerHour, 3_600_000, deps.uploadsPerDay, 86_400_000)
   // Counted for reach.md: requests per route, and how many actually went to Arkiv (cache misses).
   const counts = { requests: {} as Record<string, number>, arkivQueries: 0, bundleUploads: 0 }
-  const ROUTES = new Set(["/health", "/campaigns", "/boards/rush", "/prices", "/profiles", "/papers", "/seasons", "/query", "/swarm"])
+  const ROUTES = new Set(["/health", "/campaigns", "/boards/rush", "/prices", "/profiles", "/papers", "/seasons", "/query", "/log", "/swarm"])
   const count = (route: string) => {
     const r = ROUTES.has(route) ? route : "other"
     counts.requests[r] = (counts.requests[r] ?? 0) + 1
@@ -160,6 +171,33 @@ export function makeReadApi(deps: ReadApiDeps): Server {
 
     count(path.startsWith("/profiles/") ? "/profiles" : path.startsWith("/papers/") ? "/papers" : path.startsWith("/swarm/") ? "/swarm" : path)
     if (path === "/health") return send(res, 200, { ...deps.health(), reads: counts }, { ...headers, "cache-control": "no-store" })
+
+    if (path === "/log") {
+      // The save is private: no token configured means no such route; CORS headers are never sent for it.
+      if (!deps.restoreToken) throw new HttpError(404, "not here")
+      const peer = (deps.peer ?? ((r) => r.socket.remoteAddress))(req) ?? ""
+      if (!deps.restoreAllowRemote && !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(peer)) throw new HttpError(403, "GET /log answers only on this machine")
+      const given = Buffer.from(String(req.headers.authorization ?? "").replace(/^Bearer /i, ""))
+      const want = Buffer.from(deps.restoreToken)
+      if (given.length !== want.length || !timingSafeEqual(given, want)) throw new HttpError(401, "a bearer token is required")
+      if (!deps.restore) throw new HttpError(503, "restoring needs DHANIVERSE_LOG_KEY and an Arkiv writer or ARKIV_WRITER_ADDRESS on this publisher")
+      const town = url.searchParams.get("town") ?? ""
+      if (!TOWN.test(town)) throw new HttpError(400, "town must be the town id from the save")
+      const from = intParam(url.searchParams.get("from"), "from", 0, Number.MAX_SAFE_INTEGER) ?? 0
+      res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" })
+      try {
+        for await (const line of deps.restore(town, from)) {
+          if (!res.write(`${line}
+`)) await new Promise((ok) => res.once("drain", ok))
+        }
+      } catch (err) {
+        log.warn("restore stopped", { town, from, error: err })
+        res.write(`${JSON.stringify({ error: (err as Error).message })}
+`)
+      }
+      res.end()
+      return
+    }
 
     if (path === "/campaigns") {
       const nowSec = Math.floor(now() / 1000)

@@ -116,7 +116,7 @@ test("Arkiv unreachable: 502 with a plain message, not a crash", async () => {
 test("GET /query: the Bounty Board query and a JSON-RPC body anyone can POST", async () => {
   const r = await get("/query")
   assert.equal(r.body.chainId, 7794095)
-  assert.match(r.body.query, /tallyport\.campaign\.v1/)
+  assert.match(r.body.query, /dhaniverse.campaign\.v1/)
   assert.equal(r.body.json_rpc.method, "arkiv_query")
 })
 

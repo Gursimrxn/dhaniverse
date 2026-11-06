@@ -20,12 +20,26 @@ no player wallets.
 
 | Entity (`arkiv.schema`) | Written | Expires | Queried by |
 |---|---|---|---|
-| `tallyport.campaign.v1` | when a card appears or changes (slots, status) | at the campaign's end | Bounty Board (`GET /campaigns`) |
-| `tallyport.rush_board.v1` | when a city day closes | 48 h | `GET /boards/rush?day=` |
-| `tallyport.price_tick.v1` | one per 5-minute window | 7 days | `GET /prices?from=&to=` |
-| `tallyport.profile.v1` | when a title, stamp or ENS name changes | season end, renewed | `GET /profiles/:name` |
-| `tallyport.paper.v1` | each new paper | 30 days | `GET /papers/:day` (body on Swarm) |
-| `tallyport.season.v1` | when a season ends (needs Swarm) | 180 days | `GET /seasons` |
+| `dhaniverse.campaign.v1` | when a card appears or changes (slots, status) | at the campaign's end | Bounty Board (`GET /campaigns`) |
+| `dhaniverse.rush_board.v1` | when a city day closes | 48 h | `GET /boards/rush?day=` |
+| `dhaniverse.price_tick.v1` | one per 5-minute window | 7 days | `GET /prices?from=&to=` |
+| `dhaniverse.profile.v1` | when a title, stamp or ENS name changes | season end, renewed | `GET /profiles/:name` |
+| `dhaniverse.paper.v1` | each new paper | 30 days | `GET /papers/:day` (body on Swarm) |
+| `dhaniverse.season.v1` | when a season ends (needs Swarm) | 180 days | `GET /seasons` |
+| `dhaniverse.city.v1` | once per town, from the save's first line (encrypted) | 180 days, renewed | `GET /log` |
+| `dhaniverse.log.v1` | one per batch of save lines (gzipped, encrypted, hash-chained) | 180 days, renewed | `GET /log` |
+
+### The save on Arkiv
+
+With `SAVE_PATH` (the server's `--save` file) and `DHANIVERSE_LOG_KEY` set, the publisher tails the save and
+writes it to Arkiv in order. A batch closes at a flush or at 96 KiB of compressed lines; it is gzipped, then
+AES-256-GCM encrypted (nonce in front, tag after), and its `hash` (SHA-256 of the plaintext JSONL) is chained
+through the next batch's `prevHash`. Only whole lines are read, and a batch is sent only after the one before it
+landed, so Arkiv never has a gap. On a restart it asks Arkiv for the town's highest `toSeq` and carries on.
+Every `city` and `log` entity with under 150 days left is extended to 180 days (checked once a day).
+Without the key it says so and does not start the mirror; everything else still runs.
+Generate a key with `openssl rand -hex 32`, and keep it with the server's other secrets: lose it and the
+save on Arkiv cannot be read.
 
 Every attribute, index, owner and expiry: [`/arkiv/schema.md`](../../arkiv/schema.md). The schemas in code:
 [`src/schemas.ts`](src/schemas.ts). The contract test ([`test/contract.test.ts`](test/contract.test.ts))
@@ -70,6 +84,10 @@ The game server reaches the read API at `PUBLISHER_URL` (e.g. `http://127.0.0.1:
 | `ARKIV_CHAIN` | `rabdi` | `rabdi` (testnet, chain id 7794095) or `localhost` |
 | `ARKIV_RPC_URL` | chain's | override the RPC URL |
 | `ARKIV_WRITER_ADDRESS` | key's address | whose entities the read API trusts (read-only mode) |
+| `SAVE_PATH` | — | the server's `--save` file to mirror onto Arkiv |
+| `DHANIVERSE_LOG_KEY` | — | 64 hex characters (32 bytes): encrypts the save on Arkiv, and decrypts it for `GET /log`. Required for the mirror |
+| `DHANIVERSE_RESTORE_TOKEN` | — | 32+ characters: the bearer token `GET /log` requires. Unset: `GET /log` answers 404 |
+| `RESTORE_ALLOW_REMOTE` | `false` | let non-loopback addresses use `GET /log` (token still required) |
 | `ARKIV_FLUSH_INTERVAL_MS` | `20000` | how often a batch may go out (sooner while there's a backlog) |
 | `ARKIV_MAX_OPS_PER_TX` | `12` | operations per transaction |
 | `ARKIV_TX_TIMEOUT_MS` | `120000` | deadline for one transaction (then reconcile before retrying) |
@@ -102,6 +120,7 @@ Every answer is a live Arkiv query (behind a short cache) filtered on the writer
 | `GET /profiles/:name` | `{profile: {name, title, stamps, ens, season}}`; 404 if none |
 | `GET /papers/:day` | `{paper: {day, headline, stories, body_ref, body}}`; `/papers/latest` for the newest |
 | `GET /seasons` | `{seasons: [{season, ended_day, snapshot_ref}]}` |
+| `GET /log?town=&from=` | the save, restored from Arkiv, as JSONL: the setup line (when `from` is 0), then every line with `seq >= from`, in order. Decrypts, checks every `prevHash` link and that each batch starts where the last ended; on a broken chain, a gap or a batch that won't decrypt it ends with `{"error": …}` and stops. Needs `DHANIVERSE_LOG_KEY`, `Authorization: Bearer <DHANIVERSE_RESTORE_TOKEN>`, and a loopback caller |
 | `GET /query` | the Bounty Board's query string, RPC URL, chain id and a ready JSON-RPC body |
 | `POST /swarm/campaign-bundle` | multipart form: `story` (JSON) + up to 6 `image` files → `201 {reference, metaHash, index, files, bytes, dropped}` |
 | `GET /swarm/campaign-bundle/:ref` | that bundle's `index.json`, read back through Bee |
@@ -142,7 +161,7 @@ or straight against the RPC:
 ```sh
 curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d '{
   "jsonrpc":"2.0","id":1,"method":"arkiv_query",
-  "params":["arkiv.schema = str('\''tallyport.campaign.v1'\'') AND env = str('\''live'\'') AND status = str('\''live'\'') AND $owner = addr(WRITER_ADDRESS)",
+  "params":["arkiv.schema = str('\''dhaniverse.campaign.v1'\'') AND env = str('\''live'\'') AND status = str('\''live'\'') AND $owner = addr(WRITER_ADDRESS)",
             {"select":{"key":true,"owner":true,"expiresAt":true,"attributes":true},"limit":"0x64"}]}'
 ```
 
