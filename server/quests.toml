@@ -1,0 +1,119 @@
+# The words of every quest: titles, stories and steps. Numbers (energy, pay, tickets) live in rules.toml, and
+# sponsored quests take theirs from the campaign.
+#
+# A step's `kind` says how it gets done:
+#   talk, visit, paper, strongbox  the client reports it with QuestStep
+#   cargo                          the client reports it; the server advances the cargo money if the wallet is short
+#   swap, deliver, sign            a real transaction, sent with Swap, Deliver or PaintSign and seen on chain
+#   verify                         the Town Pass (World ID)
+#   hold                           holding the quest token, checked on chain at random moments
+#   meals                          paid meals eaten after taking the quest
+# `place` is where the client puts the quest marker: one of the town's places, or a person.
+
+# ---------------------------------------------------------------- sponsored templates
+
+[templates.spice_run]
+title = "The Spice Run"
+story = "The harbourmaster has cargo money for the spice market and nobody to carry it. Buy the sponsor's spice at the exchange kiosk, then take it to the Spice Merchant. He pays back the cargo and a fee for your trouble."
+steps = [
+  { id = "cargo", kind = "cargo", place = "harbourmaster", text = "Collect the cargo money from the harbourmaster. If your wallet is short, he'll advance it." },
+  { id = "swap", kind = "swap", place = "kiosk", text = "Swap the cargo money for the sponsor's spice at the exchange kiosk. Read the quote, the fee and the slippage first." },
+  { id = "deliver", kind = "deliver", place = "spice-merchant", text = "Deliver the spice to the Spice Merchant at spice-merchant.tallyport.eth." },
+]
+
+[templates.paint_sign]
+title = "Paint Your Shop Sign"
+story = "Every stall on the waterfront has a sign, and yours is blank. The sign painter says a sign written on your own name is one nobody can paint over."
+steps = [
+  { id = "painter", kind = "talk", place = "painter", text = "Ask the sign painter what a name is for." },
+  { id = "sign", kind = "sign", place = "stall", text = "Write your shop sign on your name. It's saved as your name's description." },
+]
+
+[templates.town_pass]
+title = "The Town Pass"
+story = "The town hall gives every person one pass, and only one. With it, the town can pay you."
+steps = [
+  { id = "clerk", kind = "talk", place = "hall", text = "Ask the clerk at the town hall about the pass." },
+  { id = "verify", kind = "verify", place = "hall", text = "Show you're one real person with World ID." },
+]
+
+[templates.hold_line]
+title = "Hold the Line"
+story = "Prices jump about. The old traders say the hard part isn't buying, it's not selling in a panic. Hold the sponsor's token for three days."
+steps = [
+  { id = "trader", kind = "talk", place = "market", text = "Hear the old trader out." },
+  { id = "hold", kind = "hold", place = "market", text = "Keep at least one token in your wallet for three days. The market checks at random." },
+]
+
+# ---------------------------------------------------------------- errands: three a day, paid from the house
+
+[[errands]]
+id = "chai_round"
+title = "The Chai Round"
+story = "The dock workers are thirsty and the chai wallah's helper is off sick."
+steps = [
+  { id = "collect", kind = "visit", place = "table", text = "Collect the chai from the Common Table." },
+  { id = "serve", kind = "talk", place = "harbourmaster", text = "Hand it round at the harbour." },
+]
+
+[[errands]]
+id = "lost_ledger"
+title = "The Lost Ledger"
+story = "A shopkeeper left her day book on the bench by the square."
+steps = [
+  { id = "find", kind = "visit", place = "square", text = "Find the day book on the bench in the square." },
+  { id = "return", kind = "visit", place = "market", text = "Return it to her stall in the market." },
+]
+
+[[errands]]
+id = "price_board"
+title = "Chalk the Price Board"
+story = "The morning's prices need chalking up before the crowd arrives."
+steps = [
+  { id = "read", kind = "visit", place = "market", text = "Read the live food price at the market." },
+  { id = "chalk", kind = "visit", place = "square", text = "Chalk it on the board in the square." },
+]
+
+[[errands]]
+id = "letters"
+title = "Letters from the Ferry"
+story = "The ferry brought letters, and the post office is shut for lunch."
+steps = [
+  { id = "pickup", kind = "talk", place = "harbourmaster", text = "Pick up the letters from the harbourmaster." },
+  { id = "deliver", kind = "visit", place = "homes", text = "Drop them at the homes on the hill." },
+]
+
+# ---------------------------------------------------------------- mysteries: one a day, house or boosted
+
+[[mysteries]]
+id = "missing_scale"
+title = "The Missing Scale"
+story = "The grain merchant's brass scale has vanished, and with it, half the market's trust."
+steps = [
+  { id = "merchant", kind = "talk", place = "market", text = "Hear what the grain merchant saw." },
+  { id = "harbour", kind = "visit", place = "harbourmaster", text = "Check the night's cargo list at the harbour." },
+  { id = "found", kind = "visit", place = "homes", text = "Follow the scrape marks to the homes on the hill." },
+]
+
+[[mysteries]]
+id = "night_bell"
+title = "The Night Bell"
+story = "Someone rang the market bell at midnight. The town wants to know why."
+steps = [
+  { id = "bell", kind = "visit", place = "market", text = "Look at the bell rope." },
+  { id = "baker", kind = "talk", place = "table", text = "Ask the baker who was up early." },
+  { id = "square", kind = "visit", place = "square", text = "Find the answer pinned to the square's board." },
+]
+
+# ---------------------------------------------------------------- Grandma's Ledger: once a season
+
+[grandma]
+title = "Grandma's Ledger"
+story = "Your grandmother kept a ledger of everything Tallyport taught her about money. Three of its pages are scattered around Mumbai's old market, and the last opens her strongbox."
+any_order = true
+steps = [
+  { id = "paper", kind = "paper", place = "square", text = "Page one: read the paper at the square on a day something big happens in the market." },
+  { id = "clerk", kind = "talk", place = "bank", text = "Page two: ask the bank clerk about Grandma's records." },
+  { id = "meals", kind = "meals", place = "table", text = "Page three: eat three meals you pay for yourself." },
+  { id = "strongbox", kind = "strongbox", place = "homes", text = "Open Grandma's strongbox." },
+]

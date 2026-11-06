@@ -1,0 +1,253 @@
+# Every tunable number, in one file. Money is USDC in base units (1,000,000 = 1 USDC), FOOD amounts are in base
+# units (1,000,000 = 1 FOOD) unless a comment says otherwise, rates and shares are basis points (100 = 1%), times are
+# milliseconds of the real clock.
+#
+# FROM CONTRACTS means a contract fixes this at deploy: change it only together with them.
+# FROM THE PLAN means the Tallyport technical plan or build spec sets the launch value. TUNABLE means nobody has yet.
+# Story and quest words live in quests.toml.
+
+# FoodHook's settings. Prices are USDC base units per whole FOOD.
+[food]
+base_price = 4000               # FROM CONTRACTS: 0.004 USDC per FOOD
+start_price = 4000              # FROM CONTRACTS
+floor = 2000                    # FROM CONTRACTS
+ceiling = 8000                  # FROM CONTRACTS
+band_bps = 1500                 # FROM CONTRACTS: 15% either way from the day's open
+pool_food = 1250                # FROM CONTRACTS: whole FOOD the deploy seeds the pool with (poolFood)
+
+# What each meal burns and gives. FROM THE PLAN. Its price is its FOOD at the live pool price.
+[[menu]]
+name = "chai"
+food = 1000000
+energy = 10
+
+[[menu]]
+name = "vada_pav"
+food = 3000000
+energy = 32
+
+[[menu]]
+name = "thali"
+food = 6000000
+energy = 70
+
+[meals]
+slippage_bps = 200              # FROM THE PLAN: a meal ticket allows 2% over the quote
+free_meal_energy = 40           # FROM THE PLAN: the free community thali
+free_meal_every_ms = 86400000   # FROM THE PLAN: once every 24 real hours
+
+[clock]
+real_day_ms = 86400000          # 24 real hours. A week is 7 of them
+
+[energy]
+max = 100                       # FROM THE PLAN
+start = 100                     # TUNABLE: a new player arrives full
+regen_below = 40                # FROM THE PLAN: free regen up to 40
+regen_every_ms = 240000         # FROM THE PLAN: +1 every 4 real minutes
+
+[rush]
+run_ms = 90000                  # FROM THE PLAN: a run is 90 seconds
+runs_per_day = 3                # FROM THE PLAN
+most_orders_per_run = 40        # TUNABLE: about one order every 2 seconds at most
+pot_bps = 3000                  # FROM THE PLAN: the pot is 30% of the FIXED bucket's day budget
+pot_shares = [25, 18, 14, 11, 9, 7, 6, 4, 3, 3]   # TUNABLE: the top 10's weights
+tickets_per_run = 1             # TUNABLE
+
+[chest]
+every_ms = 86400000             # FROM THE PLAN: once every 24 hours
+brass_streak = 3                # FROM THE PLAN
+gold_streak = 7                 # FROM THE PLAN
+pity_every = 10                 # FROM THE PLAN: every 10th chest without a golden drop has one
+golden_drop = 50000             # TUNABLE: 0.05 USDC
+budget_bps = 2000               # FROM THE PLAN: 20% of the SURPRISE bucket's day budget
+
+[chest.wood]                    # TUNABLE
+energy = 10
+tickets = 1
+voucher_bps = 1000
+drop_bps = 500
+
+[chest.brass]                   # TUNABLE
+energy = 20
+tickets = 2
+voucher_bps = 2500
+drop_bps = 1000
+
+[chest.gold]                    # TUNABLE
+energy = 30
+tickets = 3
+voucher_bps = 5000
+drop_bps = 2000
+
+[streak]
+window_days = 7                 # FROM THE PLAN: 5 visits in a rolling 7 days
+days_needed = 5                 # FROM THE PLAN
+budget_bps = 2000               # FROM THE PLAN: the weekly chest is 20% of the FIXED day budget
+weekly_bonus = 250000           # TUNABLE: 0.25 USDC, within that share
+weekly_tickets = 3              # TUNABLE
+weekly_energy = 30              # TUNABLE
+login_tickets = 1               # TUNABLE
+
+[errands]
+per_day = 3                     # FROM THE PLAN
+energy = 10                     # FROM THE PLAN
+budget_bps = 1500               # FROM THE PLAN: 15% of the FIXED day budget
+expected_per_day = 15           # TUNABLE: the rate is that share over this many errands
+
+[mystery]
+energy = 50                     # FROM THE PLAN
+per_day = 1                     # TUNABLE
+budget_bps = 1500               # FROM THE PLAN: 15% of the SURPRISE day budget, for mysteries, events and Grandma
+payout = 500000                 # FROM THE PLAN: 0.50 USDC, the low end of $0.50-$5
+
+[grandma]
+energy = 50                     # FROM THE PLAN
+meals = 3                       # FROM THE PLAN: the third page is three paid meals
+strongbox = 1000000             # TUNABLE: 1 USDC, within the mystery share
+tickets = 5                     # TUNABLE
+
+[quests]
+tickets = 1                     # TUNABLE: for finishing any quest
+
+[templates.spice_run]
+cargo = 500000                  # FROM THE PLAN: carry 0.50 USDC to the spice market
+slippage_bps = 100              # TUNABLE: the swap takes at most 1% less than the kiosk's quote
+quote_every_ms = 15000          # TUNABLE: a new quote at most every 15 seconds per player
+quote_fresh_ms = 60000          # TUNABLE: a swap needs a quote under a minute old
+
+[templates.hold_line]
+days = 3                        # FROM THE PLAN
+checks = 3                      # TUNABLE: the first when the quest is taken
+min_amount = 1000000000000000000   # TUNABLE: 1 whole quest token (18 decimals)
+
+[templates.paint_sign]
+most_chars = 80                 # TUNABLE
+
+[price_call]
+flat_bps = 50                   # TUNABLE: a move under 0.5% counts as flat
+tickets = 2                     # TUNABLE
+
+[town_goal]
+meals = 200                     # TUNABLE: meals town-wide in a week
+
+[draw]
+prize_bps = 500                 # TUNABLE: 5% of the SURPRISE balance at the commit
+reveal_after_ms = 600000        # TUNABLE: revealed 10 minutes after the commit is seen
+
+[rescue]
+below_energy = 10               # FROM THE PLAN
+delay_ms = 120000               # TUNABLE: within the plan's 10 minutes
+every_ms = 86400000             # FROM THE PLAN: once a day per person
+item = "thali"                  # FROM THE PLAN
+
+[referral]
+tickets = 5                     # TUNABLE
+
+[house]
+budget_bps = 400                # FROM CONTRACTS: HousePool spends 4% of a bucket a day
+per_human_daily_cap = 5000000   # FROM CONTRACTS: HousePool's perHumanDailyCap, 5 USDC
+
+[treasury]
+fixed_bps = 6000                # FROM CONTRACTS: Treasury's split of food revenue
+safety_bps = 1000
+ops_bps = 2000
+team_bps = 1000
+
+[ens]
+parent = "tallyport.eth"        # FROM CONTRACTS
+
+# The in-process ledger the server uses with chain.mode = "offline", standing in for the contracts. Never used with a
+# chain.
+[offline]
+fixed = 100000000               # 100 USDC in each HousePool bucket at the start
+surprise = 100000000
+safety = 20000000
+start_usdc = 0                  # FROM THE PLAN: new players start with nothing
+# The offline kiosk's MANGO/USDC pool, constant product, as the deploy seeds the real one (contracts' mango config).
+quest_pool_usdc = 5000000       # FROM CONTRACTS: poolUsdc, 5 USDC
+quest_pool_tokens = 100         # FROM CONTRACTS: poolMango, 100 whole MANGO (0.05 USDC each)
+quest_pool_fee_bps = 3000       # FROM CONTRACTS: the pool's fee, 0.30%
+quest_token_symbol = "MANGO"
+quest_token_decimals = 18
+min_payout = 150000             # FROM CONTRACTS: CampaignEscrow's minimum payout
+energy_per_food = 10            # FROM CONTRACTS: for the 25% rule
+max_advance = 1000000           # FROM CONTRACTS: CampaignEscrow's maxAdvance, 1 USDC
+
+# A campaign the offline ledger opens at the start, so the Bounty Board has a card without a chain.
+[[offline.campaigns]]
+template = "spice_run"
+sponsor = "Tallyport Launch"
+budget = 50000000
+payout_per_claim = 1000000
+energy_cost = 30
+max_claims = 50
+per_human_cap = 1
+days = 7
+kind = 0
+
+[[offline.campaigns]]
+template = "paint_sign"
+sponsor = "Tallyport Launch"
+budget = 10000000
+payout_per_claim = 250000
+energy_cost = 20
+max_claims = 40
+per_human_cap = 1
+days = 7
+kind = 0
+
+[[offline.campaigns]]
+template = "town_pass"
+sponsor = "Tallyport Launch"
+budget = 10000000
+payout_per_claim = 200000
+energy_cost = 0
+max_claims = 50
+per_human_cap = 1
+days = 7
+kind = 0
+
+[city]
+slices_per_day = 12             # trades per city day: one batch every 5 minutes of the real hour
+day_ms = 3600000                # a city day, the market's, is one real hour, shared
+
+# TUNABLE: Kofi, the farm. He sells what arrives through the day, faster when the price is over his aim.
+[kofi]
+harvest = 60000000              # 60 FOOD arrive each city day: about a busy hour of meals for the 1,250-FOOD pool, which
+                                # the ±15% band lets take ~100 FOOD of selling a day
+harvest_noise_bps = 800         # up to ±8% a day
+starting_stock = 60000000
+spoilage_bps = 3000             # 30% of unsold stock goes off each night
+sell_share_bps = 5500           # sells this share of his stock when the price is where he wants it
+sell_share_gain = 1             # share points gained per point the price is above his target
+least_share_bps = 2500
+most_share_bps = 9000
+push_bps = 500                  # he aims 5% above base
+
+# TUNABLE: shocks, per city day.
+[shocks]
+festival_chance_bps = 600       # a festival is news: more people out, and whatever they eat moves the price
+festival_days = 3
+harvest_chance_bps = 600
+harvest_supply_bps = 12500      # a good harvest brings 25% more food
+harvest_days = 3
+drought_chance_bps = 200        # a poor harvest, so shocks go both ways
+drought_supply_bps = 7000
+drought_days = 3
+
+# TUNABLE: the people who live here. They walk between the town's places so it isn't empty with one player on stage.
+[residents]
+names = ["Asha", "Bilal", "Chen", "Dara", "Esi", "Farid", "Gita", "Hana", "Imran", "Jaya", "Kwame", "Lena", "Manu", "Nadia", "Omar", "Priti", "Quan", "Ravi", "Sana", "Tomas"]
+least_stay_ms = 90000           # each person stays somewhere for their own time, between 1.5
+most_stay_ms = 300000           # and 5 minutes
+walk_ms = 25000                 # the first 25 seconds of it are the walk there
+
+# TUNABLE: the feed.
+[social]
+emotes = ["clap", "laugh", "wow", "sad"]
+posts_kept = 200                # older posts drop off, and can't be reacted to
+
+# A season is a real week. Each brings one shock, in this order, through the same rules as any other day.
+[seasons]
+season_days = 168               # one real week: 168 one-hour city days
+shocks = ["harvest", "festival", "drought"]
