@@ -1,0 +1,584 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Dhaniverse"
+config/description="A cozy multiplayer town where everyday choices teach money."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Dhaniverse-Tallyport"
+
+[autoload]
+
+Brand="*res://scripts/autoload/brand.gd"
+AppSettings="*res://scripts/autoload/app_settings.gd"
+
+[display]
+
+window/vsync/vsync_mode=1
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input]
+
+move_forward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":119,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194320,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_back={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":115,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194322,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":97,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194319,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":100,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194321,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+sprint={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194325,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+interact={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":69,"key_label":0,"unicode":101,"location":0,"echo":false,"script":null)
+]
+}
+rotate_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":90,"key_label":0,"unicode":122,"location":0,"echo":false,"script":null)
+]
+}
+rotate_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":88,"key_label":0,"unicode":120,"location":0,"echo":false,"script":null)
+]
+}
+time_of_day={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":84,"key_label":0,"unicode":116,"location":0,"echo":false,"script":null)
+]
+}
+camera_mode={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":67,"key_label":0,"unicode":99,"location":0,"echo":false,"script":null)
+]
+}
+
+[physics]
+
+common/physics_interpolation=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size=4096
+viewport/hdr_2d=true
+anti_aliasing/quality/msaa_3d=1
+textures/default_filters/anisotropic_filtering_level=4
+environment/defaults/default_clear_color=Color(0.98, 0.79, 0.66, 1)
+
+[shader_globals]
+
+vh_sh0={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh1={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh2={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh3={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh4={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh5={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh6={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh7={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sh8={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sun={
+"type": "vec3",
+"value": Vector3(0.13, 0.052, -0.99)
+}
+vh_light={
+"type": "vec3",
+"value": Vector3(0.05, 0.19, -0.98)
+}
+vh_wind={
+"type": "vec2",
+"value": Vector2(0.82, 0.38)
+}
+vh_water_y={
+"type": "float",
+"value": 0.0
+}
+vh_refl_y={
+"type": "float",
+"value": -1000.0
+}
+vh_sky_zenith={
+"type": "vec3",
+"value": Vector3(0.205, 0.215, 0.4)
+}
+vh_sky_upper={
+"type": "vec3",
+"value": Vector3(0.39, 0.37, 0.6)
+}
+vh_sky_mid_sun={
+"type": "vec3",
+"value": Vector3(0.95, 0.56, 0.54)
+}
+vh_sky_mid_away={
+"type": "vec3",
+"value": Vector3(0.55, 0.46, 0.64)
+}
+vh_sky_hor_sun={
+"type": "vec3",
+"value": Vector3(1.42, 0.86, 0.58)
+}
+vh_sky_hor_away={
+"type": "vec3",
+"value": Vector3(0.74, 0.6, 0.7)
+}
+vh_sky_halo={
+"type": "vec3",
+"value": Vector3(1, 0.6, 0.34)
+}
+vh_sky_ground={
+"type": "vec3",
+"value": Vector3(0.045, 0.055, 0.032)
+}
+vh_sky_glow={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_glow_dir={
+"type": "vec2",
+"value": Vector2(0, -1)
+}
+vh_sun_core={
+"type": "vec4",
+"value": Vector4(1, 0.62, 0.32, 3)
+}
+vh_sun_disc={
+"type": "vec4",
+"value": Vector4(1, 0.86, 0.62, 45)
+}
+vh_cloud_lit={
+"type": "vec3",
+"value": Vector3(1.25, 0.66, 0.56)
+}
+vh_cloud_lit_sun={
+"type": "vec3",
+"value": Vector3(1.65, 1.02, 0.66)
+}
+vh_cloud_shade={
+"type": "vec3",
+"value": Vector3(0.52, 0.43, 0.6)
+}
+vh_cloud_glow={
+"type": "vec3",
+"value": Vector3(1.2, 0.7, 0.35)
+}
+vh_cloud_cover={
+"type": "float",
+"value": 0.78
+}
+vh_hemi_sky={
+"type": "vec3",
+"value": Vector3(0.121275, 0.1127, 0.178925)
+}
+vh_hemi_ground={
+"type": "vec3",
+"value": Vector3(0.01855, 0.017125, 0.008275)
+}
+vh_bounce={
+"type": "vec3",
+"value": Vector3(0.11, 0.066, 0.037)
+}
+vh_fog_k={
+"type": "vec4",
+"value": Vector4(0.00026, 0.0068, 0.095, 0.75)
+}
+vh_night={
+"type": "float",
+"value": 0.0
+}
+vh_glow={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 0)
+}
+vh_unlit={
+"type": "vec3",
+"value": Vector3(1, 1, 1)
+}
+vh_sun_spec={
+"type": "vec3",
+"value": Vector3(2.6, 1.768, 1.092)
+}
+vh_cloud_shadow={
+"type": "vec4",
+"value": Vector4(0, 0.0011, 0.56, 4)
+}
+vh_shafts={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_time={
+"type": "float",
+"value": 0.0
+}
+vh_eye={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_sun_light={
+"type": "vec3",
+"value": Vector3(3.1, 1.75, 0.95)
+}
+vh_tree_lod={
+"type": "vec4",
+"value": Vector4(42, 52, 0, 0)
+}
+vh_focus={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+vh_lamp_fade={
+"type": "vec4",
+"value": Vector4(28, 40, 0, 0)
+}
+vh_lamp_n={
+"type": "int",
+"value": 0
+}
+vh_lamp_p0={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p1={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p2={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p3={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p4={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p5={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p6={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p7={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p8={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p9={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p10={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p11={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p12={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p13={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p14={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_p15={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c0={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c1={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c2={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c3={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c4={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c5={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c6={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c7={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c8={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c9={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c10={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c11={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c12={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c13={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c14={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+vh_lamp_c15={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+cloud_noise={
+"type": "sampler2D",
+"value": "res://original/textures/CloudNoise.tres"
+}
+cloud_scale={
+"type": "float",
+"value": 0.002
+}
+cloud_world_y={
+"type": "float",
+"value": 20.0
+}
+cloud_speed={
+"type": "float",
+"value": -0.01
+}
+cloud_contrast={
+"type": "float",
+"value": 3.845
+}
+cloud_threshold={
+"type": "float",
+"value": 0.0
+}
+cloud_direction={
+"type": "vec2",
+"value": Vector2(0, 1)
+}
+light_direction={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+cloud_shadow_min={
+"type": "float",
+"value": 0.2
+}
+cloud_diverge_angle={
+"type": "float",
+"value": 10.0
+}
+wind_direction={
+"type": "vec3",
+"value": Vector3(0, 0, 1)
+}
+wind_speed={
+"type": "float",
+"value": 0.06
+}
+wind_noise={
+"type": "sampler2D",
+"value": "res://original/textures/WindNoise.tres"
+}
+wind_scale={
+"type": "float",
+"value": 0.025
+}
+actor_a={
+"type": "vec4",
+"value": Vector4(0, -100, 0, 0)
+}
+actor_b={
+"type": "vec4",
+"value": Vector4(0, -100, 0, 0)
+}
+actor_c={
+"type": "vec4",
+"value": Vector4(0, -100, 0, 0)
+}
+actor_d={
+"type": "vec4",
+"value": Vector4(0, -100, 0, 0)
+}
+player_pos={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+focus_sphere={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+focus_box={
+"type": "vec4",
+"value": Vector4(0, 0, 10, 10)
+}
+focus_amount={
+"type": "float",
+"value": 0.0
+}
+cut_height={
+"type": "float",
+"value": 1000.0
+}
+sun_dir={
+"type": "vec3",
+"value": Vector3(0.5, 0.6, 0.3)
+}
+wind_strength={
+"type": "float",
+"value": 1.0
+}
+fol_sun={
+"type": "vec3",
+"value": Vector3(5.01, 4.49, 3.69)
+}
+fol_sun_dir={
+"type": "vec3",
+"value": Vector3(0.77, 0.47, 0.42)
+}
+fol_sky={
+"type": "vec3",
+"value": Vector3(0.52, 0.69, 1.0)
+}
+fol_ground={
+"type": "vec3",
+"value": Vector3(0.147, 0.102, 0.063)
+}
+fol_shadow={
+"type": "vec4",
+"value": Vector4(0.027, 0.044, 0.107, 0.75)
+}
+fol_season={
+"type": "float",
+"value": 0.35
+}
+fol_weather={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+fol_occlude={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+fol_wind={
+"type": "vec4",
+"value": Vector4(-3.14159, 0.22, 0.83, 0.05)
+}
+fol_wind_extra={
+"type": "vec2",
+"value": Vector2(0.6, 0.0)
+}
+fol_display={
+"type": "float",
+"value": 0.0
+}
+fol_trails={
+"type": "sampler2D",
+"value": ""
+}
+fol_noise_tex={
+"type": "sampler2D",
+"value": ""
+}
+fol_dim={
+"type": "float",
+"value": 1.0
+}
