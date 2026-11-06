@@ -223,6 +223,7 @@ func begin() -> void:
 	world.set_time_mode("dawn", true)
 	opening._place_on_deck()
 	opening.aboard = true
+	opening.ride_held = true           # the ride starts when the logo's burst has opened onto it (enter)
 	_arriving = true
 	_game_keys(false)
 	world.player.frozen = true
@@ -245,7 +246,8 @@ func _build_menu() -> void:
 	if saved != "": _items.append({"word": "Continue", "sub": "as %s" % saved, "do": _continue})
 	_items.append({"word": "A new life", "sub": "Step off the ferry", "do": _new_life})
 	_items.append({"word": "Settings", "sub": "Over the town", "do": _settings})
-	_items.append({"word": "Leave", "sub": "The town carries on without you", "do": func(): get_tree().quit()})
+	if not OS.has_feature("web"):     # a browser tab can't be quit from inside it
+		_items.append({"word": "Leave", "sub": "The town carries on without you", "do": func(): get_tree().quit()})
 	for i in _items.size():
 		var w := MenuWord.new()
 		w.setup(_items[i].word, _items[i].sub)
@@ -261,6 +263,7 @@ func enter() -> void:
 	cinema.bars_in()
 	cinema.card("Tallyport", "", "", Opening.FILM - 2.2)
 	_may_skip = true
+	get_tree().create_timer(BootIntro.WIPE_TIME).timeout.connect(func(): opening.ride_held = false)   # called as the burst's wipe starts
 	opening.alongside.connect(_menu_in, CONNECT_ONE_SHOT)
 	_say_keys([["Any key", "Skip"]])
 	var hint := create_tween()
