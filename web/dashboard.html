@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tallyport Treasury</title>
+<meta name="description" content="Where every USDC in Tallyport is right now: sponsor escrow, float and yield, food revenue, the treasury split and the house pool's daily budgets.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tallyport.css">
+<script type="importmap">{ "imports": { "viem": "https://esm.sh/viem@2.57.10?bundle" } }</script>
+<script type="module" src="js/dashboard.js"></script>
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 14px; }
+  .kpi { display: grid; gap: 4px; }
+  .kpi .k { font-size: 13px; color: var(--muted); }
+  .formula { font-family: var(--font-mono); font-size: 13px; line-height: 1.7; background: var(--coin-tint); color: var(--ink); border-radius: var(--radius-sm); padding: 12px 14px; overflow-x: auto; white-space: pre; }
+  .bucket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; }
+  .addr-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 4px 20px; font-size: 13px; }
+  .addr-list div { display: flex; justify-content: space-between; gap: 10px; min-width: 0; }
+  .src { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="dashboard"><span class="brand-mark" aria-hidden="true">T</span>Tallyport</a>
+  <nav class="topnav" aria-label="Pages">
+    <a href="console">Sponsor console</a>
+    <a href="dashboard" aria-current="page">Treasury</a>
+    <button class="theme-btn" id="theme-btn" type="button" aria-label="Change theme">◐</button>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="spread" aria-labelledby="title" style="align-items:flex-end">
+    <div class="stack">
+      <div class="kicker">Money flow · live</div>
+      <h1 id="title">Where every dollar is</h1>
+      <p class="lede">Money enters from two places only: sponsors and players buying meals. It leaves to players only through signed quest payouts, house rewards and rescue meals, and every pool can pay only what it holds.</p>
+    </div>
+    <div class="stack" style="justify-items:end">
+      <div class="row"><span class="pill" id="net-pill">loading…</span><span class="small muted" id="updated" aria-live="polite"></span></div>
+      <button class="btn ghost small" type="button" id="pause-btn" aria-pressed="false">Pause live updates</button>
+    </div>
+  </section>
+
+  <div id="page-notice" class="notice alert" hidden role="status"></div>
+
+  <section class="kpis" aria-label="Headline numbers">
+    <div class="card kpi"><span class="k">Owed to sponsors (unspent budgets)</span><span class="money big" id="k-liab">—</span><span class="src" id="k-liab-src"></span></div>
+    <div class="card kpi"><span class="k">House pool, all buckets</span><span class="money big" id="k-house">—</span><span class="src" id="k-house-src"></span></div>
+    <div class="card kpi"><span class="k">Food revenue today</span><span class="money big" id="k-food">—</span><span class="src">town server</span></div>
+    <div class="card kpi"><span class="k">Yield earned on idle float</span><span class="money big" id="k-yield">—</span><span class="src" id="k-yield-src"></span></div>
+  </section>
+
+  <section class="card stack" aria-labelledby="flow-title">
+    <div class="spread"><h2 id="flow-title">The money flow, live</h2><span class="small muted">Refreshes every 10 s</span></div>
+    <div id="lanes" class="stack" style="gap:22px"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" aria-labelledby="house-title">
+      <h2 id="house-title">House pool: daily budgets</h2>
+      <p class="small muted">Each bucket may pay out at most <b id="h-bps">4%</b> of its balance a day, measured at the first payout of each UTC day, so it can never run dry. Fixed rewards are funded by food revenue; surprises only by sponsor fees and yield; the safety bucket pays rescue meals only.</p>
+      <div class="bucket-grid" id="buckets"></div>
+      <dl class="facts" id="rescue"></dl>
+    </section>
+
+    <section class="card" aria-labelledby="float-title">
+      <h2 id="float-title">Float, buffer and yield</h2>
+      <p class="small muted">Sponsor money is held by FloatManager. A cash buffer covers three days of the most the live campaigns could pay; the rest earns yield in a venue you can withdraw from instantly. The yield goes to the house surprise bucket; sponsors' principal is always owed first.</p>
+      <div class="formula" id="buffer-formula" aria-label="Buffer formula with live numbers"></div>
+      <dl class="facts" id="float-facts"></dl>
+      <div id="venues" class="stack"></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card" aria-labelledby="treasury-title">
+      <h2 id="treasury-title">Treasury split</h2>
+      <p class="small muted">The farm's harvest sales and ration-shop sales land in the Treasury; anyone can call <code>split()</code> to send its balance on: 60% house fixed, 10% house safety, 20% operations (gas, servers), 10% team.</p>
+      <dl class="facts" id="treasury-facts"></dl>
+    </section>
+    <section class="card" aria-labelledby="draw-title">
+      <h2 id="draw-title">Weekly draw</h2>
+      <p class="small muted">Tickets are earned free (streaks, Rush runs, quests), never bought. The prize comes from the house surprise bucket.</p>
+      <dl class="facts" id="draw-facts"></dl>
+    </section>
+  </div>
+
+  <section class="stack" aria-labelledby="camp-title">
+    <h2 id="camp-title">Live campaigns</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">Campaign</th><th scope="col">Template</th><th scope="col" class="n">Payout</th><th scope="col" class="n">Energy</th><th scope="col" class="n">Slots left</th><th scope="col" class="n">Today's cap</th><th scope="col">Ends</th></tr></thead>
+      <tbody id="camp-rows"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <section class="card flat stack" aria-labelledby="addr-title">
+    <h3 id="addr-title">Contracts</h3>
+    <div class="addr-list" id="addrs"><span class="muted small">Loading…</span></div>
+    <p class="tiny muted" id="abi-src"></p>
+  </section>
+</main>
+<footer class="foot"><span>Tallyport · Dhaniverse</span><span>Amounts in USDC. A dash means the number isn't available yet, never zero.</span></footer>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tallyport Sponsor Console</title>
+<meta name="description" content="Fund a Tallyport campaign in USDC: pick a quest template, set the budget and payouts, and track what your money did.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tallyport.css">
+<script type="importmap">{ "imports": { "viem": "https://esm.sh/viem@2.57.10?bundle" } }</script>
+<script type="module" src="js/console.js"></script>
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+  .summary { position: sticky; top: 16px; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+  .checks li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; }
+  .checks .mark { font-weight: 700; }
+  .checks .ok .mark { color: var(--good); }
+  .checks .no .mark { color: var(--bad); }
+  .checks .warn .mark { color: var(--alert-ink); }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+  .steps li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+  .steps li[data-s="done"] .mark { color: var(--good); }
+  .steps li[data-s="fail"] .mark { color: var(--bad); }
+  .steps li[data-s="todo"] { color: var(--muted); }
+  .fields2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 14px; }
+  .camp { display: grid; gap: 12px; }
+  .camp-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .camp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 10px; }
+  .stat { background: var(--soft); border-radius: var(--radius-sm); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .stat .v { font: 700 16px/1.2 var(--font-money); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .stat .v.money { color: var(--coin-ink); }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .summary { position: static; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="console"><span class="brand-mark" aria-hidden="true">T</span>Tallyport</a>
+  <nav class="topnav" aria-label="Pages">
+    <a href="console" aria-current="page">Sponsor console</a>
+    <a href="dashboard">Treasury</a>
+    <button class="theme-btn" id="theme-btn" type="button" aria-label="Change theme">◐</button>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="spread" aria-labelledby="title" style="align-items:flex-end">
+    <div class="stack">
+      <div class="kicker">Sponsors · USDC campaigns</div>
+      <h1 id="title">Sponsor console</h1>
+      <p class="lede">Fund a quest that makes verified humans really use your product. You pay per completed quest, in USDC; unspent budget comes back to you.</p>
+    </div>
+    <div class="card flat" style="min-width:min(320px,100%)" aria-live="polite">
+      <div class="spread"><span class="small muted">Network</span><span class="pill" id="net-pill">loading…</span></div>
+      <div class="spread"><span class="small muted">Wallet</span><span id="acct" class="small">not connected</span></div>
+      <div class="spread"><span class="small muted">Your USDC</span><span id="bal" class="money">—</span></div>
+      <button class="btn coin" type="button" id="connect-btn" disabled>Connect wallet</button>
+    </div>
+  </section>
+
+  <div id="page-notice" class="notice alert" hidden role="status"></div>
+
+  <div class="layout">
+    <form id="form" class="card" novalidate aria-labelledby="new-title">
+      <h2 id="new-title">New campaign</h2>
+
+      <fieldset>
+        <legend>1 · Pick a quest template</legend>
+        <div class="templates" id="templates" role="radiogroup" aria-label="Quest template"></div>
+      </fieldset>
+
+      <hr class="rule">
+      <fieldset>
+        <legend>2 · Tell the story</legend>
+        <div class="field">
+          <label for="f-title">Title on the Bounty Board</label>
+          <input type="text" id="f-title" maxlength="60" required aria-required="true" placeholder="The Mango Run">
+          <span class="hint">Up to 60 characters. Players see it on the board in the square.</span>
+          <span class="err" id="e-title" hidden></span>
+        </div>
+        <div class="field">
+          <label for="f-story">Story</label>
+          <textarea id="f-story" maxlength="1200" required aria-required="true" placeholder="The harbourmaster needs MANGO before the monsoon…"></textarea>
+          <span class="hint">What the quest-giver says. Plain text, up to 1,200 characters.</span>
+          <span class="err" id="e-story" hidden></span>
+        </div>
+        <div class="field">
+          <label for="f-sponsor">Sponsor name <span class="muted">(optional)</span></label>
+          <input type="text" id="f-sponsor" maxlength="80" placeholder="Mango Labs">
+          <span class="hint">Shown on the Bounty Board card.</span>
+        </div>
+        <div class="field">
+          <label for="f-image">Banner image <span class="muted">(optional)</span></label>
+          <input type="file" id="f-image" accept="image/png,image/jpeg,image/webp">
+          <span class="hint">PNG, JPEG or WebP up to 1 MB. Stored publicly and permanently on Swarm with the story; its reference goes on chain.</span>
+          <span class="err" id="e-image" hidden></span>
+        </div>
+      </fieldset>
+
+      <hr class="rule">
+      <fieldset>
+        <legend>3 · Money and rules</legend>
+        <div class="fields2">
+          <div class="field">
+            <label for="f-budget">Budget</label>
+            <div class="suffix"><input type="text" inputmode="decimal" id="f-budget" autocomplete="off" aria-describedby="h-budget"><span>USDC</span></div>
+            <span class="hint" id="h-budget">Deposited now. 10% platform fee comes off the top.</span>
+            <span class="err" id="e-budget" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-payout">Payout per completed quest</label>
+            <div class="suffix"><input type="text" inputmode="decimal" id="f-payout" autocomplete="off" aria-describedby="h-payout"><span>USDC</span></div>
+            <span class="hint" id="h-payout">Paid to the player when the server verifies the action.</span>
+            <span class="err" id="e-payout" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-energy">Energy cost</label>
+            <input type="number" id="f-energy" min="0" max="100" step="1" inputmode="numeric">
+            <span class="hint">0–100. The player spends it to take the quest.</span>
+            <span class="err" id="e-energy" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-slots">Slots (max completions)</label>
+            <input type="number" id="f-slots" min="1" step="1" inputmode="numeric">
+            <span class="err" id="e-slots" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-cap">Per-human cap</label>
+            <input type="number" id="f-cap" min="1" max="65535" step="1" inputmode="numeric">
+            <span class="hint">How many times one verified human may complete it.</span>
+            <span class="err" id="e-cap" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-kind">Funding type</label>
+            <select id="f-kind">
+              <option value="0">Sponsored: the quest is about your product</option>
+              <option value="1">Boosted: your bonus pot and banner on a house quest</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-start">Starts</label>
+            <input type="datetime-local" id="f-start">
+            <span class="err" id="e-start" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-end">Ends</label>
+            <input type="datetime-local" id="f-end">
+            <span class="hint">Refund the unspent budget any time after this.</span>
+            <span class="err" id="e-end" hidden></span>
+          </div>
+        </div>
+        <div id="spice-fields" class="fields2" hidden>
+          <div class="field">
+            <label for="f-token">Quest token</label>
+            <input type="text" id="f-token" spellcheck="false" autocomplete="off" placeholder="0x…">
+            <span class="hint" id="h-token">The token players swap USDC into on Uniswap and deliver.</span>
+            <span class="err" id="e-token" hidden></span>
+          </div>
+          <div class="field">
+            <label for="f-deliver">Deliver to</label>
+            <input type="text" id="f-deliver" spellcheck="false" autocomplete="off" placeholder="0x… (defaults to your wallet)">
+            <span class="hint">Where delivered tokens go.</span>
+            <span class="err" id="e-deliver" hidden></span>
+          </div>
+        </div>
+      </fieldset>
+
+      <hr class="rule">
+      <div class="stack">
+        <ol class="steps" id="steps" aria-live="polite"></ol>
+        <div class="row">
+          <button class="btn coin" type="submit" id="create-btn" disabled>Create campaign</button>
+          <span class="small muted" id="create-hint">Connect your wallet first.</span>
+        </div>
+      </div>
+    </form>
+
+    <aside class="summary stack" aria-labelledby="sum-title">
+      <div class="plate">
+        <div class="kicker muted" id="sum-title">What your budget buys</div>
+        <dl class="facts">
+          <dt class="muted">Budget</dt><dd class="money" id="s-budget">—</dd>
+          <dt class="muted">Platform fee (<span id="s-feepct">10%</span>)</dt><dd class="money" id="s-fee">—</dd>
+          <dt class="muted">Spendable on payouts</dt><dd class="money" id="s-spend">—</dd>
+          <dt class="muted">Covers</dt><dd id="s-covers">—</dd>
+          <dt class="muted">Daily cap at start</dt><dd class="money" id="s-daily">—</dd>
+        </dl>
+        <p class="tiny muted">Fee: half funds the house surprise pool (chests, golden coins), half the team. The daily cap is what's left ÷ days left, so your budget lasts the whole campaign.</p>
+      </div>
+      <div class="card flat">
+        <h3>Rules check</h3>
+        <ul class="checks" id="checks"></ul>
+        <p class="tiny muted" id="ceiling-src"></p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="stack" aria-labelledby="mine-title">
+    <div class="spread">
+      <h2 id="mine-title">Your campaigns</h2>
+      <div class="row"><span class="small muted" id="mine-updated"></span><button class="btn ghost small" type="button" id="refresh-btn">Refresh</button></div>
+    </div>
+    <div id="mine" class="grid2"><p class="muted">Connect your wallet to see your campaigns.</p></div>
+  </section>
+</main>
+<footer class="foot">
+  <span>Tallyport · Dhaniverse</span>
+  <span id="abi-src"></span>
+</footer>
+</body>
+</html>

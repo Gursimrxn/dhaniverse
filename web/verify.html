@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Tallyport Town Pass</title>
+<meta name="description" content="Prove you're a unique human with World ID to get your Tallyport Town Pass and unlock USDC payouts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tallyport.css">
+<!-- World ID IDKit 4.6.0 (browser global build: window.IDKit). Pinned with Subresource Integrity. -->
+<script src="https://unpkg.com/@worldcoin/idkit-core@4.6.0/dist/idkit.global.js"
+        integrity="sha256-ah0i4hoO3l1TwvHVJn1rkEUFuzVeRM9zRabmQ7GSVE8=" crossorigin="anonymous" defer></script>
+<script type="module" src="js/verify.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="#main"><span class="brand-mark" aria-hidden="true">T</span>Tallyport</a>
+  <button class="theme-btn" id="theme-btn" type="button" aria-label="Change theme">◐</button>
+</header>
+
+<main id="main" class="narrow">
+  <section class="stack" aria-labelledby="title">
+    <div class="kicker">Town Pass · World ID</div>
+    <h1 id="title">Prove you're one real person</h1>
+    <p class="lede">The Town Pass links one human to one Tallyport player. It unlocks USDC payouts from quests and the house pool. World ID never tells us who you are.</p>
+  </section>
+
+  <!-- Loading -->
+  <section id="state-loading" class="card flat" aria-live="polite">
+    <div class="status wait"><span class="icon"><span class="spinner" aria-hidden="true"></span></span>
+      <div class="stack"><h3>Checking your pass link…</h3></div></div>
+  </section>
+
+  <!-- Problem with the link or the server -->
+  <section id="state-error" class="card flat" hidden>
+    <div class="status fail"><span class="icon" aria-hidden="true">!</span>
+      <div class="stack">
+        <h2 id="error-title">This pass link doesn't work</h2>
+        <p id="error-text" class="muted"></p>
+        <p class="small">Open the Town Pass in the game again to get a fresh link.</p>
+      </div></div>
+  </section>
+
+  <!-- Ready to verify -->
+  <section id="state-ready" class="card" hidden aria-labelledby="ready-title">
+    <div class="spread">
+      <h2 id="ready-title">Verify with World ID</h2>
+      <span class="pill" id="env-pill" hidden></span>
+    </div>
+    <dl class="facts">
+      <dt>Player</dt><dd id="player-name">—</dd>
+      <dt>Player wallet</dt><dd><code id="player-wallet">—</code></dd>
+      <dt>Action</dt><dd><code id="action-id">—</code></dd>
+    </dl>
+    <div id="rehearsal" class="notice alert" hidden>
+      <strong>Rehearsal mode</strong>
+      <span>This server runs offline in debug mode, so there is no real World ID check. A rehearsal pass is marked as one in the game and never unlocks real payouts on chain.</span>
+      <div class="row" style="margin-top:6px"><button class="btn alert small" type="button" id="rehearse-btn">Run rehearsal verify</button></div>
+    </div>
+    <div id="idkit-area" class="stack">
+      <p class="small muted">You need the World App with a World ID. Scan the code with it, or open the World App directly on this phone.</p>
+      <div class="row"><button class="btn coin" type="button" id="start-btn">Start verification</button></div>
+    </div>
+
+    <div id="connect" class="stack" hidden>
+      <div class="qr" id="qr" role="img" aria-label="QR code to scan with the World App"></div>
+      <div class="row" style="justify-content:center">
+        <a class="btn" id="open-app" href="#" rel="noopener">Open the World App</a>
+        <button class="btn ghost small" type="button" id="cancel-btn">Cancel</button>
+      </div>
+      <div class="status wait" aria-live="polite"><span class="icon"><span class="spinner" aria-hidden="true"></span></span>
+        <div class="stack"><h3 id="poll-title">Waiting for the World App…</h3><p class="small muted" id="poll-text">Scan the code or tap the button. This page updates by itself.</p></div></div>
+    </div>
+  </section>
+
+  <!-- Sending the proof to the server -->
+  <section id="state-sending" class="card flat" hidden aria-live="polite">
+    <div class="status wait"><span class="icon"><span class="spinner" aria-hidden="true"></span></span>
+      <div class="stack"><h3>Checking your proof…</h3><p class="small muted">The server is confirming it with World ID.</p></div></div>
+  </section>
+
+  <!-- Result -->
+  <section id="state-done" class="plate" hidden aria-live="polite" tabindex="-1">
+    <div class="kicker muted" id="done-kicker">Town Pass stamped</div>
+    <h2 id="done-title">You're verified</h2>
+    <p id="done-text">Go back to Tallyport. Your Town Pass is stamped and USDC payouts are unlocked.</p>
+    <p class="muted small" id="done-ens" hidden></p>
+    <p class="muted small">You can close this tab now.</p>
+  </section>
+
+  <section id="state-failed" class="card flat" hidden aria-live="assertive" tabindex="-1">
+    <div class="status fail"><span class="icon" aria-hidden="true">✕</span>
+      <div class="stack">
+        <h2 id="failed-title">Verification didn't go through</h2>
+        <p id="failed-text"></p>
+        <div class="row"><button class="btn" type="button" id="retry-btn">Try again</button></div>
+        <p class="small muted">Nothing was charged. If it keeps failing, go back to the game and open the Town Pass again.</p>
+      </div></div>
+  </section>
+
+  <details class="card flat small">
+    <summary><b>What does this share?</b></summary>
+    <p class="muted">World ID sends a zero-knowledge proof that you're a unique person, tied to this action and your player wallet. Tallyport stores only an anonymous number (the nullifier) so the same person can't hold two players. No name, face or phone number reaches us.</p>
+  </details>
+</main>
+<footer class="foot"><span>Tallyport · Dhaniverse</span><span>World ID by World</span></footer>
+</body>
+</html>
