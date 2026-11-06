@@ -1,19 +1,19 @@
 {
   "chainId": 11155111,
   "contracts": {
-    "CampaignEscrow": "0xE15FCa1e8488A95B62789d85dd837445aB0E0411",
-    "Farm": "0x1018AedC8d419ab99876070747D43dC9E80f219D",
-    "FloatManager": "0xbeddb3f2F37649D7347ea4bc7799c83fA1BeF35C",
-    "FoodHook": "0x4aacDBD4f0876519BEe9d33dA72c30BbB998e8c0",
-    "FoodRouter": "0xE569B7388dCaa4E7853f6174cEa6b28B5b4Bc15B",
-    "FoodToken": "0x5212D7F61bDC6DA687c049b048d4868e6AbAf63D",
-    "HousePool": "0x3E4eb6a4253b50CcdC3B5f74bdC5eA32a6890436",
-    "LuckyLedger": "0xA3eD9a457b6253F363781266dfc22C7E6152994B",
-    "MealCounter": "0x5823e88df2b0CAD7C4f3130C2A854ff0B9e51373",
-    "MockYieldVault": "0x856d74191b45D99Dd865496cBeCa374E8946Bd00",
-    "QuestToken": "0xCA33Efa4d72d4cBb97559A914A506d463d3cd14D",
-    "SpiceMerchant": "0x5354a9c917Ae1fbb7cf67a6BE0A62675669bA53f",
-    "Treasury": "0x270843627Dfd88361FCbA927e4b1532857bC5b44"
+    "CampaignEscrow": "0xe0cdBde94F574A5f4d4C4e5e001C883Ec2e2C250",
+    "Farm": "0xA3FaAA9D0F21A0cD486E21A5c9aB078be51BC726",
+    "FloatManager": "0x1072ad8DA696FeaF8DB4207268767a466c0E28CD",
+    "FoodHook": "0x09465893db2258F98d70EAb9fBdd385A1bCb28c0",
+    "FoodRouter": "0x6998658df75b00Baca69F3B1B717CB6D6a017Ef9",
+    "FoodToken": "0x848F8A9c91760f322B645442d975585A5C616804",
+    "HousePool": "0xB930420686AB5430361f97BBEfb4c308ee380c92",
+    "LuckyLedger": "0xB41D815e5F09cABe39F9d36E7b757BC4754b1A5D",
+    "MealCounter": "0x331224C98cf73f112Be7b74489F5202a2a1e88fD",
+    "MockYieldVault": "0x2843848C2aD958b16448f2EadD4C5aF3999a9441",
+    "QuestToken": "0xe592bc0598cAA8f7E2a8F4c028Fc1B96E9629358",
+    "SpiceMerchant": "0x3E56dA9584aF4E4bb5AabFaDcA5b30F87f0D60d4",
+    "Treasury": "0xfCb5609738b74b1dff271bf7801DfD5d7af3B600"
   },
   "demoCampaignId": 1,
   "ens": {
@@ -38,14 +38,14 @@
     "voucherSigner": "0x84f8364912a29ECE085d48fFAFE02CCaB005dD2a"
   },
   "network": "sepolia",
-  "startBlock": 12079317,
+  "startBlock": 12079607,
   "uniswap": {
     "foodPool": {
       "currency0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-      "currency1": "0x5212D7F61bDC6DA687c049b048d4868e6AbAf63D",
+      "currency1": "0x848F8A9c91760f322B645442d975585A5C616804",
       "fee": 0,
-      "hooks": "0x4aacDBD4f0876519BEe9d33dA72c30BbB998e8c0",
-      "poolId": "0xea904bcada3495130c2416729d431bd8950ddd87caf460843d2f956d8acab96c",
+      "hooks": "0x09465893db2258F98d70EAb9fBdd385A1bCb28c0",
+      "poolId": "0x6535e40ed4bc1fd91af14e868d6076b923650b814bfc6c5538bbbefae943bb79",
       "tickSpacing": 60
     },
     "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
@@ -53,11 +53,11 @@
     "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
     "questPool": {
       "currency0": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-      "currency1": "0xCA33Efa4d72d4cBb97559A914A506d463d3cd14D",
+      "currency1": "0xe592bc0598cAA8f7E2a8F4c028Fc1B96E9629358",
       "fee": 3000,
       "hooks": "0x0000000000000000000000000000000000000000",
-      "poolId": "0x8f0636415d960e24857034d4817a136b600754244e0da4557c573f0ba544d9bf",
-      "positionId": 41468,
+      "poolId": "0x8662a58efd2da57e78066909f13794466db2be944414bb4c0435af36b9770466",
+      "positionId": 41474,
       "tickSpacing": 60
     },
     "quoter": "0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244",

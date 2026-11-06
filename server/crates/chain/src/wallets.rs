@@ -191,6 +191,77 @@ impl WalletBook {
         Ok(())
     }
 
+    /// Brings `wallets.jsonl` back in line with the save, which records every player's address (`WalletReady`). A town
+    /// restored from Arkiv on a new machine has the save but not the data dir; without this, the next `ensure` would
+    /// hand index 0 (an existing player's wallet) to someone else. Each missing player's index is found by deriving
+    /// addresses from the seed. Refuses, and writes nothing, if the save and the book disagree or an address isn't
+    /// one of the seed's. Returns how many wallets were recovered.
+    pub fn recover(&mut self, known: &[(PlayerId, Address)]) -> Result<usize, WalletError> {
+        let mut missing = Vec::new();
+        for (player, address) in known {
+            match self.by_player.get(player) {
+                Some(w) if w.address == *address => {}
+                Some(w) => {
+                    return Err(WalletError::SaveMismatch {
+                        player: player.clone(),
+                        book: w.address,
+                        save: *address,
+                    })
+                }
+                None => {
+                    if let Some(other) = self.by_address.get(address) {
+                        return Err(WalletError::AddressTaken {
+                            player: player.clone(),
+                            other: other.clone(),
+                            address: *address,
+                        });
+                    }
+                    missing.push((player.clone(), *address));
+                }
+            }
+        }
+        if missing.is_empty() {
+            return Ok(0);
+        }
+        // Indexes are handed out in order, so every one in use is below the number of wallets ever made. The slack
+        // covers wallets made for players the save never saw get one (a draw's `ensure`).
+        let limit = (self.next_index as usize + known.len() + RECOVERY_SLACK).min(0x8000_0000) as u32;
+        let mut by_address = HashMap::new();
+        for index in 0..limit {
+            if missing.iter().all(|(_, a)| by_address.contains_key(a)) {
+                break;
+            }
+            by_address.insert(self.root.signer(index).address(), index);
+        }
+        let mut found = Vec::with_capacity(missing.len());
+        for (player, address) in missing {
+            let index = *by_address
+                .get(&address)
+                .ok_or_else(|| WalletError::NotFromSeed(player.clone(), address))?;
+            found.push((player, index, address));
+        }
+        found.sort_by_key(|(_, index, _)| *index);
+        for (player, index, address) in &found {
+            self.log.append(&Record::Assigned {
+                player: player.clone(),
+                index: *index,
+                address: *address,
+            })?;
+            self.next_index = self.next_index.max(index + 1);
+            self.by_address.insert(*address, player.clone());
+            self.by_player.insert(
+                player.clone(),
+                Wallet {
+                    player: player.clone(),
+                    index: *index,
+                    address: *address,
+                    label: None,
+                },
+            );
+        }
+        Ok(found.len())
+    }
+
     pub fn all(&self) -> impl Iterator<Item = &Wallet> {
         self.by_player.values()
     }
@@ -216,7 +287,24 @@ pub enum WalletError {
     Unknown(PlayerId),
     #[error("all wallet indexes are used")]
     Exhausted,
+    #[error("the save gives {player} wallet {save}, but wallets.jsonl has {book}")]
+    SaveMismatch {
+        player: PlayerId,
+        book: Address,
+        save: Address,
+    },
+    #[error("the save gives {player} wallet {address}, but wallets.jsonl gives it to {other}")]
+    AddressTaken {
+        player: PlayerId,
+        other: PlayerId,
+        address: Address,
+    },
+    #[error("the save gives {0} wallet {1}, which WALLET_SEED doesn't make (wrong seed?)")]
+    NotFromSeed(PlayerId, Address),
 }
+
+/// Indexes searched past the known wallets when recovering from the save.
+const RECOVERY_SLACK: usize = 1_024;
 
 #[cfg(test)]
 mod tests {
@@ -239,6 +327,61 @@ mod tests {
                 .parse::<Address>()
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn a_lost_book_is_rebuilt_from_the_save_and_never_reuses_an_index() {
+        let root = HdRoot::from_phrase(ANVIL_MNEMONIC).unwrap();
+        let first = tempfile::tempdir().unwrap();
+        let known: Vec<(PlayerId, Address)> = {
+            let mut book = WalletBook::open(first.path(), root.clone()).unwrap();
+            ["asha", "ben", "cara"]
+                .iter()
+                .map(|p| (p.to_string(), book.ensure(p).unwrap().address))
+                .collect()
+        };
+        // A new machine: the save (and so `known`) came back from Arkiv, the data dir didn't.
+        let fresh = tempfile::tempdir().unwrap();
+        // Out of order, as a save's map may give them.
+        let shuffled = vec![known[2].clone(), known[0].clone(), known[1].clone()];
+        {
+            let mut book = WalletBook::open(fresh.path(), root.clone()).unwrap();
+            assert_eq!(book.recover(&shuffled).unwrap(), 3);
+            for (p, a) in &known {
+                assert_eq!(book.get(p).unwrap().address, *a);
+            }
+            // The next player gets a new wallet, not asha's.
+            assert_eq!(book.ensure("dev").unwrap().index, 3);
+            // Running it again finds nothing to do.
+            assert_eq!(book.recover(&shuffled).unwrap(), 0);
+        }
+        // And it was written down.
+        let book = WalletBook::open(fresh.path(), root).unwrap();
+        assert_eq!(book.get("cara").unwrap().index, 2);
+        assert_eq!(book.len(), 4);
+    }
+
+    #[test]
+    fn recovery_refuses_a_book_or_seed_that_disagrees_with_the_save() {
+        let root = HdRoot::from_phrase(ANVIL_MNEMONIC).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let mut book = WalletBook::open(dir.path(), root.clone()).unwrap();
+        let asha = book.ensure("asha").unwrap().address;
+        let ben = root.signer(1).address();
+        assert!(matches!(
+            book.recover(&[("asha".into(), ben)]),
+            Err(WalletError::SaveMismatch { .. })
+        ));
+        assert!(matches!(
+            book.recover(&[("ben".into(), asha)]),
+            Err(WalletError::AddressTaken { .. })
+        ));
+        let stranger: Address = "0x000000000000000000000000000000000000dEaD".parse().unwrap();
+        assert!(matches!(
+            book.recover(&[("ben".into(), stranger)]),
+            Err(WalletError::NotFromSeed(..))
+        ));
+        assert_eq!(book.len(), 1, "a refused recovery writes nothing");
     }
 
     #[test]

@@ -30,7 +30,7 @@ This is also how you resume: say the same name and secret again. A `protocol` ot
 always one `snapshot`, or a `hello_refused`.
 
 ```json
-{"type": "snapshot", "seq": 41, "debug": false, "you": {...}, "city": {...}, "feed": [...]}
+{"type": "snapshot", "seq": 41, "debug": false, "town_pass": true, "you": {...}, "city": {...}, "feed": [...]}
 ```
 
 - A snapshot is the whole truth, so replace everything you hold. Send `hello` again after any drop.
@@ -38,6 +38,8 @@ always one `snapshot`, or a `hello_refused`.
 - Logging off walks you away from the stall: a Rush run under way ends, and still counts.
 - A new player gets a wallet from the chain when they arrive. Offline it's in the snapshot; on a chain, `wallet` is
   `null` until a `WalletReady` event, a few seconds later.
+- `town_pass` says this server can stamp a Town Pass (World ID is set up, or it's a rehearsal server). When it's `true`,
+  the game holds every player at the gangway until `you.human` is `true`: World ID, once, at sign-up.
 
 ### `you`
 

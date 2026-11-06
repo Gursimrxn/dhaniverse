@@ -4,6 +4,7 @@
 use crate::balances::{self, Watched};
 use crate::config::{ChainConfig, ConfigError, Network};
 use crate::deployments::{Deployments, DeploymentsError};
+use crate::draw;
 use crate::exec::{self, Shared, Status};
 use crate::gas::GasLedger;
 use crate::indexer;
@@ -90,7 +91,9 @@ impl ChainLedger {
         });
         let root = HdRoot::from_phrase(cfg.secrets.wallet_seed.expose())
             .map_err(|e| ChainError::Config(ConfigError::Invalid("WALLET_SEED", e)))?;
-        let wallets = Arc::new(Mutex::new(WalletBook::open(&cfg.data_dir, root)?));
+        let mut book = WalletBook::open(&cfg.data_dir, root)?;
+        recover_data_dir(&cfg, &mut book)?;
+        let wallets = Arc::new(Mutex::new(book));
         let intents = IntentTable::open(&cfg.data_dir)?;
         let gas = GasLedger::open(&cfg.data_dir)?;
         let checkpoint = indexer::initial_checkpoint(
@@ -293,4 +296,55 @@ impl Drop for ChainLedger {
     fn drop(&mut self) {
         self.stop_thread();
     }
+}
+
+/// Rebuilds what a lost data dir held from what the save knows (`cfg.recovery`): player wallets first, then the
+/// tickets of committed, unclaimed draws (the winner's proof is built from them). Records that are already there are
+/// checked, not rewritten; any disagreement stops the start.
+fn recover_data_dir(cfg: &ChainConfig, book: &mut WalletBook) -> Result<(), ChainError> {
+    let recovered = book.recover(&cfg.recovery.wallets)?;
+    if recovered > 0 {
+        tracing::warn!(
+            recovered,
+            "wallets.jsonl was missing wallets the save has; rebuilt them from the save"
+        );
+    }
+    for (week, tickets) in &cfg.recovery.draws {
+        if tickets.is_empty() || draw::load(&cfg.data_dir, *week)?.is_some() {
+            continue;
+        }
+        let mut entries = Vec::with_capacity(tickets.len());
+        for (player, from, to) in tickets {
+            let address = match book.get(player) {
+                Some(w) => w.address,
+                None => {
+                    tracing::warn!(
+                        week,
+                        player = %player,
+                        "a draw ticket's player has no wallet in the save; giving them the next one"
+                    );
+                    book.ensure(player)?.address
+                }
+            };
+            entries.push(draw::Entry {
+                player: player.clone(),
+                address,
+                from: *from,
+                to: *to,
+            });
+        }
+        let root = draw::tree(&entries)
+            .ok_or_else(|| ChainError::Other(format!("week {week}'s tickets make no tree")))?
+            .root();
+        draw::save(
+            &cfg.data_dir,
+            &draw::Committed {
+                week: *week,
+                root,
+                entries,
+            },
+        )?;
+        tracing::warn!(week, root = %root, "draw tickets were missing; rebuilt them from the save");
+    }
+    Ok(())
 }

@@ -99,6 +99,7 @@ var _culled_for := -2           # the room it's culled for, or -1 outdoors
 var cinema: Cinema
 var phone: Phone
 var opening: Opening
+var pass_gate: TownPassGate         # the Town Pass at the gangway: World ID, once, at sign-up
 var director: Director
 var presence: Presence
 var sound: Sound
@@ -1581,6 +1582,11 @@ func _market() -> void:
 	dhaniverse.setup(ui, kiosks)
 	phone.town_pass = dhaniverse.desk.ask
 	energy_plate.pass_waiting = func(): return dhaniverse.desk.waiting
+	pass_gate = TownPassGate.new()
+	pass_gate.client = client
+	pass_gate.desk = dhaniverse.desk
+	ui.add_child(pass_gate)
+	opening.pass_gate = pass_gate
 	_say_who()
 
 ## The bank's counter and the room in the Homes' courtyard, standing where they always have: nothing to do at them now.
@@ -1616,6 +1622,7 @@ func _say_who() -> void:
 	client.start(who, secret)
 	await client.synced
 	if title and title.is_up: await title.finished
+	if TownPassGate.wanted(client): await opening.hold_for_pass()     # signed up but never stamped: finish that first
 	if not opening.has_read() and not opening.playing: opening.resume()
 
 func _in_a_room(p: Vector3) -> bool:
@@ -1639,6 +1646,7 @@ func surface_at(p: Vector3) -> String:
 ## Is a paper, the phone or anything like them up on screen?
 func any_sheet_open() -> bool:
 	return (settings and settings.is_open) or (pause and pause.is_open) or phone.is_open or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
+		or (pass_gate and pass_gate.is_open()) \
 		or opening.letter._sheet.visible or food_counter.food_menu.is_open or BoardSheet.any_open()
 
 func _pace(delta: float) -> void:

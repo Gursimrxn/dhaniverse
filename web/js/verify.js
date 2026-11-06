@@ -184,6 +184,8 @@ async function start() {
 
     drawQr(request.connectorURI);
     $("#open-app").href = request.connectorURI;
+    // Staging requests are answered by World's simulator, which takes the link pasted in, not a phone's camera.
+    $("#simulator").hidden = s.environment !== "staging";
     $("#idkit-area").hidden = true;
     $("#connect").hidden = false;
     if (matchMedia("(pointer: coarse)").matches) $("#open-app").focus();
@@ -279,5 +281,15 @@ $("#retry-btn").addEventListener("click", () => {
   if (!session) loadSession();
 });
 $("#rehearse-btn").addEventListener("click", () => submit({ offline: true }));
+$("#copy-link-btn").addEventListener("click", async () => {
+  const btn = $("#copy-link-btn");
+  const link = $("#open-app").href;
+  try {
+    await navigator.clipboard.writeText(link);
+    btn.textContent = "Copied: paste it in the simulator";
+  } catch {
+    window.prompt("Copy this link into the simulator:", link);   // no clipboard access (an http page on another host)
+  }
+});
 
 loadSession();

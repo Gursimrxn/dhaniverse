@@ -39,6 +39,12 @@ pub trait HumanVerifier: Send + Sync {
     fn app_id(&self) -> Option<String> {
         None
     }
+
+    /// Whether this server can stamp a Town Pass at all: World ID is set up, or it's a rehearsal (`--debug`) server.
+    /// The game asks every passenger for the pass at the gangway only when it can be had.
+    fn can_verify(&self) -> bool {
+        false
+    }
 }
 
 /// Rehearsal only: accepts the proof `{"offline": true}`, and only when the server runs with `--debug`. The id it gives
@@ -79,6 +85,10 @@ impl HumanVerifier for OfflineVerifier {
             "rp_context": null,
             "rehearsal": true,
         }))
+    }
+
+    fn can_verify(&self) -> bool {
+        self.debug
     }
 }
 

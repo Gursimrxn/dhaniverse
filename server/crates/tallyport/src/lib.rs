@@ -56,6 +56,10 @@ impl HumanVerifier for WorldId {
     fn app_id(&self) -> Option<String> {
         self.1.clone()
     }
+
+    fn can_verify(&self) -> bool {
+        true
+    }
 }
 
 pub fn network(mode: ChainMode) -> Option<Network> {
@@ -121,6 +125,7 @@ pub fn chain_links(
     if cfg.resume_after_block.is_none() {
         cfg.resume_after_block = Some(start);
     }
+    cfg.recovery = recovery(world)?;
     // Flags (--world-rp-id, --world-app-id) win over the environment.
     let mut world_id = cfg.world_id.clone();
     if let Some(w) = world_id.as_mut() {
@@ -180,4 +185,34 @@ mod tests {
         assert_eq!(network(ChainMode::Anvil), Some(Network::Anvil));
         assert_eq!(network(ChainMode::Sepolia), Some(Network::Sepolia));
     }
+}
+
+/// What the save knows that the chain's data dir also keeps (every player's wallet, each committed and unclaimed
+/// draw's tickets), so a town restored from Arkiv on a machine without that dir gets it rebuilt, not started empty.
+pub fn recovery(world: &World) -> Result<chain::config::Recovery, String> {
+    let mut wallets = Vec::new();
+    for (account, player) in world.state.life.players() {
+        if let Some(address) = &player.wallet {
+            let address = address
+                .parse()
+                .map_err(|_| format!("the save's wallet for {account} isn't an address: {address}"))?;
+            wallets.push((account.clone(), address));
+        }
+    }
+    let draws = world
+        .state
+        .games
+        .draws
+        .values()
+        .filter(|d| d.committed && !d.claimed)
+        .map(|d| {
+            let tickets = d
+                .tickets
+                .iter()
+                .map(|t| (t.player.clone(), t.from, t.to))
+                .collect();
+            (d.week, tickets)
+        })
+        .collect();
+    Ok(chain::config::Recovery { wallets, draws })
 }

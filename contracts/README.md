@@ -49,7 +49,15 @@ SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com forge test --match-p
 forge fmt --check && forge lint -D warnings src && python tools/spec_check.py
 script/dev_chain.sh                                    # local chain; prints the server's env
 forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --slow --gas-estimate-multiplier 900   # Sepolia
+python tools/verify_deployments.py .                  # then check deployments/sepolia.json against the chain
 ```
+
+**Always run `tools/verify_deployments.py` after a Sepolia deploy.** `deployments/sepolia.json` is written from forge's
+simulation, not from what landed. Two ways that goes wrong: the quest pool's `positionId` is a guess at Uniswap's shared
+PositionManager's next id, and someone else can mint first (it happened on 7 Nov 2026: 41473 predicted, 41474 real);
+and `--resume` after a dropped connection re-runs the script and rewrites the whole file with addresses that were never
+deployed. The tool reads the broadcast's receipts and the chain, and `--fix` rewrites what's wrong. Never `--resume`
+without running it afterwards.
 
 **Sepolia gas (Nov 2026):** Sepolia's current gas schedule charges about 7× what Foundry's local simulation
 predicts for contract creation (CampaignEscrow needs about 22.7M gas; forge estimates 3.2M). Without

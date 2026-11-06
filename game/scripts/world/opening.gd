@@ -47,6 +47,7 @@ var keep := Callable()             # f(key, value): kept on this machine for nex
 var ferry: Node3D
 var ticket: FerryTicket
 var letter: GranLetter
+var pass_gate: TownPassGate        # world.gd's, once the town hall's desk exists: the Town Pass, asked for before going ashore
 var playing := false
 var aboard := false                # the player rides in with the ferry without having the deck yet: under the title
 var ride_held := false             # the ferry waits at the start of its ride: under the logo, until the town shows through
@@ -202,10 +203,21 @@ func _open_ticket() -> void:
 func _on_named(who: String) -> void:
 	keep.call("player_name", who)
 	ticket.close()
-	player.frozen = false
 	_named = true
+	if pass_gate and TownPassGate.wanted(client):
+		step = "pass"                  # held at the gangway until the Town Pass is stamped, once
+		pass_gate.open()
+		await pass_gate.passed
+	player.frozen = false
 	step = "ashore"
 	_called_for = 0.0
+
+## Someone who left before their Town Pass was stamped came back: they show it before anything else, as at the gangway.
+func hold_for_pass() -> void:
+	player.frozen = true
+	pass_gate.open()
+	await pass_gate.passed
+	player.frozen = false
 
 func _on_synced() -> void:
 	if step == "ticket" and not _named: ticket.accept()

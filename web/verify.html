@@ -74,6 +74,14 @@
         <a class="btn" id="open-app" href="#" rel="noopener">Open the World App</a>
         <button class="btn ghost small" type="button" id="cancel-btn">Cancel</button>
       </div>
+      <div id="simulator" class="notice" hidden>
+        <strong>World ID staging</strong>
+        <span>This town uses World's simulator instead of a phone. Copy the link, open the simulator, choose <em>Paste code</em> and paste it, then approve.</span>
+        <div class="row" style="margin-top:6px">
+          <button class="btn small" type="button" id="copy-link-btn">Copy link for the simulator</button>
+          <a class="btn ghost small" href="https://simulator.worldcoin.org" target="_blank" rel="noopener">Open the simulator</a>
+        </div>
+      </div>
       <div class="status wait" aria-live="polite"><span class="icon"><span class="spinner" aria-hidden="true"></span></span>
         <div class="stack"><h3 id="poll-title">Waiting for the World App…</h3><p class="small muted" id="poll-text">Scan the code or tap the button. This page updates by itself.</p></div></div>
     </div>

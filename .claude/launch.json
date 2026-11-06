@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "game-web",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8060", "--bind", "127.0.0.1", "--directory", "build/web"],
+      "port": 8060
+    }
+  ]
+}

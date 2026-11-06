@@ -281,6 +281,17 @@ pub struct ChainConfig {
     pub resume_after_block: Option<u64>,
     pub world_id: Option<WorldIdConfig>,
     pub secrets: Secrets,
+    /// What the save already knows, used to rebuild a data dir that was lost. Filled by the server, never from env.
+    pub recovery: Recovery,
+}
+
+/// What the save knows that the data dir also keeps: every player's wallet address, and each committed, unclaimed
+/// draw's tickets (player, first, last). A town restored from Arkiv on another machine has the save but not the data
+/// dir; the chain link rebuilds `wallets.jsonl` and `draws/` from this instead of starting them empty.
+#[derive(Clone, Debug, Default)]
+pub struct Recovery {
+    pub wallets: Vec<(String, alloy::primitives::Address)>,
+    pub draws: Vec<(u64, Vec<(String, u64, u64)>)>,
 }
 
 impl fmt::Debug for ChainConfig {
@@ -493,6 +504,7 @@ impl ChainConfig {
                 })?,
             world_id: WorldIdConfig::from_env(env)?,
             secrets,
+            recovery: Recovery::default(),
         };
         if cfg.gas.target_wei < cfg.gas.floor_wei {
             return Err(ConfigError::Invalid(
