@@ -1,0 +1,130 @@
+{
+  "_comment": "DEV FIXTURE ONLY: a made-up /city for checking the web pages without the game server. Not real data and never served in production. Amounts are USDC base units (1000000 = 1 USDC).",
+  "chain": "sepolia",
+  "world_app_id": "app_staging_0000000000000000000000000000",
+  "bounty": [
+    {
+      "id": 1,
+      "sponsor": "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+      "sponsor_name": "Tallyport Launch",
+      "title": "The Mango Run",
+      "template": "spice_run",
+      "payout": 1000000,
+      "energy": 30,
+      "slots": 100,
+      "slots_left": 63,
+      "claims": 37,
+      "humans": 31,
+      "budget": "150000000",
+      "spendable": "135000000",
+      "paid": "37000000",
+      "remaining": "98000000",
+      "daily_cap": "14000000",
+      "refunded": "0",
+      "starts": 1793745832,
+      "ends": 1794350632,
+      "status": "live",
+      "swarm": "5b8a3f0e2d6c4b1a9e7f8d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a"
+    },
+    {
+      "id": 2,
+      "sponsor": "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+      "sponsor_name": "Name Painters",
+      "title": "Paint your shop sign",
+      "template": "paint_sign",
+      "payout": "250000",
+      "energy": 20,
+      "slots": 200,
+      "slots_left": 151,
+      "claims": 49,
+      "humans": 49,
+      "remaining": "40000000",
+      "daily_cap": "8000000",
+      "starts": 1793745832,
+      "ends": 1794177832,
+      "status": "live",
+      "swarm": null
+    }
+  ],
+  "house": {
+    "budget_bps": 400,
+    "fixed": {
+      "balance": "820000000",
+      "budget": "32800000",
+      "spent": "9450000"
+    },
+    "surprise": {
+      "balance": "410000000",
+      "budget": "16400000",
+      "spent": "6100000"
+    },
+    "safety": {
+      "balance": "140000000",
+      "budget": "5600000",
+      "spent": "48000"
+    },
+    "paid_today": "15598000",
+    "rescue_meals": {
+      "today": 2,
+      "total": 17,
+      "usdc_total": "408000"
+    }
+  },
+  "treasury": {
+    "balance": "3120000",
+    "revenue_today": "11840000",
+    "harvest_today": "11840000",
+    "split": {
+      "fixed": "612000000",
+      "safety": "102000000",
+      "ops": "204000000",
+      "team": "102000000"
+    },
+    "split_bps": {
+      "fixed": 6000,
+      "safety": 1000,
+      "ops": 2000,
+      "team": 1000
+    },
+    "last_split_at": 1793907832
+  },
+  "float": {
+    "total": "138412300",
+    "liquid": "99000000",
+    "invested": "39412300",
+    "buffer": "99000000",
+    "daily_caps_sum": "22000000",
+    "pending_refunds": "0",
+    "liabilities": "138000000",
+    "yield_earned": "412300",
+    "yield_to_house": "329840",
+    "loss_reserve": "82460",
+    "fees_total": "17000000",
+    "last_rebalance_at": 1793916832,
+    "venues": [
+      {
+        "name": "MockYieldVault",
+        "address": "0x0000000000000000000000000000000000000001",
+        "simulated": true,
+        "apr_bps": 400,
+        "assets": "39412300"
+      }
+    ]
+  },
+  "food": {
+    "price": 4120,
+    "floor": 2000,
+    "ceiling": 8000,
+    "meals_today": 2950,
+    "usdc_today": "11840000"
+  },
+  "draw": {
+    "week": 45,
+    "tickets": 1840,
+    "prize": "5000000"
+  },
+  "town_goal": {
+    "target": 5000,
+    "progress": 2950
+  }
+}

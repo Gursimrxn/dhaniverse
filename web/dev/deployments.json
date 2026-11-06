@@ -1,0 +1,8 @@
+{
+  "_comment": "DEV FIXTURE ONLY (served by web/dev/serve.mjs when DEV_DEPLOYMENTS=1). Sepolia with Circle's test USDC and no Tallyport contracts, to exercise the chain code paths. The real file is contracts/deployments/sepolia.json, written by the deploy script.",
+  "chainId": 11155111,
+  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "contracts": {},
+  "startBlock": 0
+}
