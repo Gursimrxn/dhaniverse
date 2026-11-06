@@ -272,22 +272,40 @@
           "does": "Destroys the caller's own FOOD: food that was eaten."
         },
         {
-          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance",
+          "sig": "setAllowed(account, ok) · lockAllowlist()",
+          "who": "The holder (allowlister), deploy script",
+          "when": "Once, at deploy",
+          "does": "Sets who may send and receive FOOD (PoolManager, FoodRouter, Farm, MealCounter, the holder), then locks it forever."
+        },
+        {
+          "sig": "name · symbol · decimals · totalSupply · balanceOf · transfer · transferFrom · approve · allowance · allowed · allowlistLocked · allowlister",
           "who": "Anyone",
           "when": "Any time",
-          "does": "A standard ERC-20 token."
+          "does": "An ERC-20 token, except that a transfer needs both the sender and the receiver on the allowlist."
         }
       ],
       "events": [
         {
           "sig": "Transfer · Approval",
           "means": "Tokens moved, or an allowance changed."
+        },
+        {
+          "sig": "AllowedSet · AllowlistLocked",
+          "means": "The allowlist changed (deploy only), or was locked for good."
         }
       ],
       "errors": [
         {
           "sig": "FoodToken__ZeroSupply",
           "means": "A token with no supply is a mistake."
+        },
+        {
+          "sig": "FoodToken__NotAllowed(account)",
+          "means": "FOOD can't move to or from an address outside the game."
+        },
+        {
+          "sig": "FoodToken__NotAllowlister(caller) · FoodToken__AllowlistLocked",
+          "means": "Only the holder sets the allowlist, and only until it's locked."
         }
       ]
     },

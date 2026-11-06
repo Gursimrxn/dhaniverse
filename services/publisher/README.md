@@ -28,6 +28,11 @@ no player wallets.
 | `dhaniverse.season.v1` | when a season ends (needs Swarm) | 180 days | `GET /seasons` |
 | `dhaniverse.city.v1` | once per town, from the save's first line (encrypted) | 180 days, renewed | `GET /log` |
 | `dhaniverse.log.v1` | one per batch of save lines (gzipped, encrypted, hash-chained) | 180 days, renewed | `GET /log` |
+| `dhaniverse.chest.v1` | every chest opened (from the save) | 30 days from the draw | `GET /chests?day=` |
+| `dhaniverse.feed.v1` | every feed post (from the save) | 7 days from the post | `GET /feed?day=` |
+| `dhaniverse.stamp.v1` | every quest stamp and first, once per player (from the save) | the season's end | `GET /profiles/:name` |
+| `dhaniverse.streak.v1` | a player's login streak, patched each login day (from the save) | 8 days after the last login: expiry = streak broken | `GET /profiles/:name` |
+| `dhaniverse.pool.v1` | the house pool's statement when a real day closes (from the save's chain readings) | 90 days | `GET /pool?day=` |
 
 ### The save on Arkiv
 
@@ -40,6 +45,18 @@ Every `city` and `log` entity with under 150 days left is extended to 180 days (
 Without the key it says so and does not start the mirror; everything else still runs.
 Generate a key with `openssl rand -hex 32`, and keep it with the server's other secrets: lose it and the
 save on Arkiv cannot be read.
+
+### The town in public (from the save)
+
+With `SAVE_PATH` set (no log key needed: all of this is public), `src/town.ts` replays the save from its first line on
+every start and turns its events into public records: chest draws (tier, contents, the pity counter; a golden drop is
+yes/no, never its amount), feed posts (the server feed's own words, which never hold an amount), stamps and firsts,
+login streaks, and each closed day's house pool statement. It reads nothing else: wallets, balances, what anyone was
+paid, secret hashes and World ID results stay inside the encrypted save, and `test/town.test.ts` checks that against a
+save full of them and against `server/save.jsonl`. The publisher remembers only how far it queued (`townSeq`); after a
+lost state file it asks Arkiv what exists before creating anything. A backlog always leaves two places in each
+transaction for the save's own batch. The Market Rush board, the bounty campaigns (with slots left) and the FOOD price
+history come from the server's public view (`GET /city`), as before.
 
 Every attribute, index, owner and expiry: [`/arkiv/schema.md`](../../arkiv/schema.md). The schemas in code:
 [`src/schemas.ts`](src/schemas.ts). The contract test ([`test/contract.test.ts`](test/contract.test.ts))
@@ -57,6 +74,7 @@ npm run address             # prints the writer address for ARKIV_PRIVATE_KEY (n
 npm start                   # polls SERVER_URL/city, writes, serves the read API on :8787
 npm test                    # unit + contract tests, no network
 npm run typecheck
+npm run drill -- --save <small save>   # the restore drill on real Arkiv: writes the save + its public records, serves GET /log
 ```
 
 With nothing configured it runs as a no-op and says so once: no Arkiv key means no writes (and no
@@ -110,17 +128,35 @@ The game server reaches the read API at `PUBLISHER_URL` (e.g. `http://127.0.0.1:
 ## Read API
 
 Every answer is a live Arkiv query (behind a short cache) filtered on the writer (`$owner`) and
-`env`, and carries `source: "arkiv"`, the `block` it was read at, `owner`, `env`, `cached_at` and `stale`.
+`env`, and carries `source: "arkiv"`, the `block` it was read at, `owner`, `env`, `cached_at`, `stale` and
+`explorer: {block, owner}` (Rabdi explorer links; null on a local chain). Every row carries its `entity_key` and
+`expires_at_block`.
+
+**For the game (the "on Arkiv" proof link).** The game calls these through the server, which passes
+`GET /arkiv/<route>` to the publisher for `campaigns`, `boards/rush`, `prices`, `prices/history`, `chests`, `feed`,
+`pool`, `profiles/:name`, `papers/:day` and `seasons` (never `/log`). Show `block` with a link to `explorer.block`,
+and the row's `entity_key`; anyone can check the row itself with one JSON-RPC call (no key needed):
+
+```sh
+curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,
+  "method":"arkiv_query","params":["$key = ENTITY_KEY",{"select":{"key":true,"owner":true,"expiresAt":true,"attributes":true}}]}'
+```
+
+The explorer has no documented per-entity page yet; link the block and the writer's address.
 
 | Route | Answer |
 |---|---|
-| `GET /campaigns` | `{cards: [{id, sponsor, title, template, payout, energy, slots_left, ends, status, swarm, entity_key, expires_at_block}]}`: live, slots left, soonest-ending first. Same field names as the server's `city.bounty`. |
+| `GET /campaigns` (game: `GET /arkiv/campaigns` on the server) | `{cards: [{id, sponsor, title, template, payout, energy, slots_left, ends, status, swarm, entity_key, expires_at_block}]}`: live, slots left, soonest-ending first. Same field names as the server's `city.bounty`. |
 | `GET /boards/rush?day=N` | `{board: {day, season, board, leader, entries, top: [{rank, name, title}]}}`; latest without `day`; 404 if none |
 | `GET /prices?from=&to=` | `{ticks: [{start, end, day, open, high, low, close, samples, series: [[t, price]], shock}]}`: unix seconds, default last 24 h, at most 7 days; USDC base units per FOOD |
-| `GET /profiles/:name` | `{profile: {name, title, stamps, ens, season}}`; 404 if none |
+| `GET /prices/history?days=7` | `{days, ticks: [{start, end, day, open, high, low, close, samples, shock, entity_key, expires_at_block}]}`: the last 1-7 days (default 7), oldest first, without the per-sample series |
+| `GET /profiles/:name` | `{profile: {name, title, stamps, ens, season, entity_key, …} | null, stamps: [{player, stamp, kind, day, at, entity_key, …}], firsts: […], medals: [], streak: {player, streak, days_of_last_7, chest_tier, day, entity_key, …} | null}`; 404 if none of them exists. `streak` is null once it has expired (broken) |
+| `GET /chests?day=N` | `{draws: [{seq, day, player, kind, tier, pity_before, outcome, draw, contents: {energy, tickets, voucher, golden_drop, pity}, at, entity_key, expires_at_block}]}`: newest first, the latest 100 without `day` |
+| `GET /feed?day=N` | `{posts: [{id, day, kind, actor, at, text, entity_key, expires_at_block}]}`: newest first, the latest 100 without `day` |
+| `GET /pool?day=N` | `{pool: {day, opening, closing, budget, spent_fixed, spent_surprise, spent_safety, inflow, entity_key, expires_at_block}}`: USDC base units as decimal strings; latest closed day without `day`; 404 if none |
 | `GET /papers/:day` | `{paper: {day, headline, stories, body_ref, body}}`; `/papers/latest` for the newest |
 | `GET /seasons` | `{seasons: [{season, ended_day, snapshot_ref}]}` |
-| `GET /log?town=&from=` | the save, restored from Arkiv, as JSONL: the setup line (when `from` is 0), then every line with `seq >= from`, in order. Decrypts, checks every `prevHash` link and that each batch starts where the last ended; on a broken chain, a gap or a batch that won't decrypt it ends with `{"error": …}` and stops. Needs `DHANIVERSE_LOG_KEY`, `Authorization: Bearer <DHANIVERSE_RESTORE_TOKEN>`, and a loopback caller |
+| `GET /log?town=&from=` | the save, restored from Arkiv, as JSONL, with `x-arkiv-tip: <last line on Arkiv>`: the setup line (when `from` is 0), then every line with `seq >= from`, in order. Decrypts, checks every `prevHash` link and that each batch starts where the last ended; on a broken chain, a gap or a batch that won't decrypt it ends with `{"error": …}` and stops. Needs `DHANIVERSE_LOG_KEY`, `Authorization: Bearer <DHANIVERSE_RESTORE_TOKEN>`, and a loopback caller |
 | `GET /query` | the Bounty Board's query string, RPC URL, chain id and a ready JSON-RPC body |
 | `POST /swarm/campaign-bundle` | multipart form: `story` (JSON) + up to 6 `image` files → `201 {reference, metaHash, index, files, bytes, dropped}` |
 | `GET /swarm/campaign-bundle/:ref` | that bundle's `index.json`, read back through Bee |
@@ -196,6 +232,8 @@ src/swarm.ts          Bee HTTP API client (POST /bzz, GET /bzz, GET /stamps)
 src/swarmRef.ts       the gate: only plain 32-byte references reach a public entity
 src/bundle.ts         campaign bundle validation and upload
 src/readapi.ts        the HTTP read API
+src/town.ts           the save's events → public records (chest, feed, stamp, streak, pool)
+scripts/drill.ts      the restore drill's publisher half (--fake for the server's cargo test; live from .env)
 test/fakeArkiv.ts     in-memory Arkiv node behind a viem transport (decodes real execute txs, evaluates queries)
 test/fakeBee.ts       in-memory Bee
 ```
