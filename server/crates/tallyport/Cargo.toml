@@ -1,0 +1,19 @@
+[package]
+name = "tallyport"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+description = "The Tallyport town server: offline, or settling on anvil / Sepolia through the chain crate"
+
+[features]
+# Runs tests/anvil_e2e.rs against a running dev chain (see its header).
+anvil-tests = []
+
+[dependencies]
+server = { path = "../server" }
+chain = { path = "../chain" }
+rules.workspace = true
+serde_json = "1"
+
+[dev-dependencies]
+tungstenite = { version = "0.26", default-features = false, features = ["handshake"] }
