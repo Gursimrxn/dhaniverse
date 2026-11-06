@@ -26,12 +26,11 @@ const AT_RAIL_BOW := 3.5           # m along the deck: he's reached the rail
 const AT_RAIL_SIDE := 1.45         # m across it, on either side
 const BOB := 0.03                  # m
 const TALK_AT := 3.1               # m from the harbourmaster
-const HINT_AFTER := 6.0             # s standing still on the deck before it's worth saying how to walk
 const LETTER_AFTER := 2.2          # s from him speaking to the letter being read
 const AFTER_SKY := 10.0            # s the morning takes to come up after the letter
 const GREET := "Morning, %s. I've something for you. From your gran."
 const CALL := "Over here, %s!"
-const AFTER_LETTER := "She was a good one, %s. Kofi at the Market Hall could use a hand, past the bank."
+const AFTER_LETTER := "She was a good one, %s. Work's on the board where the road meets the town."
 const READ := "read_gran_letter"   # the setting that says the letter's been read
 
 var world: Node3D
@@ -50,12 +49,11 @@ var ticket: FerryTicket
 var letter: GranLetter
 var playing := false
 var aboard := false                # the player rides in with the ferry without having the deck yet: under the title
+var ride_held := false             # the ferry waits at the start of its ride: under the logo, until the town shows through
 var step := ""                     # where it's got to: film, deck, ticket, ashore, handing, letter, ""
 var _ride_u := 1.0
 var _named := false
-var _walk_hint: KeyHint
-var _hint_gone := false
-var _still_for := 0.0
+var _keys: KeyStrip                # W A S D, the mouse and E, low on the screen while they find their feet
 var _called_for := 0.0
 var _mode_was := ""
 
@@ -76,8 +74,8 @@ func setup(tags: Control) -> void:
 	letter = GranLetter.new()
 	tags.add_child(letter)
 	letter.read.connect(_finish)
-	_walk_hint = KeyHint.new()
-	tags.add_child(_walk_hint)
+	_keys = KeyStrip.new()
+	tags.add_child(_keys)
 	client.synced.connect(_on_synced)
 	client.hello_refused.connect(_on_hello_refused)
 
@@ -149,7 +147,7 @@ func _end_film() -> void:
 	_called_for = 0.0
 
 func _physics_process(delta: float) -> void:
-	if _ride_u >= 1.0: return
+	if _ride_u >= 1.0 or ride_held: return
 	var was: Transform3D = ferry.global_transform
 	_ride(minf(_ride_u + delta / RIDE * (RIDE_NAMED if _named else 1.0), 1.0))
 	# he's carried with the deck, walking or not
@@ -177,18 +175,11 @@ func _alongside() -> void:
 	alongside.emit()
 
 func _process(delta: float) -> void:
+	_keys.want = playing and step in ["deck", "ashore"]
 	if not playing: return
 	match step:
 		"deck":
 			var l: Vector3 = ferry.global_transform.affine_inverse() * player.global_position
-			if not _hint_gone:
-				_still_for = 0.0 if player.velocity.length() > 0.5 else _still_for + delta
-				if _still_for > HINT_AFTER:
-					_walk_hint.at = player.global_position + Vector3.UP * 1.85
-					_walk_hint.show_hint("W", "Walk")
-				if ON_DECK.distance_to(l) > 0.6:
-					_hint_gone = true
-					_walk_hint.show_hint("", "")
 			if l.x > AT_RAIL_BOW or absf(l.z) > AT_RAIL_SIDE or l.x < -0.2:
 				_open_ticket()
 		"ashore":
@@ -204,8 +195,6 @@ func _to_keeper() -> float:
 
 func _open_ticket() -> void:
 	step = "ticket"
-	_walk_hint.show_hint("", "")
-	_hint_gone = true
 	player.frozen = true
 	sound.play("paper")
 	ticket.open()
