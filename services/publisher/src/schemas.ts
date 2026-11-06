@@ -1,4 +1,4 @@
-// The Arkiv schemas: the single source of truth for every entity Tallyport writes. `arkiv/schema.md`
+// The Arkiv schemas: the single source of truth for every entity Dhaniverse writes. `arkiv/schema.md`
 // documents these; the contract test checks the two agree on the wire.
 //
 // Rules that shaped them (docs.arkiv.network/schemas/define, /reference/limits):
@@ -120,6 +120,94 @@ export const LogSchema = defineSchema("dhaniverse.log.v1", {
   payload: bytes(),
 })
 
+
+// ---- the town in public, derived from the save's events (src/town.ts) ---------------------------
+// Names, titles, stamps and outcome kinds only: never a balance, an amount a player was paid, a wallet or anything
+// from World ID. The pool is the house pool's own books, not any player's money.
+
+/** One feed post, as the server's feed wrote it (its words never hold an amount). 7 days from the post. */
+export const FeedSchema = defineSchema("dhaniverse.feed.v1", {
+  env: str().indexed(),
+  /** The server's post id: unique in the town. */
+  postId: u64().indexed(),
+  /** Real day (the rules' `real_day`). */
+  day: u64().indexed(),
+  kind: str().indexed(),
+  /** The player the post is about, if any. */
+  actor: str().optional(),
+  /** Unix seconds. */
+  at: u64(),
+  /** JSON: [{id, text}]. */
+  items: bytes(),
+})
+
+/** One chest opening: the public record that every draw followed the odds plate and the pity rule. 30 days. */
+export const ChestSchema = defineSchema("dhaniverse.chest.v1", {
+  env: str().indexed(),
+  day: u64().indexed(),
+  player: str().indexed(),
+  /** The save line it happened on: unique in the town. */
+  seq: u64().indexed(),
+  /** `daily` or `weekly`. */
+  kind: str(),
+  /** `wood`, `brass` or `gold`. */
+  tier: str(),
+  /** Daily chests opened since the last golden drop, before this one (the pity rule's counter). */
+  pityBefore: i32(),
+  /** The headline kind, never an amount: `golden_drop`, `voucher` or `plain`. */
+  outcome: str().indexed(),
+  /** This player's daily chest number (1, 2, …): the draw's index in the rules' dice. */
+  draw: i32(),
+  /** JSON {energy, tickets, voucher, golden_drop (true/false, never the amount), pity}. */
+  contents: bytes(),
+  at: u64(),
+})
+
+/** A stamp (from a quest) or a first (first meal, first quest, Town Pass) earned. Until the season's end. */
+export const StampSchema = defineSchema("dhaniverse.stamp.v1", {
+  env: str().indexed(),
+  player: str().indexed(),
+  stamp: str().indexed(),
+  /** `stamp` or `first`. Skill-game medals join as `medal` when the game layer emits them. */
+  kind: str().indexed(),
+  /** `kind:player:stamp`: each is earned once. */
+  ref: str().indexed(),
+  day: u64(),
+  at: u64(),
+  seq: u64(),
+})
+
+/** A player's login streak. Renewed on each login day; when it expires (8 days) the streak is broken. */
+export const StreakSchema = defineSchema("dhaniverse.streak.v1", {
+  env: str().indexed(),
+  player: str().indexed(),
+  /** Real days in a row. */
+  streak: i32(),
+  daysOfLast7: i32(),
+  /** The daily chest's tier the streak earns: `wood`, `brass` or `gold`. */
+  chestTier: str(),
+  /** The real day of the last login. */
+  day: u64(),
+  fp: str(),
+})
+
+/** The house pool's statement for one closed real day: its own public books. 90 days. USDC base units. */
+export const PoolSchema = defineSchema("dhaniverse.pool.v1", {
+  env: str().indexed(),
+  day: u64().indexed(),
+  /** fixed + surprise + safety at the day's first reading, and at its last. */
+  opening: u64(),
+  closing: u64(),
+  /** The day's payout budget across the three buckets. */
+  budget: u64(),
+  /** Paid out from each bucket, as the chain confirmed it. */
+  spentFixed: u64(),
+  spentSurprise: u64(),
+  spentSafety: u64(),
+  /** closing - opening + spent: what came in (the treasury's split, top-ups). */
+  inflow: u64(),
+})
+
 export const SCHEMAS = {
   campaign: CampaignSchema,
   rush_board: RushBoardSchema,
@@ -127,6 +215,11 @@ export const SCHEMAS = {
   profile: ProfileSchema,
   paper: PaperSchema,
   season: SeasonSchema,
+  feed: FeedSchema,
+  chest: ChestSchema,
+  stamp: StampSchema,
+  streak: StreakSchema,
+  pool: PoolSchema,
 } as const
 
 export type EntityType = keyof typeof SCHEMAS

@@ -9,9 +9,10 @@ import { ConfigError, loadConfig } from "./config.ts"
 import { log, setLevel, throttled } from "./log.ts"
 import { Publisher } from "./publisher.ts"
 import { makeReadApi } from "./readapi.ts"
-import { createSaveMirror, restoreLines } from "./save.ts"
+import { arkivTip, createSaveMirror, restoreLines } from "./save.ts"
 import { FileStateStore } from "./state.ts"
 import { Swarm } from "./swarm.ts"
+import { TownProjector } from "./town.ts"
 
 async function main(): Promise<void> {
   let cfg
@@ -63,6 +64,8 @@ async function main(): Promise<void> {
     store,
     Date.now,
     saveMirror,
+    // The town's public records need only the save, not the log key.
+    cfg.savePath ? new TownProjector(cfg.savePath) : null,
   )
   await publisher.init()
 
@@ -76,6 +79,8 @@ async function main(): Promise<void> {
     corsOrigins: cfg.corsOrigins,
     restoreToken: cfg.restoreToken ?? null,
     restoreAllowRemote: cfg.restoreAllowRemote,
+    explorer: clients.chain.blockExplorers?.default.url.replace(/\/$/, "") ?? null,
+    restoreTip: clients.trusted ? (town) => arkivTip(clients.publicClient, clients.trusted as `0x${string}`, cfg.env, town) : null,
     restore:
       clients.trusted && cfg.logKey
         ? (town, from) => restoreLines(clients.publicClient, clients.trusted as `0x${string}`, cfg.env, cfg.logKey as Buffer, town, from)

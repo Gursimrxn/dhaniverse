@@ -216,6 +216,7 @@ export function seasonDraft(season: number, endedDay: number, snapshotRef: strin
 export const PATCHABLE: Partial<Record<EntityType, string[]>> = {
   campaign: ["status", "sponsor", "title", "template", "payout", "energy", "slotsLeft", "endsAt", "metaHash", "fp"],
   profile: ["title", "stamps", "ens", "season", "fp"],
+  streak: ["streak", "daysOfLast7", "chestTier", "day", "fp"],
 }
 
 // ---- reading back -------------------------------------------------------------------------------
@@ -323,4 +324,159 @@ export function paperFromRow(row: Row) {
 
 export function seasonFromRow(row: Row) {
   return { season: n(row.season), ended_day: n(row.endedDay), snapshot_ref: s(row.snapshotRef), ...meta(row) }
+}
+
+// ---- the town in public, from the save's events -------------------------------------------------
+// `town.ts` reads the save and hands over plain records (they are persisted as JSON while they wait);
+// these turn them into entity drafts. Expiry counts from when the thing happened, not from when it is written.
+
+export const FEED_TTL_MS = 7 * DAY
+export const CHEST_TTL_MS = 30 * DAY
+export const POOL_TTL_MS = 90 * DAY
+export const STREAK_TTL_MS = 8 * DAY
+
+export type ChestRecord = {
+  type: "chest"
+  seq: number
+  atMs: number
+  day: number
+  player: string
+  kind: "daily" | "weekly"
+  tier: string
+  pityBefore: number
+  pity: boolean
+  draw: number
+  energy: number
+  tickets: number
+  voucher: boolean
+  goldenDrop: boolean
+}
+export type FeedRecord = { type: "feed"; seq: number; atMs: number; day: number; postId: number; kind: string; actor: string | null; text: string }
+export type StampRecord = { type: "stamp"; seq: number; atMs: number; day: number; player: string; stamp: string; kind: "stamp" | "first" }
+export type PoolRecord = {
+  type: "pool"
+  seq: number
+  atMs: number
+  day: number
+  opening: number
+  closing: number
+  budget: number
+  spentFixed: number
+  spentSurprise: number
+  spentSafety: number
+}
+export type TownRecord = ChestRecord | FeedRecord | StampRecord | PoolRecord
+export type StreakState = { player: string; streak: number; daysOfLast7: number; chestTier: string; day: number; atMs: number }
+
+export const recordId = (r: TownRecord): string =>
+  r.type === "chest" ? String(r.seq) : r.type === "feed" ? String(r.postId) : r.type === "pool" ? String(r.day) : stampRef(r)
+export const stampRef = (r: { kind: string; player: string; stamp: string }) => fitStr(`${r.kind}:${r.player}:${r.stamp}`)
+
+/** When a record's entity should expire; `stampUntilMs` is the season's end. */
+export function recordExpiresAt(r: TownRecord, stampUntilMs: number, now: number): number {
+  const at = r.type === "chest" ? r.atMs + CHEST_TTL_MS : r.type === "feed" ? r.atMs + FEED_TTL_MS : r.type === "pool" ? r.atMs + POOL_TTL_MS : stampUntilMs
+  return clampTtl(at, now)
+}
+
+export function townDraft(r: TownRecord, env: string, stampUntilMs: number, now: number): Draft {
+  const atMs = recordExpiresAt(r, stampUntilMs, now)
+  const at = u64(Math.floor(r.atMs / 1000))
+  let values: Record<string, unknown>
+  switch (r.type) {
+    case "chest": {
+      const outcome = r.goldenDrop ? "golden_drop" : r.voucher ? "voucher" : "plain"
+      values = {
+        env,
+        day: u64(r.day),
+        player: fitStr(r.player),
+        seq: u64(r.seq),
+        kind: r.kind,
+        tier: r.tier,
+        pityBefore: i32(r.pityBefore),
+        outcome,
+        draw: i32(r.draw),
+        contents: json({ energy: r.energy, tickets: r.tickets, voucher: r.voucher, golden_drop: r.goldenDrop, pity: r.pity }),
+        at,
+      }
+      break
+    }
+    case "feed":
+      values = { env, postId: u64(r.postId), day: u64(r.day), kind: fitStr(r.kind), at, items: json([{ id: r.postId, text: r.text }]) }
+      if (r.actor) values.actor = fitStr(r.actor)
+      break
+    case "stamp":
+      values = { env, player: fitStr(r.player), stamp: fitStr(r.stamp), kind: r.kind, ref: stampRef(r), day: u64(r.day), at, seq: u64(r.seq) }
+      break
+    case "pool":
+      values = {
+        env,
+        day: u64(r.day),
+        opening: u64(r.opening),
+        closing: u64(r.closing),
+        budget: u64(r.budget),
+        spentFixed: u64(r.spentFixed),
+        spentSurprise: u64(r.spentSurprise),
+        spentSafety: u64(r.spentSafety),
+        inflow: u64(Math.max(0, r.closing - r.opening + r.spentFixed + r.spentSurprise + r.spentSafety)),
+      }
+      break
+  }
+  return { type: r.type, id: recordId(r), values, expiry: { atMs }, expiresAtMs: atMs, fp: fingerprint(r) }
+}
+
+export function streakDraft(s: StreakState, env: string, now: number): Draft {
+  const content = { streak: s.streak, daysOfLast7: s.daysOfLast7, chestTier: s.chestTier, day: s.day }
+  const fp = fingerprint(content)
+  const atMs = clampTtl(s.atMs + STREAK_TTL_MS, now)
+  return {
+    type: "streak",
+    id: s.player,
+    values: { env, player: fitStr(s.player), streak: i32(s.streak), daysOfLast7: i32(s.daysOfLast7), chestTier: s.chestTier, day: u64(s.day), fp },
+    expiry: { atMs },
+    expiresAtMs: atMs,
+    fp,
+  }
+}
+
+export function feedFromRow(row: Row) {
+  const items = hexJson(row.items) as { id: number; text: string }[] | null
+  return { id: n(row.postId), day: n(row.day), kind: s(row.kind), actor: s(row.actor), at: n(row.at), text: items?.[0]?.text ?? null, ...meta(row) }
+}
+
+export function chestFromRow(row: Row) {
+  return {
+    seq: n(row.seq),
+    day: n(row.day),
+    player: s(row.player),
+    kind: s(row.kind),
+    tier: s(row.tier),
+    pity_before: n(row.pityBefore),
+    outcome: s(row.outcome),
+    draw: n(row.draw),
+    contents: hexJson(row.contents),
+    at: n(row.at),
+    ...meta(row),
+  }
+}
+
+export function stampFromRow(row: Row) {
+  return { player: s(row.player), stamp: s(row.stamp), kind: s(row.kind), day: n(row.day), at: n(row.at), ...meta(row) }
+}
+
+export function streakFromRow(row: Row) {
+  return { player: s(row.player), streak: n(row.streak), days_of_last_7: n(row.daysOfLast7), chest_tier: s(row.chestTier), day: n(row.day), ...meta(row) }
+}
+
+export function poolFromRow(row: Row) {
+  return {
+    day: n(row.day),
+    opening: bigStr(row.opening),
+    closing: bigStr(row.closing),
+    budget: bigStr(row.budget),
+    spent_fixed: bigStr(row.spentFixed),
+    spent_surprise: bigStr(row.spentSurprise),
+    spent_safety: bigStr(row.spentSafety),
+    inflow: bigStr(row.inflow),
+    ...meta(row),
+  }
 }

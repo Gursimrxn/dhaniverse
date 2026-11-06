@@ -6,7 +6,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { BoardRow, Paper, Person } from "./city.ts"
-import type { PriceWindow } from "./entities.ts"
+import type { PriceWindow, TownRecord } from "./entities.ts"
 import type { EntityType } from "./schemas.ts"
 
 export type Tracked = { key: `0x${string}`; fp: string; expiresAtMs: number }
@@ -19,6 +19,7 @@ export type Pending =
   | { type: "price_tick"; id: string; input: PriceWindow; attempts: number }
   | { type: "paper"; id: string; input: Paper; bodyRef: string | null; attempts: number; inline: boolean }
   | { type: "season"; id: string; input: SeasonInput; snapshotRef: string | null; attempts: number }
+  | { type: TownRecord["type"]; id: string; input: TownRecord; attempts: number }
 
 export type State = {
   v: 1
@@ -32,6 +33,10 @@ export type State = {
   seasonView: { board: BoardRow[]; people: Person[] } | null
   lastPaperDay: number | null
   priceWindow: PriceWindow | null
+  /** The last save line whose public records were queued (they are then in `pending` or on Arkiv). */
+  townSeq: number
+  /** Which town that was, so a different save starts again from 0. */
+  townId: string | null
 }
 
 export function emptyState(env: string, writer: string | null): State {
@@ -39,7 +44,7 @@ export function emptyState(env: string, writer: string | null): State {
     v: 1,
     env,
     writer,
-    tracked: { campaign: {}, rush_board: {}, price_tick: {}, profile: {}, paper: {}, season: {} },
+    tracked: { campaign: {}, rush_board: {}, price_tick: {}, profile: {}, paper: {}, season: {}, feed: {}, chest: {}, stamp: {}, streak: {}, pool: {} },
     pending: [],
     lastDay: null,
     dayBoard: null,
@@ -47,6 +52,8 @@ export function emptyState(env: string, writer: string | null): State {
     seasonView: null,
     lastPaperDay: null,
     priceWindow: null,
+    townSeq: 0,
+    townId: null,
   }
 }
 
@@ -78,6 +85,11 @@ export class FileStateStore implements StateStore {
     }
     const parsed = JSON.parse(raw) as State
     if (parsed.v !== 1 || parsed.env !== this.env) return emptyState(this.env, this.writer)
+    // A state file from before the town types: start those empty.
+    const base = emptyState(this.env, this.writer)
+    parsed.tracked = { ...base.tracked, ...parsed.tracked }
+    parsed.townSeq ??= 0
+    parsed.townId ??= null
     // Keys belong to their owner: a different writer starts with nothing tracked, but keeps what it hasn't written.
     if (parsed.writer !== this.writer) {
       const fresh = emptyState(this.env, this.writer)

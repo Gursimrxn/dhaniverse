@@ -8,6 +8,11 @@ import { i32, u64 } from "@arkiv-network/sdk/schema"
 import type { Hex } from "viem"
 import {
   campaignFromRow,
+  chestFromRow,
+  feedFromRow,
+  poolFromRow,
+  stampFromRow,
+  streakFromRow,
   paperFromRow,
   priceTickFromRow,
   profileFromRow,
@@ -43,9 +48,14 @@ export const NATURAL_KEY: Record<EntityType, { column: string; value: (id: strin
   profile: { column: "name", value: (id) => id },
   paper: { column: "day", value: (id) => u64(BigInt(id)) },
   season: { column: "season", value: (id) => i32(Number(id)) },
+  chest: { column: "seq", value: (id) => u64(BigInt(id)) },
+  feed: { column: "postId", value: (id) => u64(BigInt(id)) },
+  stamp: { column: "ref", value: (id) => id },
+  pool: { column: "day", value: (id) => u64(BigInt(id)) },
+  streak: { column: "player", value: (id) => id },
 }
 
-const HAS_FP: ReadonlySet<EntityType> = new Set(["campaign", "profile"])
+const HAS_FP: ReadonlySet<EntityType> = new Set(["campaign", "profile", "streak"])
 const IDS_PER_QUERY = 10
 
 /** `atBlock`: the block the answer was read at, so `expiresAtBlock - atBlock` is the time left in blocks. */
@@ -151,6 +161,52 @@ export function makeReader(client: PublicArkivClient, owner: Hex, env: string) {
       ).fetch()
       const row = res.entities[0]
       return { block: res.blockNumber, paper: row ? paperFromRow(row) : null }
+    },
+
+    /** Chest draws, newest first: one day's, or the latest 100. */
+    async chests(day: number | null) {
+      const where = day === null ? eq("env", env) : and(eq("env", env), eq("day", u64(day)))
+      const res = await base("chest").where(where).orderBy(desc("seq")).limit(MAX_LIMIT).fetch()
+      return { block: res.blockNumber, draws: res.entities.map(chestFromRow) }
+    },
+
+    /** Feed posts, newest first: one day's, or the latest 100. */
+    async feed(day: number | null) {
+      const where = day === null ? eq("env", env) : and(eq("env", env), eq("day", u64(day)))
+      const res = await base("feed").where(where).orderBy(desc("postId")).limit(MAX_LIMIT).fetch()
+      return { block: res.blockNumber, posts: res.entities.map(feedFromRow) }
+    },
+
+    /** One closed day's house pool statement, or the latest. */
+    async pool(day: number | null) {
+      const q = base("pool")
+      const res = await (day === null
+        ? q.where(eq("env", env)).orderBy(desc("day")).limit(1)
+        : q.where(and(eq("env", env), eq("day", u64(day)))).limit(1)
+      ).fetch()
+      const row = res.entities[0]
+      return { block: res.blockNumber, pool: row ? poolFromRow(row) : null }
+    },
+
+    /** Everything public about one player: the profile, every stamp and first, and the streak (absent once broken). */
+    async player(name: string) {
+      const [profile, stamps, streak] = await Promise.all([
+        base("profile").where(and(eq("env", env), eq("name", name))).limit(1).fetch(),
+        base("stamp").where(and(eq("env", env), eq("player", name))).limit(MAX_LIMIT).fetch(),
+        base("streak").where(and(eq("env", env), eq("player", name))).limit(1).fetch(),
+      ])
+      const p = profile.entities[0]
+      const k = streak.entities[0]
+      const all = stamps.entities.map(stampFromRow).sort((a, b) => (a.at ?? 0) - (b.at ?? 0))
+      const block = [profile.blockNumber, stamps.blockNumber, streak.blockNumber].reduce((a, b) => (a < b ? a : b))
+      return {
+        block,
+        profile: p ? profileFromRow(p) : null,
+        stamps: all.filter((x) => x.kind === "stamp"),
+        firsts: all.filter((x) => x.kind === "first"),
+        medals: all.filter((x) => x.kind === "medal"),
+        streak: k ? streakFromRow(k) : null,
+      }
     },
 
     async seasons() {

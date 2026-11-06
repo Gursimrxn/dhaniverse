@@ -18,8 +18,15 @@ import {
   profileDraft,
   rushBoardDraft,
   seasonDraft,
+  recordExpiresAt,
+  recordId,
+  streakDraft,
+  townDraft,
+  MAX_TTL_MS,
+  STREAK_TTL_MS,
   type Draft,
   type PriceWindow,
+  type TownRecord,
 } from "./entities.ts"
 import type { ArkivWriter, Op } from "./arkiv/writer.ts"
 import { log, throttled } from "./log.ts"
@@ -28,6 +35,7 @@ import type { SaveMirror } from "./save.ts"
 import { isSaveType, type EntityType } from "./schemas.ts"
 import type { State, StateStore, Pending } from "./state.ts"
 import type { Swarm } from "./swarm.ts"
+import type { TownProjector } from "./town.ts"
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -61,7 +69,10 @@ export type PublisherStats = {
 
 type Planned = { op: Op; pending: Pending | null }
 
-const ORDER: EntityType[] = ["campaign", "paper", "rush_board", "season", "price_tick", "profile"]
+const ORDER: EntityType[] = ["campaign", "paper", "rush_board", "season", "price_tick", "profile", "chest", "feed", "stamp", "pool", "streak"]
+const TOWN_TYPES: ReadonlySet<EntityType> = new Set(["chest", "feed", "stamp", "pool"])
+/** Room kept in each transaction for the save's own batch while the town has a backlog. */
+const SAVE_ROOM = 2
 
 export class Publisher {
   state!: State
@@ -82,6 +93,7 @@ export class Publisher {
   private readonly store: StateStore
   private readonly now: () => number
   private readonly save: SaveMirror | null
+  private readonly town: TownProjector | null
   private readonly unsynced = new Set<EntityType>(ORDER)
   private readonly arkivBackoff: Backoff
   private readonly swarmBackoff: Backoff
@@ -89,8 +101,17 @@ export class Publisher {
   private flushing = false
   private dirty = false
 
-  constructor(opts: PublisherOptions, writer: ArkivWriter | null, swarm: Swarm, store: StateStore, now: () => number = Date.now, save: SaveMirror | null = null) {
+  constructor(
+    opts: PublisherOptions,
+    writer: ArkivWriter | null,
+    swarm: Swarm,
+    store: StateStore,
+    now: () => number = Date.now,
+    save: SaveMirror | null = null,
+    town: TownProjector | null = null,
+  ) {
     this.opts = opts
+    this.town = writer ? town : null
     // The save goes on Arkiv through the same writer, so without one there is nothing to mirror.
     this.save = writer ? save : null
     this.writer = writer
@@ -195,6 +216,8 @@ export class Publisher {
     const before = this.state.pending.length
     // A price window older than the tick lifetime would be dead on arrival; anything else is written late rather than never.
     this.state.pending = this.state.pending.filter((p) => p.type !== "price_tick" || p.input.endMs > now - PRICE_TICK_TTL_MS + HOUR)
+    const until = this.stampUntil(now)
+    this.state.pending = this.state.pending.filter((p) => !TOWN_TYPES.has(p.type) || recordExpiresAt(p.input as TownRecord, until, now) > now + HOUR)
     for (const type of ORDER) {
       for (const [id, t] of Object.entries(this.state.tracked[type])) {
         if (t.expiresAtMs < now - HOUR) delete this.state.tracked[type][id]
@@ -315,6 +338,9 @@ export class Publisher {
     const s = this.latest
     const env = this.opts.env
 
+    // 0. New lines in the save: queue their public records.
+    await this.readTown()
+
     // 1. Ask Arkiv about anything we might create but whose existence we aren't sure of.
     await this.reconcile(now)
 
@@ -364,10 +390,64 @@ export class Publisher {
       }
     }
 
-    // 5. The save on Arkiv: after everything public.
+    // 5. The town's records from the save, oldest first, and the streaks. A backlog leaves room for the save's batch.
+    if (this.town) {
+      for (const st of this.town.streaks.values()) {
+        if (st.atMs + STREAK_TTL_MS <= now + HOUR) continue // broken already: let it expire
+        const op = this.diff(streakDraft(st, env, now), now)
+        if (op) out.push({ op, pending: null })
+      }
+      let room = Math.max(1, this.opts.maxOpsPerTx - out.length - (this.save ? SAVE_ROOM : 0))
+      const until = this.stampUntil(now)
+      const waiting = this.state.pending.filter((p) => TOWN_TYPES.has(p.type)).sort((a, b) => (a.input as TownRecord).seq - (b.input as TownRecord).seq)
+      for (const p of waiting) {
+        if (room <= 0) break
+        if (this.isLive(p.type, p.id, now)) {
+          this.resolve(p)
+          this.dirty = true
+          continue
+        }
+        out.push({ op: { kind: "create", draft: townDraft(p.input as TownRecord, env, until, now) }, pending: p })
+        room--
+      }
+    }
+
+    // 6. The save on Arkiv: after everything public.
     if (this.save) out.push(...(await this.save.plan(now)).map((op) => ({ op, pending: null })))
 
     return out
+  }
+
+  /** Reads new save lines into the queue. A save it can't read is reported and retried; the rest carries on. */
+  private async readTown(): Promise<void> {
+    const town = this.town
+    if (!town) return
+    try {
+      await town.read()
+    } catch (err) {
+      this.warn("town-read", () => log.warn("could not read the save for the town's public records; will retry", { error: err }))
+      return
+    }
+    if (town.townId === null) return
+    const st = this.state
+    if (st.townId !== town.townId) {
+      st.townId = town.townId
+      st.townSeq = 0
+    }
+    if (town.lastSeq <= st.townSeq) {
+      town.drain(st.townSeq)
+      return
+    }
+    // Each line is queued once (townSeq), so no dedupe scan is needed.
+    for (const r of town.drain(st.townSeq)) st.pending.push({ type: r.type, id: recordId(r), input: r, attempts: 0 })
+    st.townSeq = town.lastSeq
+    this.dirty = true
+  }
+
+  /** Stamps fade with the season: its end when the server says, else Arkiv's longest lifetime. */
+  private stampUntil(now: number): number {
+    const end = this.latest ? seasonEndMs(this.latest) : null
+    return end !== null && end > now ? end : now + MAX_TTL_MS
   }
 
   private isLive(type: EntityType, id: string, now: number): boolean {
@@ -443,6 +523,8 @@ export class Publisher {
         }
         return seasonDraft(p.input.season, p.input.endedDay, p.snapshotRef, env, now)
       }
+      default:
+        return townDraft(p.input as TownRecord, env, this.stampUntil(now), now)
     }
   }
 
@@ -464,6 +546,7 @@ export class Publisher {
     for (const card of s?.bounty ?? []) if (card.endsAt * 1000 > now) add("campaign", card.id)
     for (const p of this.state.pending) add(p.type, p.id)
     for (const person of s?.people ?? []) add("profile", person.name)
+    for (const player of this.town?.streaks.keys() ?? []) add("streak", player)
 
     for (const type of ORDER) {
       if (!this.unsynced.has(type)) continue
