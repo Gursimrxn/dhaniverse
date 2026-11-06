@@ -315,6 +315,7 @@ impl HttpDesk {
             ("/verify/session", true, _) => self.session(request),
             ("/verify", _, true) => self.verify_post(request),
             ("/arkiv/campaigns", true, _) => self.arkiv_campaigns(),
+            (path, true, _) if path.starts_with("/arkiv/") => self.arkiv_read(request),
             ("/swarm/campaign-bundle", _, true) => self.swarm_bundle(request),
             (_, true, _) => self.static_file(&request.path),
             _ => Response::error(405, "method", "not here"),
@@ -509,6 +510,39 @@ impl HttpDesk {
                 503,
                 "unavailable",
                 &format!("the publisher isn't answering ({problem}); the Bounty Board's Arkiv cards are unavailable"),
+            ),
+        }
+    }
+
+    /// The publisher's other public Arkiv reads (Rush board, prices, chests, feed, pool, profiles), passed through.
+    fn arkiv_read(&self, request: &Request) -> Response {
+        let Some(base) = &self.config.publisher_url else {
+            return Response::error(
+                503,
+                "unavailable",
+                "this server has no publisher (set PUBLISHER_URL)",
+            );
+        };
+        let Some(target) = crate::arkiv::read_path(&request.path, &request.query) else {
+            return Response::error(404, "not_found", "not here");
+        };
+        match fetch(
+            &format!("{}{target}", base.trim_end_matches('/')),
+            "GET",
+            None,
+            &[],
+        ) {
+            Ok((status, content_type, body)) => Response {
+                status,
+                content_type,
+                body,
+                cache: "public, max-age=10",
+                cors: true,
+            },
+            Err(problem) => Response::error(
+                503,
+                "unavailable",
+                &format!("the publisher isn't answering ({problem})"),
             ),
         }
     }
