@@ -18,7 +18,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const DEFAULT_ADDR: &str = "127.0.0.1:7878";
 const DEFAULT_HEARTBEAT_MS: u64 = 5000;
 const DEFAULT_PUBLISHER: &str = "http://127.0.0.1:8787";
-const VALUE_FLAGS: [&str; 17] = [
+const VALUE_FLAGS: [&str; 18] = [
     "--config",
     "--addr",
     "--save",
@@ -34,6 +34,7 @@ const VALUE_FLAGS: [&str; 17] = [
     "--public-url",
     "--public-rpc-url",
     "--world-app-id",
+    "--world-rp-id",
     "--arkiv",
     "--town",
 ];
@@ -57,7 +58,10 @@ pub const USAGE: &str = "server [flags]
   --public-url <url>       how browsers reach this server, for Town Pass links
                            (default PUBLIC_URL or http://<addr>)
   --public-rpc-url <url>   a keyless read RPC the pages may use (default PUBLIC_RPC_URL)
-  --world-app-id <id>      the World ID app id the pages show (default WORLD_APP_ID)
+  --world-app-id <id>      the World ID app id for IDKit and the pages (default WORLD_APP_ID, else the
+                           founder's app_eca8340a4f71973c608bbaa31a7af47e)
+  --world-rp-id <id>       the World ID RP id proofs are verified under (default WORLD_RP_ID, else the
+                           founder's rp_f24fbbc28154fb5c); the tallyport binary only
   --arkiv <url>            before starting, bring the save up to date from Arkiv through the publisher's
                            GET /log at this http:// URL on this machine (needs DHANIVERSE_RESTORE_TOKEN).
                            A missing save is rebuilt whole; a broken chain stops the server
@@ -86,6 +90,7 @@ struct FileConfig {
     public_url: Option<String>,
     public_rpc_url: Option<String>,
     world_app_id: Option<String>,
+    world_rp_id: Option<String>,
     arkiv: Option<String>,
     town: Option<String>,
     heartbeat_ms: Option<u64>,
@@ -109,6 +114,8 @@ pub struct ServerConfig {
     pub new_if_incompatible: bool,
     pub public_url: Option<String>,
     pub http: HttpConfig,
+    /// `--world-rp-id`: overrides `WORLD_RP_ID` for the chain binary's World ID verifier.
+    pub world_rp_id: Option<String>,
     /// `--arkiv`: the publisher to restore the save from before opening it.
     pub arkiv: Option<String>,
     /// `--town`: which town `--arkiv` rebuilds when there is no save.
@@ -228,6 +235,7 @@ pub fn parse_args(args: &[String]) -> Result<Option<ServerConfig>, String> {
             .or(file.public_url)
             .or_else(|| env("PUBLIC_URL")),
         http,
+        world_rp_id: value("--world-rp-id").or(file.world_rp_id),
         arkiv: value("--arkiv").or(file.arkiv),
         town: value("--town").or(file.town),
     }))

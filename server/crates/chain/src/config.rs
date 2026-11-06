@@ -14,9 +14,11 @@
 //! | `GAS_STATION_KEY` | tops up player wallets with ETH for gas | optional (no top-ups) |
 //! | `WALLET_SEED` | BIP-39 phrase for the server-held player wallets | required |
 //! | `RP_SIGNING_KEY` | World ID 4: signs RP contexts (EIP-191) | optional (World ID off) |
-//! | `WORLD_RP_ID` | World ID relying-party id (`rp_…`) | `WORLD_APP_ID` |
-//! | `WORLD_APP_ID` | World ID app id (`app_…`), for IDKit on the verify page | optional |
+//! | `WORLD_RP_ID` | World ID relying-party id (`rp_…`) | `WORLD_APP_ID` if set, else the founder's `rp_f24fbbc28154fb5c` |
+//! | `WORLD_APP_ID` | World ID app id (`app_…`), for IDKit on the verify page | `app_eca8340a4f71973c608bbaa31a7af47e` |
+//! | `WORLD_ACTION` | the Developer Portal action every Town Pass proves | `tallyport-town-pass` |
 //! | `WORLD_ENVIRONMENT` | `production`, `staging` or `sandbox` | `production` |
+//! | `WORLD_ALLOW_LEGACY_PROOFS` | also take World ID 3.0 proofs (`true`/`false`); see [`WorldIdConfig`] | `false` |
 //!
 //! Tuning knobs (`CHAIN_GAS_FLOOR_WEI`, `CHAIN_GAS_TOPUP_WEI`, `CHAIN_GAS_DAILY_CAP_WEI`, `CHAIN_VOUCHER_TTL_SECS`,
 //! `CHAIN_LOG_RANGE`, `CHAIN_ENS_PARENT`, `CHAIN_ABI_DIR`) are read too; see [`ChainConfig::from_env`].
@@ -130,6 +132,12 @@ pub struct Secrets {
     pub wallet_seed: Secret,
 }
 
+/// The founder's World ID app (Developer Portal), the defaults when `WORLD_APP_ID` / `WORLD_RP_ID` aren't set.
+pub const DEFAULT_WORLD_APP_ID: &str = "app_eca8340a4f71973c608bbaa31a7af47e";
+pub const DEFAULT_WORLD_RP_ID: &str = "rp_f24fbbc28154fb5c";
+/// The Developer Portal action every Town Pass proves, unless `WORLD_ACTION` says otherwise.
+pub const DEFAULT_WORLD_ACTION: &str = "tallyport-town-pass";
+
 /// World ID 4 settings (IDKit 4: the server signs an RP context per verify session, then forwards IDKit's result to
 /// `POST https://developer.world.org/api/v4/verify/{rp_id}`).
 #[derive(Clone, Debug)]
@@ -142,7 +150,12 @@ pub struct WorldIdConfig {
     pub signing_key: Key,
     /// `WORLD_ENVIRONMENT`: `production` (default), `staging` or `sandbox`. The API's answer must match.
     pub environment: String,
+    /// `WORLD_ACTION`: the action id, as created in the Developer Portal.
     pub action: String,
+    /// `WORLD_ALLOW_LEGACY_PROOFS`: also take World ID 3.0 (Orb legacy) proofs. Off by default: a person could then
+    /// prove once with a 3.0 credential and again after upgrading to 4.0, and the two nullifiers can't be linked, so
+    /// one person could hold two players (World's docs: "track both v3 and v4 nullifiers"). New apps start 4.0-only.
+    pub allow_legacy_proofs: bool,
     /// `https://developer.world.org/api/v4/verify` (the rp id is appended).
     pub verify_base_url: String,
     /// How long a signed RP context is valid (IDKit's default is 300 s).
@@ -157,7 +170,8 @@ impl WorldIdConfig {
             app_id: None,
             signing_key,
             environment: "production".into(),
-            action: "tallyport-town-pass".into(),
+            action: DEFAULT_WORLD_ACTION.into(),
+            allow_legacy_proofs: false,
             verify_base_url: "https://developer.world.org/api/v4/verify".into(),
             context_ttl: Duration::from_secs(300),
             timeout: Duration::from_secs(15),
@@ -172,13 +186,30 @@ impl WorldIdConfig {
             }
             return Ok(None);
         };
+        // An explicitly chosen app without an rp id verifies under its app id (the API accepts both); otherwise
+        // the founder's app and its RP registration.
         let app_id = env.get("WORLD_APP_ID");
         let rp_id = env
             .get("WORLD_RP_ID")
             .or_else(|| app_id.clone())
-            .ok_or(ConfigError::Missing("WORLD_RP_ID"))?;
+            .unwrap_or_else(|| DEFAULT_WORLD_RP_ID.into());
         let mut c = WorldIdConfig::new(rp_id, key);
-        c.app_id = app_id;
+        c.app_id = Some(app_id.unwrap_or_else(|| DEFAULT_WORLD_APP_ID.into()));
+        if let Some(a) = env.get("WORLD_ACTION") {
+            c.action = a;
+        }
+        if let Some(v) = env.get("WORLD_ALLOW_LEGACY_PROOFS") {
+            c.allow_legacy_proofs = match v.trim() {
+                "true" | "1" => true,
+                "false" | "0" => false,
+                _ => {
+                    return Err(ConfigError::Invalid(
+                        "WORLD_ALLOW_LEGACY_PROOFS",
+                        format!("{v:?} (true or false)"),
+                    ))
+                }
+            };
+        }
         if let Some(e) = env.get("WORLD_ENVIRONMENT") {
             if !matches!(e.as_str(), "production" | "staging" | "sandbox") {
                 return Err(ConfigError::Invalid(
@@ -544,6 +575,32 @@ pub(crate) mod tests {
             ChainConfig::from_env(Network::Sepolia, &get),
             Err(ConfigError::Missing("RP_SIGNING_KEY"))
         ));
+    }
+
+    #[test]
+    fn world_id_defaults_to_the_founders_app_and_is_4_0_only() {
+        let mut env = anvil_env();
+        env.insert("RP_SIGNING_KEY", ANVIL_KEYS[0].into());
+        let get = |k: &str| env.get(k).cloned();
+        let w = ChainConfig::from_env(Network::Anvil, &get).unwrap().world_id.unwrap();
+        assert_eq!(w.rp_id, DEFAULT_WORLD_RP_ID);
+        assert_eq!(w.app_id.as_deref(), Some(DEFAULT_WORLD_APP_ID));
+        assert_eq!(w.action, DEFAULT_WORLD_ACTION);
+        assert!(!w.allow_legacy_proofs);
+
+        env.insert("WORLD_RP_ID", "rp_other".into());
+        env.insert("WORLD_APP_ID", "app_other".into());
+        env.insert("WORLD_ACTION", "other-action".into());
+        env.insert("WORLD_ALLOW_LEGACY_PROOFS", "true".into());
+        let get = |k: &str| env.get(k).cloned();
+        let w = ChainConfig::from_env(Network::Anvil, &get).unwrap().world_id.unwrap();
+        assert_eq!((w.rp_id.as_str(), w.app_id.as_deref()), ("rp_other", Some("app_other")));
+        assert_eq!(w.action, "other-action");
+        assert!(w.allow_legacy_proofs);
+
+        env.insert("WORLD_ALLOW_LEGACY_PROOFS", "yes".into());
+        let get = |k: &str| env.get(k).cloned();
+        assert!(ChainConfig::from_env(Network::Anvil, &get).is_err());
     }
 
     #[test]

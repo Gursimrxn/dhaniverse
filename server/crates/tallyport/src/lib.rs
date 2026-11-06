@@ -41,7 +41,7 @@ impl HumanVerifier for WorldId {
             "app_id": c.app_id,
             "action": c.action,
             "environment": c.environment,
-            "allow_legacy_proofs": true,
+            "allow_legacy_proofs": c.allow_legacy_proofs,
             "rp_context": {
                 "rp_id": c.rp_id,
                 "nonce": c.nonce,
@@ -121,7 +121,16 @@ pub fn chain_links(
     if cfg.resume_after_block.is_none() {
         cfg.resume_after_block = Some(start);
     }
-    let world_id = cfg.world_id.clone();
+    // Flags (--world-rp-id, --world-app-id) win over the environment.
+    let mut world_id = cfg.world_id.clone();
+    if let Some(w) = world_id.as_mut() {
+        if let Some(rp) = &server.world_rp_id {
+            w.rp_id.clone_from(rp);
+        }
+        if let Some(app) = &server.http.world_app_id {
+            w.app_id = Some(app.clone());
+        }
+    }
     let ledger = ChainLedger::start(cfg).map_err(|e| format!("chain: {e}"))?;
     let verifier: Arc<dyn HumanVerifier> = match world_id {
         Some(w) => {
