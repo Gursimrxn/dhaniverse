@@ -35,7 +35,7 @@ const LAYER_WATER := 4
 const LAYER_POST := 128          # full-screen passes in the scene (ambient occlusion): main camera only
 const SETTINGS_FILE := "user://settings.cfg"
 const MODE_BLEND := 2.5        # seconds to change the time of day
-const LAMP_SLOTS := 12         # lamps lit at once around the player (vh.gdshaderinc has room for 16)
+const LAMP_SLOTS := 12         # lamps lit at once around the player (vh.gdshaderinc has room for 12)
 # lamp kinds: linear colour, intensity, range (m)
 const LAMP_STREET := [Color(1.0, 0.584, 0.254), 14.0, 13.0]     # #ffc98a lanterns
 const LAMP_BOLLARD := [Color(1.0, 0.665, 0.361), 3.5, 6.0]      # #ffd5a2 trail bollards
@@ -375,12 +375,14 @@ func _update_lamps(delta: float) -> void:
 		if lamp_w[i] > 0.002: live.append(i)
 	live.sort_custom(func(a, b): return lamp_w[a] > lamp_w[b])
 	var n := mini(live.size(), LAMP_SLOTS)
+	var pos: Array = []
+	var col: Array = []
 	for j in n:
 		var l: Array = lamps[live[j]]
 		var c: Color = l[1] * (float(l[2]) * k * lamp_w[live[j]])
-		RenderingServer.global_shader_parameter_set("vh_lamp_p%d" % j, Vector4(l[0].x, l[0].y, l[0].z, l[3]))
-		RenderingServer.global_shader_parameter_set("vh_lamp_c%d" % j, Vector4(c.r, c.g, c.b, 0.0))
-	RenderingServer.global_shader_parameter_set("vh_lamp_n", n)
+		pos.append(Color(l[0].x, l[0].y, l[0].z, l[3]))
+		col.append(Color(c.r, c.g, c.b, 0.0))
+	VHTex.set_lamps(pos, col)
 
 func _add_lamp(kind: Array, at: Vector3) -> void:
 	lamps.append([at, kind[0], kind[1], kind[2]])

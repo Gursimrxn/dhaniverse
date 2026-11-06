@@ -32,7 +32,7 @@ const MODE_BLEND := 2.5        # seconds to change the time of day
 const TOWN_SQUARE := Vector3(-14.5, 0.0, -9.5)   # where the town turns to when news comes
 const DAWN_SUN := {"sun_az": 78, "sun_el": 4, "light_az": 82, "light_el": 13, "sun_color": "ffc4a0", "intensity": 2.5, "ambient_intensity": 0.9, "exposure": 0.92}   # the opening's: it isn't one of T's times of day
 const BANNERS_AT := [Vector2(-42.0, -3.0), Vector2(-34.0, -14.0), Vector2(-27.0, 0.5), Vector2(-16.0, -2.0), Vector2(-10.0, -14.0), Vector2(-4.0, 0.0)]
-const LAMP_SLOTS := 6          # lamps lit at once around the player (vh.gdshaderinc has room for 16); the rest light only the ground decals
+const LAMP_SLOTS := 6          # lamps lit at once around the player (vh.gdshaderinc has room for 12); the rest light only the ground decals
 # lamp kinds: linear colour, intensity, range (m)
 const LAMP_STREET := [Color(1.0, 0.584, 0.254), 14.0, 13.0]     # #ffc98a lanterns
 const LAMP_BOLLARD := [Color(1.0, 0.665, 0.361), 3.5, 6.0]      # #ffd5a2 trail bollards
@@ -158,6 +158,7 @@ func _ready() -> void:
 		add_child(port)
 		port.setup(self)
 	_near_only()
+	if OS.has_feature("web") or OS.get_cmdline_user_args().has("--warm"): _warm_up()
 	if OS.get_cmdline_user_args().has("--game"): _game()     # the old game layer, off: being replanned from scratch
 	var args := OS.get_cmdline_user_args()
 	for a in args:
@@ -181,6 +182,72 @@ func _ready() -> void:
 		if a.begins_with("--snap="):      # dev: exactly what a player sees after 10 s, then quit
 			_snap(a.trim_prefix("--snap="))
 			return
+
+## Shader warm-up (the web): a browser compiles each shader the first time something is drawn with it, a few seconds each
+## (ANGLE on Direct3D), and the town's first frame would ask for all of them at once and hold the page for minutes. So the
+## camera sees only a speck while the town's materials are drawn on it once each, a shader every two frames, behind the
+## boot screen (main.gd fills its line from warm_progress); `warmed` says it's done. -- --warm runs it on the desktop too.
+signal warmed
+const WARM_LAYER := 1 << 19
+var warm_progress := 1.0
+
+## What decides the shader a material is drawn with: its own shader, or for a StandardMaterial3D the features it turns on.
+func _shader_key(m: Material):
+	if m is ShaderMaterial: return (m as ShaderMaterial).shader
+	if not m is BaseMaterial3D: return m
+	var b := m as BaseMaterial3D
+	var k := [b.get_class(), b.transparency, b.shading_mode, b.cull_mode, b.blend_mode, b.depth_draw_mode, b.vertex_color_use_as_albedo, b.vertex_color_is_srgb,
+		b.billboard_mode, b.no_depth_test, b.emission_enabled, b.normal_enabled, b.specular_mode, b.diffuse_mode, b.texture_filter, b.next_pass != null]
+	for t in [BaseMaterial3D.TEXTURE_ALBEDO, BaseMaterial3D.TEXTURE_ROUGHNESS, BaseMaterial3D.TEXTURE_METALLIC, BaseMaterial3D.TEXTURE_NORMAL, BaseMaterial3D.TEXTURE_EMISSION]:
+		k.append(b.get_texture(t) != null)
+	return str(k)
+
+func _warm_up() -> void:
+	var by_shader := {}
+	for gi in find_children("*", "GeometryInstance3D", true, false):
+		var g := gi as GeometryInstance3D
+		var list: Array = [g.material_override, g.material_overlay]
+		var mesh: Mesh = null
+		if g is MeshInstance3D: mesh = (g as MeshInstance3D).mesh
+		elif g is MultiMeshInstance3D and (g as MultiMeshInstance3D).multimesh: mesh = (g as MultiMeshInstance3D).multimesh.mesh
+		if mesh and g.material_override == null:
+			for i in mesh.get_surface_count():
+				var over: Material = (g as MeshInstance3D).get_surface_override_material(i) if g is MeshInstance3D else null
+				list.append(over if over else mesh.surface_get_material(i))
+		for m in list:
+			if m == null: continue
+			var key = _shader_key(m)     # materials on one shader share its programs
+			if key != null and not by_shader.has(key): by_shader[key] = m
+	var mats: Array = by_shader.values()
+	var t0 := Time.get_ticks_msec()
+	if mats.is_empty(): return
+	warm_progress = 0.0
+	var masks := {}                   # the cameras looked through meanwhile, and what they saw: they see only the specks till done
+	var stage := Node3D.new()
+	get_parent().add_child.call_deferred(stage)
+	await get_tree().process_frame
+	var speck := QuadMesh.new()
+	speck.size = Vector2.ONE * 0.01
+	for i in mats.size():
+		var mi := MeshInstance3D.new()
+		mi.mesh = speck
+		mi.material_override = mats[i]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.layers = WARM_LAYER
+		stage.add_child(mi)
+		for f in 2:     # drawn this frame: its shader is compiled
+			var cam := get_viewport().get_camera_3d()     # whichever is current now: the opening may switch
+			if cam:
+				if not masks.has(cam): masks[cam] = cam.cull_mask
+				cam.cull_mask = WARM_LAYER
+				mi.global_transform = cam.global_transform * Transform3D(Basis(), Vector3(0.0, 0.0, -1.0))
+			await get_tree().process_frame
+		mi.queue_free()
+		warm_progress = float(i + 1) / mats.size()
+	stage.queue_free()
+	for cam in masks: if is_instance_valid(cam): (cam as Camera3D).cull_mask = masks[cam]
+	print("warm-up: %d shaders in %.1f s" % [mats.size(), (Time.get_ticks_msec() - t0) / 1000.0])
+	warmed.emit()
 
 ## Dev: -- --off=grass,water,bank leaves those parts out (to time them).
 func _on(part: String) -> bool:
@@ -474,12 +541,14 @@ func _update_lamps(delta: float) -> void:
 		if lamp_w[i] > 0.002: live.append(i)
 	live.sort_custom(func(a, b): return lamp_w[a] > lamp_w[b])
 	var n := mini(live.size(), LAMP_SLOTS)
+	var pos: Array = []
+	var col: Array = []
 	for j in n:
 		var l: Array = lamps[live[j]]
 		var c: Color = l[1] * (float(l[2]) * k * lamp_w[live[j]])
-		RenderingServer.global_shader_parameter_set("vh_lamp_p%d" % j, Vector4(l[0].x, l[0].y, l[0].z, l[3]))
-		RenderingServer.global_shader_parameter_set("vh_lamp_c%d" % j, Vector4(c.r, c.g, c.b, 0.0))
-	RenderingServer.global_shader_parameter_set("vh_lamp_n", n)
+		pos.append(Color(l[0].x, l[0].y, l[0].z, l[3]))
+		col.append(Color(c.r, c.g, c.b, 0.0))
+	VHTex.set_lamps(pos, col)
 
 func _add_lamp(kind: Array, at: Vector3) -> void:
 	lamps.append([at, kind[0], kind[1], kind[2]])
@@ -901,6 +970,7 @@ func _trees() -> void:
 		groups[key].xf.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(q.x, height_at(q.x, q.y) - 0.05, q.y)))
 	var far_bushes: Array = []            # far off, one bush looks like another: they share a shape
 	var far_bush: Dictionary = {}
+	var blobs: Array = []
 	var near := TREE_NEAR if quality == "high" else TREE_NEAR * 0.5
 	for a in OS.get_cmdline_user_args(): if a.begins_with("--tree-near="): near = float(a.trim_prefix("--tree-near="))     # dev: measuring
 	for key in groups:
@@ -913,11 +983,18 @@ func _trees() -> void:
 		else:
 			_far_trees(tpl.low_wood, _far_mat(wood_mat, near), groups[key].xf)
 			_far_trees(tpl.low_leaves, _far_mat(leaf[tpl.atlas], near), groups[key].xf)
-		if quality == "low":
-			for xf in groups[key].xf: _blob(Vector3(xf.origin.x, 0.0, xf.origin.z), float(tpl.crown_radius) * 1.1 + 0.6, self)
+		if quality == "low":     # their soft shadows, in a few batches: a draw a region, not a draw a tree
+			var r := float(tpl.crown_radius) * 1.1 + 0.6
+			for xf in groups[key].xf: blobs.append(Transform3D(Basis.from_scale(Vector3(r, 1.0, r)), Vector3(xf.origin.x, height_at(xf.origin.x, xf.origin.z) + 0.04, xf.origin.z)))
 	if not far_bushes.is_empty():
 		_far_trees(far_bush.low_wood, _far_mat(wood_mat, near), far_bushes)
 		_far_trees(far_bush.low_leaves, _far_mat(leaf[far_bush.atlas], near), far_bushes)
+	if not blobs.is_empty():
+		if not mats.has("blob"): mats["blob"] = _mat("res://shaders/valley/blob_shadow.gdshader")
+		var q := QuadMesh.new()
+		q.size = Vector2.ONE * 2.0
+		q.orientation = PlaneMesh.FACE_Y
+		_far_trees(q, mats["blob"], blobs)
 	_set_season(0)
 	print("trees: ", spots.size(), " in ", groups.size(), " shapes")
 
@@ -1583,6 +1660,7 @@ func _near_only() -> void:
 
 ## A building far from the camera can't throw a shadow as far as the shadow map reaches: it needn't be drawn into it. Same picture, fewer draws.
 func _far_shadows(delta: float) -> void:
+	if sun == null or not sun.shadow_enabled: return     # low: there is no shadow map to leave them out of
 	_shadow_look_in -= delta
 	if _shadow_look_in > 0.0: return
 	_shadow_look_in = SHADOW_LOOK_EVERY
@@ -1685,6 +1763,12 @@ func _post() -> void:
 	post.set_anchors_preset(Control.PRESET_FULL_RECT)
 	post.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	post.material = _mat("res://shaders/valley/grade.gdshader")
+	if quality == "low":
+		# low has no bloom or light rays, the only reads of the screen's mips: without them the engine stops building a mip chain of the
+		# whole frame every frame (on the web: a dozen texture reallocations and a stall on the GPU each frame). Same picture.
+		var sh := Shader.new()
+		sh.code = (post.material.shader as Shader).code.replace("filter_linear_mipmap", "filter_linear")
+		post.material.shader = sh
 	layer.add_child(post)
 
 func _snap(path: String) -> void:

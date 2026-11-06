@@ -21,6 +21,9 @@ func _ready() -> void:
 	if intro:
 		world.title.begin()
 		intro.opened.connect(world.title.enter)
+		while world.get("warm_progress") != null and world.warm_progress < 1.0:     # the web: its shaders compile behind the line
+			intro._line_fill.scale.x = maxf(intro._line_fill.scale.x, lerpf(0.3, 0.95, world.warm_progress))
+			await get_tree().process_frame
 		intro.play()
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--title-shots="): _shots(a.trim_prefix("--title-shots="), world)
