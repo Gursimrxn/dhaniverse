@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<title>$GODOT_PROJECT_NAME</title>
+<style>
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+body { color: #FFF8E3; background: #000; overflow: hidden; touch-action: none; font-family: system-ui, sans-serif; }
+#canvas { display: block; width: 100vw; height: 100vh; }
+#canvas:focus { outline: none; }
+/* The same line BootIntro (scripts/ui/boot_intro.gd) draws: 196 × 2 px at 720 tall, centred, cream on 14% cream. The download fills
+   it to 60%; the game's own BootIntro takes over from there. */
+#line { position: fixed; left: 50%; top: 50%; width: calc(196 / 720 * 100vh); height: calc(2 / 720 * 100vh); transform: translate(-50%, -50%); background: rgba(255, 248, 227, 0.14); transition: opacity .3s; }
+#bar { height: 100%; width: 0; background: #FFF8E3; transition: width .2s; }
+#note { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 24px; font-size: 15px; line-height: 1.5; }
+</style>
+$GODOT_HEAD_INCLUDE
+</head>
+<body>
+<canvas id="canvas">Your browser can't run the game: it needs WebGL 2.</canvas>
+<div id="line"><div id="bar"></div></div>
+<div id="note"></div>
+<script src="$GODOT_URL"></script>
+<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+const line = document.getElementById('line');
+const bar = document.getElementById('bar');
+const note = document.getElementById('note');
+const fail = (text) => { line.style.opacity = 0; note.textContent = text; note.style.display = 'grid'; };
+const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+if (missing.length) {
+  fail('This browser is missing what the game needs: ' + missing.join(', ') + '.');
+} else {
+  engine.startGame({
+    onProgress: (current, total) => { if (total > 0) bar.style.width = (60 * current / total) + '%'; },
+  }).then(() => { line.style.opacity = 0; }, (err) => fail(String(err && err.message || err)));
+}
+</script>
+</body>
+</html>
