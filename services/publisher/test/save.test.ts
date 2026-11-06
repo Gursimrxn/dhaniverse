@@ -15,7 +15,7 @@ import { parseKey } from "../src/crypto.ts"
 import { setSink } from "../src/log.ts"
 import { Publisher } from "../src/publisher.ts"
 import { makeReadApi } from "../src/readapi.ts"
-import { BATCH_LIMIT, SaveMirror, createSaveMirror, restoreLines } from "../src/save.ts"
+import { BATCH_LIMIT, SaveMirror, arkivTip, createSaveMirror, restoreLines } from "../src/save.ts"
 import { MemoryStateStore, emptyState } from "../src/state.ts"
 import { Swarm } from "../src/swarm.ts"
 import { FakeArkiv } from "./fakeArkiv.ts"
@@ -52,6 +52,8 @@ const expected = (last: number) => [SETUP, ...Array.from({ length: last }, (_, i
 
 const TOKEN = "t".repeat(40)
 
+let lastTip: string | null = null
+
 function rig(over: Record<string, unknown> = {}) {
   const holder: { mirror: SaveMirror | null } = { mirror: null }
   const fake = new FakeArkiv()
@@ -79,6 +81,7 @@ function rig(over: Record<string, unknown> = {}) {
     restoreToken: TOKEN,
     ...over,
     restore: (town, from) => restoreLines(clients.publicClient, writer.address, "test", KEY, town, from),
+    restoreTip: (town) => arkivTip(clients.publicClient, writer.address, "test", town),
   })
   servers.push(api)
   const listening = new Promise((ok) => api.listen(0, "127.0.0.1", () => ok(null)))
@@ -89,6 +92,7 @@ function rig(over: Record<string, unknown> = {}) {
   const restore = async (from = 0, town = "town1") => {
     const res = await get(`/log?town=${town}&from=${from}`, `Bearer ${TOKEN}`)
     assert.equal(res.status, 200)
+    lastTip = res.headers.get("x-arkiv-tip")
     const body = await res.text()
     return body === "" ? [] : body.replace(/\n$/, "").split("\n")
   }
@@ -122,6 +126,7 @@ test("mirrors a save in order", async () => {
   assert.ok(batches.length >= 1)
   assert.equal(batches[0]!.attributes.get("prevHash")?.value, "0".repeat(64))
   assert.deepEqual(await r.restore(0), expected(250))
+  assert.equal(lastTip, "250", "GET /log says how far Arkiv goes, so a cut-short answer is caught")
   assert.deepEqual(await r.restore(200), expected(250).slice(200), "from=200 starts at line 200, no setup line")
   // Nothing readable in clear on Arkiv.
   const moved = Buffer.from("Moved").toString("hex")

@@ -6,7 +6,11 @@
 //   GET  /campaigns                      live campaign cards (the Bounty Board)
 //   GET  /boards/rush?day=N              a closed day's Rush board (latest without ?day)
 //   GET  /prices?from=&to=               price batches, unix seconds (default: the last 24 h; at most 7 days)
-//   GET  /profiles/:name                 a player's public profile
+//   GET  /prices/history?days=7          the last 1-7 days of price batches, without the per-sample series
+//   GET  /profiles/:name                 a player's public profile, stamps, firsts, medals and streak
+//   GET  /chests?day=                    chest draws (tier, contents, pity), newest first
+//   GET  /feed?day=                      the town feed, newest first
+//   GET  /pool?day=                      a closed day's house pool statement (latest without ?day)
 //   GET  /papers/:day                    a day's paper index entry (`latest` for the newest)
 //   GET  /seasons                        finished seasons and their Swarm snapshots
 //   GET  /log?town=&from=                the town's save, restored from Arkiv: JSONL, setup line first when from=0
@@ -35,6 +39,10 @@ export type ReadApiDeps = {
   /** The live Bounty Board query text and the RPC it runs on, for /query. */
   queryInfo: () => { query: string; rpc: string; chainId: number; owner: string | null; env: string } | null
   health: () => Record<string, unknown>
+  /** The Arkiv explorer (no trailing slash), for the proof links in every answer; null on a local chain. */
+  explorer?: string | null
+  /** The last save line Arkiv holds for a town (sent as `x-arkiv-tip` with `GET /log`). */
+  restoreTip?: ((town: string) => Promise<number>) | null
   /** The save's lines from Arkiv (see `restoreLines`); absent when there is no log key or no Arkiv to read. */
   restore?: ((town: string, from: number) => AsyncIterable<string>) | null
   /** Bearer token for `GET /log` (32+ chars). Absent: the route does not exist (404). */
@@ -97,7 +105,7 @@ export function makeReadApi(deps: ReadApiDeps): Server {
   const uploads = new RateLimiter(deps.uploadsPerHour, 3_600_000, deps.uploadsPerDay, 86_400_000)
   // Counted for reach.md: requests per route, and how many actually went to Arkiv (cache misses).
   const counts = { requests: {} as Record<string, number>, arkivQueries: 0, bundleUploads: 0 }
-  const ROUTES = new Set(["/health", "/campaigns", "/boards/rush", "/prices", "/profiles", "/papers", "/seasons", "/query", "/log", "/swarm"])
+  const ROUTES = new Set(["/health", "/campaigns", "/boards/rush", "/prices", "/prices/history", "/profiles", "/papers", "/seasons", "/query", "/log", "/swarm", "/chests", "/feed", "/pool"])
   const count = (route: string) => {
     const r = ROUTES.has(route) ? route : "other"
     counts.requests[r] = (counts.requests[r] ?? 0) + 1
@@ -125,10 +133,12 @@ export function makeReadApi(deps: ReadApiDeps): Server {
         counts.arkivQueries += 1
         return withTimeout(load(reader), deps.queryTimeoutMs, "Arkiv query")
       })
+      const block = got.value.block
       return {
         source: "arkiv",
         owner: reader.owner,
         env: reader.env,
+        explorer: deps.explorer ? { block: `${deps.explorer}/block/${block}`, owner: `${deps.explorer}/address/${reader.owner}` } : null,
         cached_at: new Date(got.cachedAt).toISOString(),
         stale: got.stale,
         ...got.value,
@@ -184,7 +194,21 @@ export function makeReadApi(deps: ReadApiDeps): Server {
       const town = url.searchParams.get("town") ?? ""
       if (!TOWN.test(town)) throw new HttpError(400, "town must be the town id from the save")
       const from = intParam(url.searchParams.get("from"), "from", 0, Number.MAX_SAFE_INTEGER) ?? 0
-      res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" })
+      let tip: number | null = null
+      if (deps.restoreTip) {
+        try {
+          tip = await withTimeout(deps.restoreTip(town), deps.queryTimeoutMs, "Arkiv query")
+        } catch (err) {
+          log.warn("restore: could not read Arkiv's tip", { town, error: err })
+          throw new HttpError(502, "Arkiv did not answer in time; try again shortly")
+        }
+      }
+      res.writeHead(200, {
+        "content-type": "application/x-ndjson; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+        ...(tip === null ? {} : { "x-arkiv-tip": String(tip) }),
+      })
       try {
         for await (const line of deps.restore(town, from)) {
           if (!res.write(`${line}
@@ -221,12 +245,33 @@ export function makeReadApi(deps: ReadApiDeps): Server {
       return send(res, 200, await fromArkiv(key, (r) => r.prices(from, to)), short)
     }
 
+    if (path === "/prices/history") {
+      const days = intParam(url.searchParams.get("days"), "days", 1, 7) ?? 7
+      const to = Math.floor(now() / 1000)
+      const from = to - days * 24 * 3600
+      const out = await fromArkiv(`prices-history:${days}:${Math.floor(to / 60)}`, async (r) => {
+        const got = await r.prices(from, to)
+        return { block: got.block, days, ticks: got.ticks.map(({ series: _series, ...t }) => t) }
+      })
+      return send(res, 200, out, short)
+    }
+
+    if (path === "/chests" || path === "/feed" || path === "/pool") {
+      const day = intParam(url.searchParams.get("day"), "day", 0, Number.MAX_SAFE_INTEGER)
+      const key = `${path}:${day ?? "latest"}`
+      if (path === "/chests") return send(res, 200, await fromArkiv(key, (r) => r.chests(day)), short)
+      if (path === "/feed") return send(res, 200, await fromArkiv(key, (r) => r.feed(day)), short)
+      const out = await fromArkiv(key, (r) => r.pool(day))
+      return send(res, out.pool ? 200 : 404, out, short)
+    }
+
     const profile = /^\/profiles\/([^/]+)$/.exec(path)
     if (profile) {
       const name = decodeURIComponent(profile[1] as string)
       if (!NAME.test(name)) throw new HttpError(400, "not a player name")
-      const out = await fromArkiv(`profile:${name}`, (r) => r.profile(name))
-      return send(res, out.profile ? 200 : 404, out, short)
+      const out = await fromArkiv(`profile:${name}`, (r) => r.player(name))
+      const found = out.profile || out.streak || out.stamps.length + out.firsts.length + out.medals.length > 0
+      return send(res, found ? 200 : 404, out, short)
     }
 
     const paper = /^\/papers\/(latest|\d{1,15})$/.exec(path)

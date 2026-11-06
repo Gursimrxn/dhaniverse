@@ -485,3 +485,10 @@ export async function* restoreLines(
     if (page.entities.length < RESTORE_PAGE) return
   }
 }
+
+/** The last save line Arkiv holds for a town (0 when none): `GET /log` sends it as `x-arkiv-tip`. */
+export async function arkivTip(client: PublicArkivClient, owner: Hex, env: string, townId: string): Promise<number> {
+  const res = await select(client, { toSeq: true }).from(LogSchema).ownedBy(owner).where(forTown(env, townId)).orderBy(desc("toSeq")).limit(1).fetch()
+  const top = res.entities[0]
+  return top ? num(top, "toSeq") : 0
+}
