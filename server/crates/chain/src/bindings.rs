@@ -190,7 +190,9 @@ sol! {
         );
     }
 
-    /// v4-periphery's `IV4Router.ExactInputSingleParams`.
+    /// v4-periphery's `IV4Router.ExactInputSingleParams`, 5 fields, as the Universal Router at 0x3A9D…F98b decodes it.
+    /// Universal Router 2.1.x (also on Uniswap's Sepolia list) adds `uint256 minHopPriceX36` before `hookData`:
+    /// switching `uniswap.universalRouter` to one of those needs this struct changed too.
     #[derive(Debug)]
     struct ExactInputSingleParams {
         PoolKey poolKey;
