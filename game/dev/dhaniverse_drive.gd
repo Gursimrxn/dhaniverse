@@ -257,7 +257,7 @@ func _run() -> void:
 	check(world.energy_plate._target == int(client.you.get("usdc", -1)), "the wallet rolls to %s" % USDC.text(int(client.you.get("usdc", 0))))
 
 	# a sponsor opens a new Spice Run, and it's run end to end
-	await rehearse({"type": "NewCampaign", "template": "spice_run", "payout": 1000000, "energy": 15, "slots": 10, "boosted": false})
+	await rehearse({"type": "NewCampaign", "template": "spice_run", "payout": 1000000, "energy": 30, "slots": 10, "boosted": false})
 	var posted := await event("BountyPosted", 4.0, false)
 	check(not posted.is_empty(), "NewCampaign: campaign %d is on the board" % int(posted.get("campaign", 0)))
 	var quest := "campaign:%d" % int(posted.get("campaign", 0))

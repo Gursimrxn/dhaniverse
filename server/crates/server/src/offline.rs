@@ -1003,11 +1003,10 @@ mod tests {
             days: 1,
             kind: 0,
         };
-        // 50 energy is 5 FOOD, 0.70 USDC at the ceiling; four times that is over the 0.15 payout.
+        // 50 energy is 5 FOOD, 0.04 USDC at the ceiling; four times that is over the 0.15 payout.
         assert!(ledger.open_campaign(&cheap).is_err());
         let fair = OfflineCampaign {
-            energy_cost: 15,
-            payout_per_claim: 1_000_000,
+            energy_cost: 30,
             ..cheap
         };
         assert!(ledger.open_campaign(&fair).is_ok());

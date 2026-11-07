@@ -212,7 +212,7 @@ fn a_sponsored_quest_runs_over_the_socket_and_pays_once_the_town_pass_is_held() 
     let mut sam = Client::connect(&server.addr);
     sam.hello("sam");
     // the town opens no sign campaign of its own: a sponsor opens one here
-    sam.debug(json!({"type": "NewCampaign", "template": "paint_sign", "payout": 1_200_000, "energy": 20, "slots": 40}));
+    sam.debug(json!({"type": "NewCampaign", "template": "paint_sign", "payout": 250_000, "energy": 20, "slots": 40}));
     let card = sam.latest_city()["bounty"]
         .as_array()
         .unwrap()
@@ -308,7 +308,7 @@ fn a_rehearsal_campaign_and_bucket_funding_show_in_the_city() {
     let server = Server::start(&save, &["--heartbeat-ms", "0"]);
     let mut sam = Client::connect(&server.addr);
     let before = sam.hello("sam")["city"].clone();
-    sam.debug(json!({"type": "NewCampaign", "template": "hold_line", "payout": 1_200_000, "energy": 20, "slots": 5}));
+    sam.debug(json!({"type": "NewCampaign", "template": "hold_line", "payout": 500000, "energy": 20, "slots": 5}));
     sam.debug(json!({"type": "FundBucket", "bucket": "safety", "usdc": 5_000_000}));
     let city = sam.hello("sam")["city"].clone();
     let cards = city["bounty"].as_array().unwrap();
