@@ -10,9 +10,10 @@ const INK := Color("262727")
 const MUTED := Color("5d5e5e")
 
 var client: TownClient
+var busy := Callable()             # a milestone blast has the screen: what would print waits for it
 var wallet_at := Callable()        # where the wallet plate is on the screen, for the receipt to fly to
 var _quests := {}                  # quest id -> its last state, for the slip once the quest has left the log
-var _busy := false
+var _waiting: Array = []           # [kind, event] held while something big has the screen
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -26,9 +27,14 @@ func _remember() -> void:
 
 func _on_event(e: Dictionary) -> void:
 	if str(e.get("account", "")) != client.player: return
-	match str(e.type):
-		"QuestDone": _slip(e)
-		"RewardPaid": _receipt(e)
+	if not str(e.type) in ["QuestDone", "RewardPaid"]: return
+	_waiting.append(e)
+
+func _process(_delta: float) -> void:
+	if _waiting.is_empty() or (busy.is_valid() and busy.call()): return
+	var e: Dictionary = _waiting.pop_front()
+	if str(e.type) == "QuestDone": _slip(e)
+	else: _receipt(e)
 
 func _paper(width: float) -> PanelContainer:
 	var paper := PanelContainer.new()

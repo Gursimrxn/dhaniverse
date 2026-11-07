@@ -62,6 +62,7 @@ func _ready() -> void:
 	add_child(_marks)
 	var slips := JobSlip.new()     # ux03: the job slip a quest prints, and a receipt for every cent
 	slips.client = client
+	slips.busy = func(): return world != null and world.blast != null and world.blast.playing
 	slips.wallet_at = func(): return world.energy_plate.global_position + Vector2(20, 100) if world and world.energy_plate else Vector2(40, 110)
 	add_child(slips)
 	_build_pocket()

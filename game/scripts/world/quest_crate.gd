@@ -89,11 +89,13 @@ func _drop(tier: String) -> void:
 	var p: Vector3 = world.player.global_position
 	var yaw: float = world.player.body_yaw()
 	var at := p + Vector3(cos(yaw), 0.0, -sin(yaw)) * BESIDE
-	global_position = Vector3(at.x, world.height_at(at.x, at.z), at.z)
+	global_position = Vector3(at.x, p.y, at.z)     # at your feet's height: the path and the jetty stand over the ground
 	rotation.y = yaw + PI
 	_mat.albedo_color = DoorChest.TIER_COLOURS.get(tier, DoorChest.TIER_COLOURS.wood)
-	_mat.metallic = 0.7 if tier != "wood" else 0.0
-	_mat.roughness = 0.35 if tier != "wood" else 0.75
+	_mat.metallic = 0.25 if tier != "wood" else 0.0     # the town has no reflections to show more metal than this
+	_mat.roughness = 0.4 if tier != "wood" else 0.75
+	_mat.emission_enabled = tier != "wood"
+	_mat.emission = _mat.albedo_color * 0.25
 	_label.text = "%s CRATE" % tier.to_upper()
 	_lid.rotation.x = 0.0
 	_box.scale = Vector3.ONE

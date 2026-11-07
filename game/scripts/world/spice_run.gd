@@ -80,7 +80,7 @@ func open_swap() -> void:
 	sheet.pick = 0
 	_fill()
 	var q: Dictionary = p[0]
-	sheet.set_card(str(q.get("title", "the spice run")).to_lower(), "step %d of %d · %s" % [TownState.steps_done(q) + 1, q.get("steps", []).size(), TownState.step_says(q, p[1]).to_lower()])
+	sheet.set_card(str(q.get("title", "the spice run")).to_lower(), "step %d of %d · %s" % [TownState.steps_done(q) + 1, q.get("steps", []).size(), TownState.step_says(q, p[1])])
 	sheet.open()
 	if quote_left_ms(_step()) == 0: ask_quote()          # none yet, or an old one: a fresh one as the kiosk opens
 

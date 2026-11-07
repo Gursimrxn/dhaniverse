@@ -9,8 +9,8 @@ signal chosen(i: int)              # the lever: swap on this quote
 signal key_pressed(key: int)       # Q: a new quote
 
 const SIZE := Vector2(2.6, 1.6)    # m, the board's face
-const AT := Vector3(0.0, 3.3, -0.35)   # its middle, in the kiosk's own frame (the kiosk faces +Z, where a customer stands)
-const EYE := Vector3(0.0, 2.7, 4.4)    # where the camera looks from, in the same frame
+const AT := Vector3(0.0, 4.0, -0.35)   # its middle, in the kiosk's own frame (the kiosk faces +Z, where a customer stands)
+const EYE := Vector3(0.0, 3.3, 4.6)    # where the camera looks from, in the same frame
 const HOLD := 1.0                  # s of E to pull the lever
 const FLY := 1.1
 const DARK := Color("1d1e1e")
@@ -63,20 +63,23 @@ func _build(chain_words: String) -> void:
 	var mark := Sprite3D.new()                      # Uniswap's own wordmark, as is
 	mark.texture = UNISWAP
 	mark.pixel_size = 0.0011
-	mark.position = Vector3(-SIZE.x * 0.5 + 0.38, SIZE.y * 0.5 - 0.14, 0.05)
+	mark.position = Vector3(-SIZE.x * 0.5 + 0.36, SIZE.y * 0.5 - 0.18, 0.05)
 	add_child(mark)
-	add_child(_text(_head("THE EXCHANGE · LIVE QUOTE"), Vector3(0.05, SIZE.y * 0.5 - 0.14, 0.05), HORIZONTAL_ALIGNMENT_LEFT))
-	_chain = _text(_small(chain_words), Vector3(SIZE.x * 0.5 - 0.1, SIZE.y * 0.5 - 0.14, 0.05), HORIZONTAL_ALIGNMENT_RIGHT)
+	var head := _text(_head("THE EXCHANGE · LIVE QUOTE"), Vector3(-SIZE.x * 0.5 + 0.72, SIZE.y * 0.5 - 0.13, 0.05), HORIZONTAL_ALIGNMENT_LEFT)
+	head.font_size = 34
+	add_child(head)
+	_chain = _text(_small(chain_words), Vector3(-SIZE.x * 0.5 + 0.72, SIZE.y * 0.5 - 0.27, 0.05), HORIZONTAL_ALIGNMENT_LEFT)
+	_chain.font_size = 28
 	add_child(_chain)
 	for i in 4:
-		var y := SIZE.y * 0.5 - 0.42 - i * 0.24
+		var y := SIZE.y * 0.5 - 0.52 - i * 0.22
 		var label := _text(_small(""), Vector3(-SIZE.x * 0.5 + 0.12, y, 0.05), HORIZONTAL_ALIGNMENT_LEFT)
 		var value := _text(_figure(""), Vector3(SIZE.x * 0.5 - 0.12, y, 0.05), HORIZONTAL_ALIGNMENT_RIGHT)
 		add_child(label)
 		add_child(value)
 		_rows.append(label)
 		_rows.append(value)
-	_clock = _text(_small(""), Vector3(0.0, -SIZE.y * 0.5 + 0.12, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
+	_clock = _text(_small(""), Vector3(0.0, -SIZE.y * 0.5 + 0.13, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_clock)
 	_stamp = _text(_head("AT THE CHAIN"), Vector3(SIZE.x * 0.22, -SIZE.y * 0.12, 0.07), HORIZONTAL_ALIGNMENT_CENTER)
 	_stamp.font_size = 64

@@ -255,6 +255,14 @@ func _run() -> void:
 	check(not paid.is_empty(), "RewardPaid %s" % USDC.text(int(paid.get("amount", 0))))
 	await secs(0.6)
 	check(world.energy_plate._target == int(client.you.get("usdc", -1)), "the wallet rolls to %s" % USDC.text(int(client.you.get("usdc", 0))))
+	await shot("06b_slip_receipt_crate")     # the job slip held up, the receipt flying, the crate at your side (ux03, ux09)
+	check(world.quest_crate._tier != "", "a %s crate dropped at your side" % world.quest_crate._tier)
+	client.send({"type": "OpenCrate"})
+	var crate_opened := await event("CrateOpened")
+	check(not crate_opened.is_empty(), "CrateOpened: %s" % JSON.stringify(crate_opened.get("contents", {})))
+	await secs(0.9)
+	await shot("06c_crate_open")
+	await secs(2.5)
 
 	# a sponsor opens a new Spice Run, and it's run end to end
 	await rehearse({"type": "NewCampaign", "template": "spice_run", "payout": 1000000, "energy": 30, "slots": 10, "boosted": false})
