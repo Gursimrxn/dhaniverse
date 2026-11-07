@@ -45,6 +45,11 @@ pub enum Purpose {
         account: AccountId,
         quest: String,
     },
+    Withdraw {
+        account: AccountId,
+        to: String,
+        amount: Usdc,
+    },
     Harvest,
     DrawClaim {
         week: u64,
@@ -244,7 +249,8 @@ impl State {
             | Purpose::Harvest
             | Purpose::DrawClaim { .. }
             | Purpose::Holding { .. }
-            | Purpose::Quote { .. } => {}
+            | Purpose::Quote { .. }
+            | Purpose::Withdraw { .. } => {}
         }
     }
 
@@ -420,6 +426,7 @@ impl State {
                         events.push(Event::RewardPaid {
                             account,
                             amount,
+                            advance_repaid: 0,
                             why,
                             reference,
                             tx,
@@ -496,6 +503,7 @@ impl State {
                     events.push(Event::RewardPaid {
                         account,
                         amount: amount + advance_repaid,
+                        advance_repaid,
                         why,
                         reference,
                         tx,
@@ -570,6 +578,21 @@ impl State {
                     received: amount_out,
                 });
                 self.step_done(&player, &quest, index, &mut events);
+            }
+            Observation::Withdrawn {
+                player,
+                to,
+                amount,
+                reference,
+                tx,
+            } => {
+                self.settle(&reference)?;
+                events.push(Event::Withdrawn {
+                    account: player,
+                    to,
+                    amount,
+                    tx,
+                });
             }
             Observation::Delivered {
                 player,
@@ -814,6 +837,13 @@ impl State {
             }
             Purpose::Quote { account, quest } => {
                 self.quote_failed(&account, &quest, &reason, &mut events);
+            }
+            Purpose::Withdraw { account, amount, .. } => {
+                events.push(Event::WithdrawFailed {
+                    account,
+                    amount,
+                    reason,
+                });
             }
             Purpose::Harvest | Purpose::DrawClaim { .. } => {}
         }

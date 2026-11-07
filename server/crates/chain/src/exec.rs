@@ -473,6 +473,27 @@ async fn execute(shared: &Arc<Shared>, intent: &Intent) -> Result<(), String> {
                 },
             );
         }
+        After::Withdrawn {
+            player,
+            to,
+            amount,
+            reference,
+        } => {
+            shared.confirmed(last.block).await;
+            let time = shared.block_time(last.block).await;
+            shared.emit(
+                last.block,
+                NOT_A_LOG,
+                time,
+                Observation::Withdrawn {
+                    player,
+                    to,
+                    amount,
+                    reference,
+                    tx: last.hash.to_string(),
+                },
+            );
+        }
         After::RecordsSet { player, records } => {
             shared.confirmed(last.block).await;
             let time = shared.block_time(last.block).await;

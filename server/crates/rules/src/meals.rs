@@ -238,6 +238,9 @@ impl State {
         });
         self.house.stats.meals_today += 1;
         self.house.stats.usdc_today += usdc;
+        if own_money && !rescue {
+            self.drop_loot(&reference, &mut events);
+        }
         if rescue {
             self.house.stats.rescues_today += 1;
             self.house.stats.rescues_total += 1;

@@ -91,6 +91,7 @@ impl IntentExt for Intent {
             | Intent::Advance { player, .. }
             | Intent::SwapForQuest { player, .. }
             | Intent::Deliver { player, .. }
+            | Intent::Withdraw { player, .. }
             | Intent::RegisterName { player, .. }
             | Intent::SetRecords { player, .. }
             | Intent::ClaimDraw { player, .. }
@@ -111,6 +112,7 @@ impl IntentExt for Intent {
             Intent::Advance { .. } => "Advance",
             Intent::SwapForQuest { .. } => "SwapForQuest",
             Intent::Deliver { .. } => "Deliver",
+            Intent::Withdraw { .. } => "Withdraw",
             Intent::RegisterName { .. } => "RegisterName",
             Intent::SetRecords { .. } => "SetRecords",
             Intent::Split => "Split",

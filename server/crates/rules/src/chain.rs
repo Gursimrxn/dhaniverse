@@ -167,6 +167,14 @@ pub enum Intent {
         #[serde(rename = "ref")]
         reference: Ref,
     },
+    /// The player's wallet sends `amount` USDC to `to`. Answered by `Withdrawn`.
+    Withdraw {
+        player: AccountId,
+        to: String,
+        amount: Usdc,
+        #[serde(rename = "ref")]
+        reference: Ref,
+    },
     /// The player's wallet hands its quest tokens to the Spice Merchant. Answered by `Delivered`.
     Deliver {
         player: AccountId,
@@ -232,6 +240,7 @@ impl Intent {
             | Intent::SwapForQuest { reference, .. }
             | Intent::QuoteSwap { reference, .. }
             | Intent::Deliver { reference, .. }
+            | Intent::Withdraw { reference, .. }
             | Intent::ClaimDraw { reference, .. }
             | Intent::CheckHolding { reference, .. } => Some(reference),
             _ => None,
@@ -348,6 +357,15 @@ pub enum Observation {
     /// A campaign paused by the admin or cancelled by its sponsor: no new claims.
     CampaignClosed {
         campaign: u64,
+        tx: String,
+    },
+    /// A withdrawal's USDC transfer, confirmed.
+    Withdrawn {
+        player: AccountId,
+        to: String,
+        amount: Usdc,
+        #[serde(rename = "ref")]
+        reference: Ref,
         tx: String,
     },
     /// `SpiceMerchant.Delivered`.

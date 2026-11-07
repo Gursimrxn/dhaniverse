@@ -401,7 +401,7 @@ impl Hub {
     fn town_pass(&mut self, player: &str, reference: &str) -> Value {
         match self.world.state.town_pass_check(player) {
             Ok(wallet) => match self.links.verify.open(player, &wallet) {
-                Ok(url) => json!({"type": "result", "ref": reference, "ok": true, "url": url}),
+                Ok(url) => json!({"type": "result", "ref": reference, "ok": true, "qr": qr_rows(&url), "url": url}),
                 Err(problem) => {
                     eprintln!("no Town Pass link: {problem}");
                     json!({"type": "result", "ref": reference, "ok": false, "refusal": {"type": "TryAgain"}})
@@ -860,4 +860,18 @@ impl Hub {
             let _ = client.out.send(ToClient::Text(message.to_string()));
         }
     }
+}
+
+/// The Town Pass link as a QR code, row by row ('1' a dark module), for the game's World ID panel to draw: scanned with a
+/// phone, the pass is finished there, and the game never sends anyone to a browser.
+fn qr_rows(url: &str) -> Vec<String> {
+    let Ok(code) = qrcode::QrCode::new(url.as_bytes()) else {
+        return Vec::new();
+    };
+    let width = code.width();
+    let modules = code.to_colors();
+    modules
+        .chunks(width)
+        .map(|row| row.iter().map(|m| if *m == qrcode::Color::Dark { '1' } else { '0' }).collect())
+        .collect()
 }

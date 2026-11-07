@@ -3,7 +3,8 @@
 
 use crate::book::StepKind;
 use crate::chain::{HumanId, Intent};
-use crate::{is_person, AccountId, Event, Refusal, State};
+use crate::observe::Purpose;
+use crate::{is_person, AccountId, Event, Ref, Refusal, State, Usdc};
 use std::collections::BTreeMap;
 
 impl State {
@@ -84,6 +85,53 @@ impl State {
             },
             &mut events,
         );
+        Ok(events)
+    }
+
+    /// Sends USDC from the player's wallet to an address they name. The chain moves it; the balance follows from the
+    /// chain's own report, so nothing is taken off here.
+    pub(crate) fn withdraw(
+        &mut self,
+        account: AccountId,
+        to: String,
+        amount: Usdc,
+        reference: Ref,
+    ) -> Result<Vec<Event>, Refusal> {
+        if self.ref_known(&reference) {
+            return Err(Refusal::RefUsed { reference });
+        }
+        let to = to.trim().to_string();
+        let hex = to.strip_prefix("0x").unwrap_or("");
+        if hex.len() != 40 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(Refusal::BadAddress);
+        }
+        if amount == 0 {
+            return Err(Refusal::BadAmount);
+        }
+        let player = self.life.get(&account)?;
+        let Some(wallet) = player.wallet.clone() else {
+            return Err(Refusal::NoWallet);
+        };
+        if wallet.eq_ignore_ascii_case(&to) {
+            return Err(Refusal::BadAddress);
+        }
+        let have = player.usdc.unwrap_or(0);
+        if have < amount {
+            return Err(Refusal::NotEnoughUsdc { have, need: amount });
+        }
+        let mut events = vec![Event::WithdrawSent {
+            account: account.clone(),
+            to: to.clone(),
+            amount,
+            reference: reference.clone(),
+        }];
+        let intent = Intent::Withdraw {
+            player: account.clone(),
+            to: to.clone(),
+            amount,
+            reference,
+        };
+        self.send(Purpose::Withdraw { account, to, amount }, intent, &mut events);
         Ok(events)
     }
 

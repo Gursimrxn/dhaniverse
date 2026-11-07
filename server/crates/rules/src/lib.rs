@@ -21,6 +21,7 @@ mod human;
 pub mod life;
 pub mod market;
 mod math;
+mod loot;
 mod meals;
 pub mod observe;
 pub mod pool;
@@ -78,6 +79,8 @@ pub struct State {
     pub city_event: Option<(String, u64)>,
     /// Today's front page, for anyone who connects after it went out.
     pub paper: Option<Paper>,
+    /// The last loot crate to fall: out, claimed or gone.
+    pub loot: Option<loot::Loot>,
 }
 
 /// One day's front page.
@@ -122,6 +125,7 @@ impl State {
             season: 1,
             city_event: None,
             paper: None,
+            loot: None,
         })
     }
 
@@ -219,6 +223,17 @@ fn dispatch(state: &mut State, command: Command) -> Result<Vec<Event>, Refusal> 
             quest,
             reference,
         } => state.deliver(account, quest, reference),
+        Command::Withdraw {
+            account,
+            to,
+            amount,
+            reference,
+        } => state.withdraw(account, to, amount, reference),
+        Command::ClaimLoot {
+            account,
+            id,
+            reference,
+        } => state.claim_loot(account, id, reference),
         Command::QuoteSwap { account, quest } => state.quote_swap(account, quest),
         Command::PaintSign { account, text } => state.paint_sign(account, text),
         Command::PriceCall { account, call } => state.price_call(account, call),

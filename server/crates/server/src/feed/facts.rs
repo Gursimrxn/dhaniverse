@@ -111,6 +111,12 @@ pub fn read(event: &Event) -> Option<Fact> {
         | Event::HumanVerified { .. }
         | Event::NameRegistered { .. }
         | Event::SignPainting { .. }
+        | Event::WithdrawSent { .. }
+        | Event::Withdrawn { .. }
+        | Event::WithdrawFailed { .. }
+        | Event::LootDropped { .. }
+        | Event::LootClaimed { .. }
+        | Event::LootGone { .. }
         | Event::RecordsSet { .. }
         | Event::QuestTaken { .. }
         | Event::QuestStepSent { .. }

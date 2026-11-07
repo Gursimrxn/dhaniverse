@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn nothing_happened_so_nothing_is_printed() {
         let page = page(&[]);
-        assert_eq!(page.headline, "A quiet day in Tallyport");
+        assert_eq!(page.headline, "A quiet day in Dhaniverse");
         assert_eq!(page.stories.len(), 0);
     }
 
@@ -146,7 +146,7 @@ mod tests {
             tx: String::new(),
         };
         let page = page(&[meal]);
-        assert_eq!(page.headline, "A quiet day in Tallyport");
+        assert_eq!(page.headline, "A quiet day in Dhaniverse");
         assert_eq!(page.stories.len(), 0);
     }
 

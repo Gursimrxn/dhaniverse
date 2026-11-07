@@ -76,6 +76,7 @@ mod tests {
             Event::RewardPaid {
                 account: sam(),
                 amount: SECRET,
+                advance_repaid: 0,
                 why: "x".into(),
                 reference: r(),
                 tx: r(),

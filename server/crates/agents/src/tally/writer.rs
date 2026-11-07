@@ -41,7 +41,7 @@ fn headline(facts: &Facts) -> String {
             "festival" => "A festival brings a crowd to town".to_string(),
             "harvest" => "A good harvest reaches the market".to_string(),
             "drought" => "A poor harvest hits the market".to_string(),
-            other => format!("Tallyport wakes to a {other}"),
+            other => format!("Dhaniverse wakes to a {other}"),
         };
     }
     if let Some(change) = food_change_bps(facts) {
@@ -53,7 +53,7 @@ fn headline(facts: &Facts) -> String {
     if let Some((name, first)) = facts.firsts.first() {
         return format!("{name} {}", first_phrase(*first));
     }
-    "A quiet day in Tallyport".to_string()
+    "A quiet day in Dhaniverse".to_string()
 }
 
 fn city_event_story(kind: &str, days: u32) -> String {

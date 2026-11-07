@@ -141,6 +141,44 @@ pub enum Event {
         account: AccountId,
         text: String,
     },
+    /// A paid meal dropped an urgent crate at one of the town's spots, for anyone to reach first before `ends_at`.
+    LootDropped {
+        id: u64,
+        spot: u64,
+        prize: Usdc,
+        ends_at: u64,
+    },
+    /// Someone reached the crate first; its prize follows as a reward.
+    LootClaimed {
+        id: u64,
+        account: AccountId,
+        prize: Usdc,
+    },
+    /// Nobody reached the crate in time.
+    LootGone {
+        id: u64,
+    },
+    /// A withdrawal left for the chain.
+    WithdrawSent {
+        account: AccountId,
+        to: String,
+        amount: Usdc,
+        #[serde(rename = "ref")]
+        reference: Ref,
+    },
+    /// A withdrawal landed: the USDC is at `to`.
+    Withdrawn {
+        account: AccountId,
+        to: String,
+        amount: Usdc,
+        tx: String,
+    },
+    /// A withdrawal the chain refused. The USDC never left.
+    WithdrawFailed {
+        account: AccountId,
+        amount: Usdc,
+        reason: String,
+    },
     RecordsSet {
         account: AccountId,
         records: BTreeMap<String, String>,
@@ -233,9 +271,13 @@ pub enum Event {
         reference: Ref,
         waiting: Waiting,
     },
+    /// A reward paid. `amount` is the reward; `advance_repaid` of it went back to the campaign for an advance the player had
+    /// (the Spice Run's cargo), so `amount - advance_repaid` is what reached their wallet.
     RewardPaid {
         account: AccountId,
         amount: Usdc,
+        #[serde(default)]
+        advance_repaid: Usdc,
         why: String,
         #[serde(rename = "ref")]
         reference: Ref,
@@ -563,6 +605,12 @@ pub enum Refusal {
     /// That World ID already holds a different player.
     HumanTaken,
     NoName,
+    /// Not an Ethereum address, or the player's own.
+    BadAddress,
+    /// Nothing to send.
+    BadAmount,
+    /// The crate was claimed, or ran out, before you reached it.
+    LootGone,
     BadSign {
         most: usize,
     },

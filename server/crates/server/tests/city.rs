@@ -160,7 +160,7 @@ fn the_paper_only_reports_what_really_happened() {
         events.extend(advance(&mut world, DAY));
     }
     let known = [
-        "A quiet day in Tallyport",
+        "A quiet day in Dhaniverse",
         "A festival brings a crowd to town",
         "A good harvest reaches the market",
         "A poor harvest hits the market",

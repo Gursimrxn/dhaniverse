@@ -26,6 +26,7 @@ impl State {
         self.notice_the_stuck(&mut events);
         self.ask_holding_checks(&mut events);
         self.reveal_due_draws(&mut events);
+        self.expire_loot(&mut events);
         Ok(events)
     }
 

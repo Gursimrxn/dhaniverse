@@ -613,6 +613,27 @@ impl OfflineLedger {
                     tx,
                 });
             }
+            Intent::Withdraw {
+                player,
+                to,
+                amount,
+                reference,
+            } => {
+                let have = self.usdc.get(&player).copied().unwrap_or(0);
+                if have < amount {
+                    out.push(failed(&reference, "ERC20InsufficientBalance"));
+                    return;
+                }
+                self.usdc.insert(player.clone(), have - amount);
+                out.push(Observation::Withdrawn {
+                    player: player.clone(),
+                    to,
+                    amount,
+                    reference,
+                    tx,
+                });
+                out.push(self.balance(&player));
+            }
             Intent::RegisterName { player, label } => {
                 if !self.names.insert(player.clone()) {
                     return;

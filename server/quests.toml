@@ -14,10 +14,10 @@
 
 [templates.spice_run]
 title = "The Spice Run"
-story = "The harbourmaster has cargo money for the spice market and nobody to carry it. Buy the sponsor's spice at the exchange kiosk, then take it to the Spice Merchant. He pays back the cargo and a fee for your trouble."
+story = "Uniswap is paying for a spice run. The harbourmaster has cargo money for the spice market and nobody to carry it: swap it for MANGO through Uniswap at the exchange kiosk, then take it to the Spice Merchant. He pays back the cargo and a fee for your trouble."
 steps = [
   { id = "cargo", kind = "cargo", place = "harbourmaster", text = "Collect the cargo money from the harbourmaster. If your wallet is short, he'll advance it." },
-  { id = "swap", kind = "swap", place = "kiosk", text = "Swap the cargo money for the sponsor's spice at the exchange kiosk. Read the quote, the fee and the slippage first." },
+  { id = "swap", kind = "swap", place = "kiosk", text = "Swap the cargo money for MANGO through Uniswap at the exchange kiosk. Read the quote, the fee and the slippage first." },
   { id = "deliver", kind = "deliver", place = "spice-merchant", text = "Deliver the spice to the Spice Merchant at spice-merchant.tallyport.eth." },
 ]
 
@@ -109,7 +109,7 @@ steps = [
 
 [grandma]
 title = "Grandma's Ledger"
-story = "Your grandmother kept a ledger of everything Tallyport taught her about money. Three of its pages are scattered around Mumbai's old market, and the last opens her strongbox."
+story = "Your grandmother kept a ledger of everything Dhaniverse taught her about money. Three of its pages are scattered around Mumbai's old market, and the last opens her strongbox."
 any_order = true
 steps = [
   { id = "paper", kind = "paper", place = "square", text = "Page one: read the paper at the square on a day something big happens in the market." },

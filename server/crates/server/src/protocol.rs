@@ -93,6 +93,14 @@ pub enum PlayerCommand {
     QuoteSwap {
         quest: String,
     },
+    /// Send USDC from your wallet to an address (base units: 1000000 is 1 USDC).
+    Withdraw {
+        to: String,
+        amount: u64,
+    },
+    ClaimLoot {
+        id: u64,
+    },
     PaintSign {
         text: String,
     },
@@ -156,6 +164,17 @@ impl PlayerCommand {
                 reference,
             },
             PlayerCommand::QuoteSwap { quest } => Command::QuoteSwap { account, quest },
+            PlayerCommand::Withdraw { to, amount } => Command::Withdraw {
+                account,
+                to,
+                amount,
+                reference,
+            },
+            PlayerCommand::ClaimLoot { id } => Command::ClaimLoot {
+                account,
+                id,
+                reference,
+            },
             PlayerCommand::PaintSign { text } => Command::PaintSign { account, text },
             PlayerCommand::PriceCall { call } => Command::PriceCall { account, call },
             PlayerCommand::Refer { player } => Command::Refer { account, player },
@@ -251,6 +270,9 @@ pub fn named_in(event: &Event) -> Option<Vec<AccountId>> {
         | Event::HumanVerified { account }
         | Event::NameRegistered { account, .. }
         | Event::SignPainting { account, .. }
+        | Event::WithdrawSent { account, .. }
+        | Event::Withdrawn { account, .. }
+        | Event::WithdrawFailed { account, .. }
         | Event::RecordsSet { account, .. }
         | Event::QuestTaken { account, .. }
         | Event::QuestStepSent { account, .. }
@@ -298,6 +320,9 @@ pub fn named_in(event: &Event) -> Option<Vec<AccountId>> {
         | Event::DrawRevealed { .. }
         | Event::BountyPosted { .. }
         | Event::BountyClosed { .. }
+        | Event::LootDropped { .. }
+        | Event::LootClaimed { .. }
+        | Event::LootGone { .. }
         | Event::LedgerUpdated { .. } => None,
     }
 }
@@ -661,6 +686,7 @@ pub fn city(world: &World) -> Value {
         "draw": {"week": week, "tickets": tickets, "prize": prize},
         "shock": state.city_event_today(),
         "paper": state.paper,
+        "loot": state.loot.as_ref().map(|l| json!({"id": l.id, "spot": l.spot, "prize": l.prize, "ends_at": l.ends_at, "claimed_by": l.claimed_by, "out": l.out(state.now_ms)})),
         "resident_walk_ms": world.town.config().residents.walk_ms,
         "emotes": state.social.emotes(),
         "boards": boards::to_json(state, &world.boards()),

@@ -64,6 +64,7 @@ impl State {
             | Intent::SwapForQuest { reference, .. }
             | Intent::QuoteSwap { reference, .. }
             | Intent::Deliver { reference, .. }
+            | Intent::Withdraw { reference, .. }
             | Intent::CheckHolding { reference, .. } => *reference = self.chain_ref(reference),
             Intent::ClaimDraw {
                 week, reference, ..

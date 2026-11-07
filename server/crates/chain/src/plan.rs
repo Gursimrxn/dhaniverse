@@ -44,6 +44,12 @@ pub enum After {
         player: String,
         records: BTreeMap<String, String>,
     },
+    Withdrawn {
+        player: String,
+        to: String,
+        amount: u64,
+        reference: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -552,6 +558,36 @@ pub(crate) async fn plan<R: Reads>(
                 "deliver",
             ));
             indexed(txs)
+        }
+
+        Intent::Withdraw {
+            player: id,
+            to,
+            amount,
+            reference,
+        } => {
+            let p = need(player, id)?;
+            let dest: Address = to.parse().map_err(|_| format!("{to:?} is not an address"))?;
+            if dest == p.address || dest == Address::ZERO {
+                return Err("a withdrawal goes somewhere else".into());
+            }
+            Ok(Plan {
+                txs: vec![call(
+                    Sender::Player(id.clone()),
+                    ctx.dep.usdc,
+                    IERC20::transferCall {
+                        to: dest,
+                        amount: U256::from(*amount),
+                    },
+                    "withdraw",
+                )],
+                after: After::Withdrawn {
+                    player: id.clone(),
+                    to: to.clone(),
+                    amount: *amount,
+                    reference: reference.clone(),
+                },
+            })
         }
 
         Intent::RegisterName { player: id, label } => {

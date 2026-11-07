@@ -2,7 +2,7 @@
 
 use crate::chain::{HumanId, Observation};
 use crate::life::Call;
-use crate::{AccountId, First, Food, Ref};
+use crate::{AccountId, First, Food, Ref, Usdc};
 use serde::{Deserialize, Serialize};
 
 /// What a key may do. Each maps to one contract role or one server part, plus `Clock`, which stands in for the
@@ -88,6 +88,21 @@ pub enum Command {
     Deliver {
         account: AccountId,
         quest: String,
+        #[serde(rename = "ref")]
+        reference: Ref,
+    },
+    /// Sends USDC from the player's wallet to an address they name, from the phone's wallet.
+    Withdraw {
+        account: AccountId,
+        to: String,
+        amount: Usdc,
+        #[serde(rename = "ref")]
+        reference: Ref,
+    },
+    /// First to the loot crate: its prize.
+    ClaimLoot {
+        account: AccountId,
+        id: u64,
         #[serde(rename = "ref")]
         reference: Ref,
     },
@@ -227,6 +242,8 @@ impl Command {
             | Command::AbandonQuest { .. }
             | Command::Swap { .. }
             | Command::Deliver { .. }
+            | Command::Withdraw { .. }
+            | Command::ClaimLoot { .. }
             | Command::QuoteSwap { .. }
             | Command::PaintSign { .. }
             | Command::PriceCall { .. }
