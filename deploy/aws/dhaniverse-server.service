@@ -1,0 +1,23 @@
+[Unit]
+Description=Dhaniverse town: the game server, settling on Ethereum Sepolia
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=dhaniverse
+Group=dhaniverse
+# The newest build (deploy/aws/update.sh switches this link). From here, ../web and ../contracts/deployments resolve.
+WorkingDirectory=/opt/dhaniverse/server-current/server
+EnvironmentFile=/etc/dhaniverse/server.env
+# --new-if-incompatible: a push that changes the rules starts a new city and moves the old save aside, instead of stopping.
+ExecStart=/opt/dhaniverse/server-current/server/tallyport --chain sepolia --addr 127.0.0.1:7878 --behind-proxy --save /var/lib/dhaniverse/town.jsonl --new-if-incompatible
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/dhaniverse
+
+[Install]
+WantedBy=multi-user.target

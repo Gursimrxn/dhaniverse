@@ -1,0 +1,21 @@
+[Unit]
+Description=Dhaniverse publisher: the town's save and public record on Arkiv
+After=dhaniverse-server.service
+Wants=dhaniverse-server.service
+
+[Service]
+User=dhaniverse
+Group=dhaniverse
+WorkingDirectory=/opt/dhaniverse/server-current/services/publisher
+EnvironmentFile=/etc/dhaniverse/publisher.env
+ExecStart=/opt/node/bin/node src/main.ts
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/dhaniverse
+
+[Install]
+WantedBy=multi-user.target

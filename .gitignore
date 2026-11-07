@@ -32,3 +32,6 @@ next-env.d.ts
 apps/web/AGENTS.md
 apps/web/public/godot/
 apps/web/test-results/
+
+# server SSH keys: never commit
+*.pem

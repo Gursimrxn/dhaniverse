@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# The live town on this server, in one command.
+#   town start     start the town (game server + Arkiv publisher), and keep it on across reboots
+#   town stop      stop it, and keep it off across reboots
+#   town restart   restart both
+#   town status    what's running, which builds are installed, the server's health
+#   town logs      follow the server, publisher and updater logs (Ctrl-C to stop following)
+#   town update    install the newest build from GitHub now, instead of within the minute
+#   town reset     archive this town and begin a new city (nothing is deleted; wallets are never handed out twice)
+set -euo pipefail
+DATA=/var/lib/dhaniverse
+UNITS=(dhaniverse-server dhaniverse-publisher)
+
+case "${1:-status}" in
+  start)
+    sudo systemctl enable --now "${UNITS[@]}"
+    echo "town started" ;;
+  stop)
+    sudo systemctl disable --now dhaniverse-publisher dhaniverse-server
+    echo "town stopped" ;;
+  restart)
+    sudo systemctl restart "${UNITS[@]}" ;;
+  status)
+    for u in "${UNITS[@]}" caddy dhaniverse-update.timer; do printf '%-26s %s\n' "$u" "$(systemctl is-active "$u" || true)"; done
+    echo "server build: $(cat /opt/dhaniverse/server.version 2>/dev/null || echo none)"
+    echo "game build:   $(cat /opt/dhaniverse/game.version 2>/dev/null || echo none)"
+    echo "health:       $(curl -s --max-time 3 http://127.0.0.1:7878/health || echo 'no answer')" ;;
+  logs)
+    sudo journalctl -f -n 100 -u dhaniverse-server -u dhaniverse-publisher -u dhaniverse-update ;;
+  update)
+    sudo systemctl start dhaniverse-update
+    sudo journalctl -u dhaniverse-update -n 5 --no-pager -o cat ;;
+  reset)
+    was="$(systemctl is-active dhaniverse-server || true)"
+    sudo systemctl stop dhaniverse-publisher dhaniverse-server
+    old="$DATA/archive/$(date -u +%Y%m%dT%H%M%SZ)"
+    sudo -u dhaniverse mkdir -p "$old"
+    for f in town.jsonl town.jsonl.chain-sepolia publisher; do
+      if sudo test -e "$DATA/$f"; then sudo mv "$DATA/$f" "$old/"; fi
+    done
+    # The player wallets come from one seed, by index. The new town carries on the old one's list, so it never hands a new
+    # player an old player's wallet (and whatever is still in it).
+    if sudo test -f "$old/town.jsonl.chain-sepolia/wallets.jsonl"; then
+      sudo -u dhaniverse mkdir -p "$DATA/town.jsonl.chain-sepolia"
+      sudo -u dhaniverse cp "$old/town.jsonl.chain-sepolia/wallets.jsonl" "$DATA/town.jsonl.chain-sepolia/"
+    fi
+    echo "the old town is archived in $old"
+    if [[ "$was" == active ]]; then
+      sudo systemctl start "${UNITS[@]}"
+      echo "a new town is running"
+    else
+      echo "the new town begins at: town start"
+    fi ;;
+  *)
+    sed -n '2,10p' "$0"; exit 1 ;;
+esac

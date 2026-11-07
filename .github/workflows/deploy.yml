@@ -1,0 +1,190 @@
+# Every push to main deploys the live town (deploy/aws). This builds and publishes; the server installs what's published
+# within a minute (deploy/aws/update.sh, on a timer). GitHub holds no key to the server, and the server holds none to GitHub.
+#
+#   live-server  the game server (built in Amazon Linux 2023, the server's own OS, so its C library matches), the Arkiv
+#                publisher with its packages, the web pages and the Sepolia contract addresses
+#   live-game    the browser game (Godot web export), rebuilt only when game/ changes
+#
+# Each release holds VERSION (the commit), the tarball and its SHA-256. VERSION goes up last, so the server never sees a
+# commit before its tarball is there.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.7.2
+  RUST_VERSION: 1.99.1
+  NODE_VERSION: 24.22.2
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      game: ${{ steps.filter.outputs.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            game:
+              - 'game/**'
+
+  server:
+    runs-on: ubuntu-latest
+    container: amazonlinux:2023
+    steps:
+      - name: Build tools
+        run: dnf install -y -q gcc gcc-c++ make openssl-devel pkgconf-pkg-config tar gzip xz git findutils which
+
+      - uses: actions/checkout@v4
+
+      - name: Rust ${{ env.RUST_VERSION }}
+        run: |
+          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+          key: server-al2023-${{ env.RUST_VERSION }}-${{ hashFiles('server/Cargo.lock') }}
+          restore-keys: server-al2023-${{ env.RUST_VERSION }}-
+
+      - name: Build the server
+        working-directory: server
+        run: cargo build --release --locked -p tallyport
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Publisher packages
+        working-directory: services/publisher
+        run: npm ci --omit=dev
+
+      - name: Bundle
+        run: |
+          out="$RUNNER_TEMP/server"
+          mkdir -p "$out/server" "$out/contracts/deployments" "$out/services"
+          cp server/target/release/tallyport server/rules.toml server/quests.toml "$out/server/"
+          cp -r web "$out/web"
+          cp contracts/deployments/sepolia.json "$out/contracts/deployments/"
+          cp -r services/publisher "$out/services/publisher"
+          rm -rf "$out/services/publisher/test" "$out/services/publisher/data" "$out/services/publisher/.env"
+          echo "$GITHUB_SHA" > "$out/VERSION"
+          mkdir -p dist
+          tar -czf dist/server.tar.gz -C "$out" .
+          (cd dist && sha256sum server.tar.gz > server.tar.gz.sha256 && echo "$GITHUB_SHA" > VERSION)
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server
+          path: dist/
+          retention-days: 3
+
+  game:
+    needs: changes
+    if: needs.changes.outputs.game == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The art is in Git LFS (about 220 MB). GitHub's free LFS bandwidth is 1 GB a month, so the files are cached here and
+      # only what changed is ever downloaded again.
+      - name: LFS file list
+        run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-ids
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+          restore-keys: lfs-
+      - name: LFS files
+        run: git lfs pull
+
+      - uses: actions/cache@v4
+        id: godot
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-stable-web
+      - name: Godot ${{ env.GODOT_VERSION }} and its web templates (checksum-verified)
+        if: steps.godot.outputs.cache-hit != 'true'
+        run: |
+          v="$GODOT_VERSION-stable"
+          base="https://github.com/godotengine/godot/releases/download/$v"
+          mkdir -p ~/godot && cd ~/godot
+          curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+          for f in "Godot_v${v}_linux.x86_64.zip" "Godot_v${v}_export_templates.tpz"; do
+            curl -fsSL -o "$f" "$base/$f"
+            grep " $f\$" SHA512-SUMS.txt | sha512sum -c --quiet
+          done
+          unzip -q "Godot_v${v}_linux.x86_64.zip" && mv "Godot_v${v}_linux.x86_64" godot
+          unzip -q "Godot_v${v}_export_templates.tpz" 'templates/version.txt' 'templates/web_*'
+          rm -f ./*.zip ./*.tpz
+
+      - name: Install the templates
+        run: |
+          dest="$HOME/.local/share/godot/export_templates/$(cat ~/godot/templates/version.txt)"
+          mkdir -p "$dest" && cp ~/godot/templates/* "$dest/"
+
+      - name: Export the web build
+        run: |
+          # The preset names the founder's own template paths; here, Godot's installed templates are used instead.
+          sed -i 's#^custom_template/\(debug\|release\)=".*"#custom_template/\1=""#' game/export_presets.cfg
+          ~/godot/godot --headless --path game --import > import.log 2>&1 || true
+          mkdir -p build/web
+          ~/godot/godot --headless --path game --export-release "Web" ../build/web/index.html 2>&1 | tee export.log
+          test -s build/web/index.pck && test -s build/web/index.wasm
+
+      - name: Bundle
+        run: |
+          echo "$GITHUB_SHA" > build/web/VERSION
+          mkdir -p dist
+          tar -czf dist/game.tar.gz -C build/web .
+          (cd dist && sha256sum game.tar.gz > game.tar.gz.sha256 && echo "$GITHUB_SHA" > VERSION)
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game
+          path: dist/
+          retention-days: 3
+
+  publish:
+    needs: [server, game]
+    if: always() && needs.server.result == 'success' && (needs.game.result == 'success' || needs.game.result == 'skipped')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish to the live releases
+        run: |
+          for part in server game; do
+            [ -d "artifacts/$part" ] || { echo "$part: not rebuilt this time"; continue; }
+            tag="live-$part"
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "Live $part (rolling)" \
+                --notes "Rolling build of the live town's $part, replaced on every push to main by .github/workflows/deploy.yml. The server installs it from here (deploy/aws/update.sh). VERSION names the commit."
+            fi
+            gh release upload "$tag" "artifacts/$part/$part.tar.gz" "artifacts/$part/$part.tar.gz.sha256" --clobber
+            gh release upload "$tag" "artifacts/$part/VERSION" --clobber
+            echo "$part: published $GITHUB_SHA"
+          done

@@ -1,0 +1,8 @@
+[Unit]
+Description=Install the newest Dhaniverse build published by GitHub Actions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/dhaniverse/bin/update

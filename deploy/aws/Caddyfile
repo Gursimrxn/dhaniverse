@@ -1,0 +1,16 @@
+# One address for everything, with its certificate fetched and renewed by Caddy: the browser game at /play/, and the town
+# server (its WebSocket, /verify for the Town Pass, /city, /health, the web pages) everywhere else.
+{$DHANIVERSE_HOST} {
+	encode zstd gzip
+
+	redir /play /play/ 308
+	handle_path /play/* {
+		root * /opt/dhaniverse/game-current
+		header Cache-Control "no-cache"
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:7878
+	}
+}

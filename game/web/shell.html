@@ -21,6 +21,11 @@ $GODOT_HEAD_INCLUDE
 <canvas id="canvas">Your browser can't run the game: it needs WebGL 2.</canvas>
 <div id="line"><div id="bar"></div></div>
 <div id="note"></div>
+<script>
+// Served over HTTPS (the live town: deploy/aws/Caddyfile puts the game at /play/ and the town server on the same host), the game
+// talks to that host's server. ?server=wss://... still wins; a plain http page (a local build) keeps the game's own default.
+if (!window.DHANIVERSE_SERVER && location.protocol === 'https:') window.DHANIVERSE_SERVER = 'wss://' + location.host;
+</script>
 <script src="$GODOT_URL"></script>
 <script>
 const GODOT_CONFIG = $GODOT_CONFIG;
