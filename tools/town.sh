@@ -43,7 +43,11 @@ start_server() {
 start_publisher() {
   running publisher && { echo "publisher: already running"; return; }
   local node; node="$(node24)"
-  (cd "$ROOT/services/publisher" && nohup "$node" --env-file-if-exists=.env src/main.ts >> "$LIVE/logs/publisher.log" 2>&1 & echo $! > "$LIVE/publisher.pid")
+  (
+    cd "$ROOT/services/publisher"
+    nohup "$node" --env-file-if-exists=.env src/main.ts >> "$LIVE/logs/publisher.log" 2>&1 < /dev/null &
+    echo $! > "$LIVE/publisher.pid"      # node's own id (backgrounding `cd && node` would record a wrapper shell instead)
+  )
   echo "publisher: started (Arkiv, env live)"
 }
 
@@ -75,8 +79,12 @@ case "${1:-status}" in
     for f in "$SAVE" "$CHAIN_DIR" "$LIVE/publisher"; do [[ -e "$f" ]] && mv "$f" "$old/"; done
     # Player wallets come from one seed, by index: the new town carries on the old one's list, so it never hands a new player
     # an old player's wallet (and whatever is still in it).
+    # Each old wallet stays reserved under an archived name, so a player who signs up again under the same name gets a new,
+    # empty wallet: a fresh account, not the old one.
     if [[ -f "$old/$(basename "$CHAIN_DIR")/wallets.jsonl" ]]; then
-      mkdir -p "$CHAIN_DIR" && cp "$old/$(basename "$CHAIN_DIR")/wallets.jsonl" "$CHAIN_DIR/"
+      mkdir -p "$CHAIN_DIR"
+      sed -E "s/\"player\":\"([^\"]*)\"/\"player\":\"archived-$(basename "$old")-\1\"/" \
+        "$old/$(basename "$CHAIN_DIR")/wallets.jsonl" > "$CHAIN_DIR/wallets.jsonl"
     fi
     echo "the old town is archived in $old; tools/town.sh start begins a new one" ;;
   *) sed -n '2,10p' "$0"; exit 1 ;;

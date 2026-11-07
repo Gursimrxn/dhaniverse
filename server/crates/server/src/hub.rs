@@ -557,6 +557,8 @@ impl Hub {
             "debug": self.options.debug,
             // The game asks for the Town Pass before anyone comes ashore whenever one can be had here.
             "town_pass": self.links.verifier.can_verify(),
+            // Which city this is: a reset begins a new one, so what a client kept about the old city stays with it.
+            "town": self.world.state.town_id,
             "you": you,
             "city": protocol::city(&self.world),
             "feed": protocol::feed(&self.world),

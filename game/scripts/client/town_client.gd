@@ -31,6 +31,7 @@ var city := {}
 var up := false                    # connected and synced
 var debug := false                 # a rehearsal server: rehearse() works on it
 var town_pass := false             # this town stamps Town Passes (World ID, or a rehearsal): everyone shows one before coming ashore
+var town_id := ""                  # which city this is: a reset begins a new one, so notes kept about the old one don't carry over
 var player := ""                   # who this is: nothing connects until there is a name
 var secret := ""                   # proves it, to the server: made once, kept on this machine
 var _nameless := false             # connected with no name yet: all it can do is claim one
@@ -187,6 +188,7 @@ func handle_message(m: Dictionary) -> void:
 			feed = m.get("feed", [])
 			debug = bool(m.get("debug", false))
 			town_pass = bool(m.get("town_pass", false))
+			town_id = str(m.get("town", ""))
 			var was_up := up
 			var waiting := _pending.duplicate()     # what is sent in answer to `synced` below goes first, and only once
 			if _nameless:                 # this is the claim being answered: its result follows, and from now on this is who we are

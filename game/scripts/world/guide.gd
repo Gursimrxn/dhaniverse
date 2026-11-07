@@ -26,12 +26,14 @@ var _t := 0.0
 var _map_at := Vector2(INF, INF)
 var _done := {}
 var _day := -1
+var _for := ""                     # whose note it is: "<town>/<player>". A reset (a new town) or another player starts clean.
 
 func _ready() -> void:
 	tracked = str(world._setting(TRACKED, ""))
 	var saved = world._setting(DONE, {})
 	if saved is Dictionary:
 		_day = int(saved.get("day", -1))
+		_for = str(saved.get("for", ""))
 		for q in saved.get("quests", []): _done[str(q)] = true
 	_diamond.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF    # moved every frame here
 	_diamond.add_child(QuestMarks.diamond())
@@ -51,17 +53,21 @@ func track(quest: String) -> void:
 	world._save_setting(TRACKED, quest)
 	_think_in = 0.0     # the diamond, the route and the tracker move to it now
 
-## Was this quest finished today (the real day), on this machine?
+## Was this quest finished today (the real day), in this town, by this player? (Kept on this machine, for the board's chalk.)
 func done_today(quest: String) -> bool:
-	return _day == int(client.city.get("real_day", -2)) and _done.has(quest)
+	return _for == _whose() and _day == int(client.city.get("real_day", -2)) and _done.has(quest)
 
 func _note_done(quest: String) -> void:
 	var day := int(client.city.get("real_day", -1))
-	if day != _day:
+	if day != _day or _for != _whose():
 		_day = day
+		_for = _whose()
 		_done.clear()
 	_done[quest] = true
-	world._save_setting(DONE, {"day": _day, "quests": _done.keys()})
+	world._save_setting(DONE, {"day": _day, "for": _for, "quests": _done.keys()})
+
+func _whose() -> String:
+	return "%s/%s" % [client.town_id, client.player]
 
 ## What the island, the minimap and the quest tracker all show: the next thing's words, and how far off it is (m; INF for nowhere).
 func next_words() -> String:
