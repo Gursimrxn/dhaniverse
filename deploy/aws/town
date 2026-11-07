@@ -35,14 +35,14 @@ case "${1:-status}" in
     sudo systemctl stop dhaniverse-publisher dhaniverse-server
     old="$DATA/archive/$(date -u +%Y%m%dT%H%M%SZ)"
     sudo -u dhaniverse mkdir -p "$old"
-    for f in town.jsonl town.jsonl.chain-sepolia publisher; do
+    for f in town.jsonl town.chain-sepolia publisher; do
       if sudo test -e "$DATA/$f"; then sudo mv "$DATA/$f" "$old/"; fi
     done
     # The player wallets come from one seed, by index. The new town carries on the old one's list, so it never hands a new
     # player an old player's wallet (and whatever is still in it).
-    if sudo test -f "$old/town.jsonl.chain-sepolia/wallets.jsonl"; then
-      sudo -u dhaniverse mkdir -p "$DATA/town.jsonl.chain-sepolia"
-      sudo -u dhaniverse cp "$old/town.jsonl.chain-sepolia/wallets.jsonl" "$DATA/town.jsonl.chain-sepolia/"
+    if sudo test -f "$old/town.chain-sepolia/wallets.jsonl"; then
+      sudo -u dhaniverse mkdir -p "$DATA/town.chain-sepolia"
+      sudo -u dhaniverse cp "$old/town.chain-sepolia/wallets.jsonl" "$DATA/town.chain-sepolia/"
     fi
     echo "the old town is archived in $old"
     if [[ "$was" == active ]]; then

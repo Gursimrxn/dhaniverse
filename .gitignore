@@ -35,3 +35,6 @@ apps/web/test-results/
 
 # server SSH keys: never commit
 *.pem
+
+# the local live town (tools/town.sh): its save, chain data, publisher state and logs
+/live/

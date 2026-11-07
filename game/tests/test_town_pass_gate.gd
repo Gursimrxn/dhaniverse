@@ -43,16 +43,23 @@ func test_stamping_lets_them_ashore() -> void:
 	var root := Node.new()
 	Engine.get_main_loop().root.add_child(root)
 	root.add_child(gate)
-	var passed: Array[int] = []
-	gate.passed.connect(func(): passed.append(1))
 	gate.open()
-	check(gate.is_open(), "the sheet is up")
+	check(gate.is_open(), "the gate is up")
+	check(not gate._stamped, "nothing stamped yet")
 	c.handle_message({"type": "event", "seq": 2.0, "event": {"type": "HumanVerified", "account": "sam"}})
-	eq(passed.size(), 1, "HumanVerified lets them ashore")
-	check(not gate.is_open(), "the sheet is put away")
-	c.handle_message({"type": "event", "seq": 2.0, "event": {"type": "HumanVerified", "account": "sam"}})
-	eq(passed.size(), 1, "only once")
-	root.queue_free()
+	check(gate._stamped, "HumanVerified stamps the pass (the gate then opens after the stamp's moment)")
+	eq(gate._stamp.text, "TOWN PASS ✓", "the stamp lands")
+	root.free()                      # now, so the gate never draws from a freed desk
+	desk.free()
+	c.free()
+
+func test_the_pass_page_can_be_opened_on_this_computer() -> void:
+	var c := _client(true, false)
+	var desk := TownPassDesk.new()
+	desk.client = c
+	desk._on_replied({"type": "TownPass"}, {"ok": true, "url": "https://town.example/verify?token=abc", "qr": ["101", "010", "101"]})
+	eq(desk.url, "https://town.example/verify?token=abc", "the link is kept for the gate's 'open here'")
+	eq(desk.qr.size(), 3, "and drawn as a code")
 	desk.free()
 	c.free()
 
@@ -69,6 +76,6 @@ func test_someone_elses_pass_does_not_open_the_gate() -> void:
 	gate.open()
 	c.handle_message({"type": "event", "seq": 2.0, "event": {"type": "HumanVerified", "account": "priya"}})
 	check(gate.is_open(), "still waiting for their own")
-	root.queue_free()
+	root.free()
 	desk.free()
 	c.free()

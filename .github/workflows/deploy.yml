@@ -84,6 +84,7 @@ jobs:
           cp contracts/deployments/sepolia.json "$out/contracts/deployments/"
           cp -r services/publisher "$out/services/publisher"
           rm -rf "$out/services/publisher/test" "$out/services/publisher/data" "$out/services/publisher/.env"
+          cp deploy/aws/town "$out/town"
           echo "$GITHUB_SHA" > "$out/VERSION"
           mkdir -p dist
           tar -czf dist/server.tar.gz -C "$out" .

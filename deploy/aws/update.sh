@@ -37,6 +37,7 @@ install_part() {
   echo "$want" > "$ROOT/$part.version"
   echo "installed $part ${want:0:12}"
   if [[ "$part" == server ]]; then
+    [[ -f "$dest/town" ]] && install -m 755 "$dest/town" /usr/local/bin/town    # the town command travels with each build
     # Only what's running is restarted: a stopped town stays stopped until `town start`.
     systemctl try-restart dhaniverse-server.service
     systemctl try-restart dhaniverse-publisher.service

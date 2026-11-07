@@ -16,6 +16,7 @@ var tell := Callable()
 var clerk: TownNpc
 var waiting := false               # a link was given: waiting for World ID
 var qr: Array = []                 # the link's QR code, row by row ("1" dark), for the gate to draw
+var url := ""                      # the link itself: the gate's "open here", for World ID's simulator on this computer
 var open_gate := Callable()        # the Town Pass gate's open: what pressing E at the desk does
 
 func setup(ui: Control, clerk_at: Transform3D) -> void:
@@ -73,8 +74,9 @@ func ask() -> void:
 
 func _on_replied(command: Dictionary, reply: Dictionary) -> void:
 	if command.get("type") != "TownPass": return
-	var url := str(reply.get("url", ""))
-	if url == "": return
+	var link := str(reply.get("url", ""))
+	if link == "": return
+	url = link
 	qr = reply.get("qr", [])
 	waiting = true
 	waiting_changed.emit(true)

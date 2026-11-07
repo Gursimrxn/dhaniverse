@@ -290,11 +290,17 @@ func _build_buttons() -> Control:
 	row.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	row.offset_right = -PANEL_RIGHT
 	row.offset_top = 544
-	var get_app := GlassButton.new("get world app ↗", "", (PANEL_W - 9.0) * 0.5 - 18.0)
+	var w := (PANEL_W - 18.0) / 3.0 - 12.0
+	var get_app := GlassButton.new("world app ↗", "", w)
 	get_app.pressed.connect(func(): OS.shell_open(WORLD_APP))     # only on a click: the game never opens a page by itself
-	var later := GlassButton.new("later", "ESC", (PANEL_W - 9.0) * 0.5 - 18.0)
+	# The same pass page the code leads to, opened on this computer: for World ID's simulator (a staging town), or a town on
+	# this machine, whose address a phone can't reach.
+	var here := GlassButton.new("open here ↗", "", w)
+	here.pressed.connect(func(): if desk.url != "": OS.shell_open(desk.url))
+	var later := GlassButton.new("later", "ESC", w)
 	later.pressed.connect(_later)
 	row.add_child(get_app)
+	row.add_child(here)
 	row.add_child(later)
 	return row
 
