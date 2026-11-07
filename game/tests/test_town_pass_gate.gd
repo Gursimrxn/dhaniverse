@@ -47,7 +47,10 @@ func test_stamping_lets_them_ashore() -> void:
 	check(gate.is_open(), "the gate is up")
 	check(not gate._stamped, "nothing stamped yet")
 	c.handle_message({"type": "event", "seq": 2.0, "event": {"type": "HumanVerified", "account": "sam"}})
-	check(gate._stamped, "HumanVerified stamps the pass (the gate then opens after the stamp's moment)")
+	check(gate._verified, "HumanVerified: World ID said yes")
+	check(not gate._stamped, "the ticket waits to be clipped (E, or by itself after a moment)")
+	gate._stamp_lands()                # what E, or the wait running out, does
+	check(gate._stamped, "the pass is stamped (the gate then opens after the stamp's moment)")
 	eq(gate._stamp.text, "TOWN PASS ✓", "the stamp lands")
 	root.free()                      # now, so the gate never draws from a freed desk
 	desk.free()
