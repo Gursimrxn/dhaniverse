@@ -16,6 +16,7 @@ const SINK := 2.0                # px the cap sinks when its key is pressed
 
 static var _shown := {}          # a hint's first word -> how many times it has come up
 static var enabled := true       # the player can turn key hints off in settings; remarks with no key still show
+var name_tag := false             # ux02: a person's tag, magenta with black words, never a key
 var always_words := false        # words that change with what's there (a quest's step): never learned away
 
 var _row := HBoxContainer.new()
@@ -74,10 +75,12 @@ func show_hint(key: String, words: String) -> void:
 	else:
 		_words.visible = true
 	_last = words
-	_plate.bg_color = Brand.GREEN if key != "" else Brand.PLATE
+	_plate.bg_color = Brand.GREEN if key != "" else (Brand.MAGENTA if name_tag else Brand.PLATE)
+	_words.add_theme_color_override("font_color", Color.BLACK if name_tag and key == "" else Color.WHITE)
+	_words.add_theme_font_size_override("font_size", 13 if name_tag and key == "" else 15)
 	# the board's .8rem round the key and 1.6rem after the words
-	var lead := MARGIN if key != "" else Vector2(16, 6)
-	var trail := (MARGIN.x * 2.0 if _words.visible else MARGIN.x) if key != "" else 16.0
+	var lead := MARGIN if key != "" else (Vector2(10, 4) if name_tag else Vector2(16, 6))
+	var trail := (MARGIN.x * 2.0 if _words.visible else MARGIN.x) if key != "" else (10.0 if name_tag else 16.0)
 	_row.position = lead
 	_row.reset_size()
 	size = _row.get_combined_minimum_size() + Vector2(lead.x + trail, lead.y * 2.0 + RING + TAIL_GAP + TAIL.y)

@@ -256,6 +256,17 @@ pub enum Event {
         tier: Tier,
         contents: ChestContents,
     },
+    /// A quest done dropped a crate at the player's feet, of this tier.
+    CrateDropped {
+        account: AccountId,
+        quest: String,
+        tier: Tier,
+    },
+    CrateOpened {
+        account: AccountId,
+        tier: Tier,
+        contents: ChestContents,
+    },
     TicketsEarned {
         account: AccountId,
         tickets: u32,
@@ -611,6 +622,8 @@ pub enum Refusal {
     BadAmount,
     /// The crate was claimed, or ran out, before you reached it.
     LootGone,
+    /// No quest crate waiting to be opened.
+    NoCrate,
     BadSign {
         most: usize,
     },

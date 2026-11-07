@@ -131,6 +131,11 @@ fn errands_cost_ten_energy_three_a_day_and_pay_the_days_errand_rate() {
     assert!(
         matches!(done(&events), Some(Event::QuestDone { reward, .. }) if reward.usdc == 40_000)
     );
+    // a quest done drops a crate at your feet (ux09); it opens once, from the chest table for its tier
+    assert!(events.iter().any(|e| matches!(e, Event::CrateDropped { account, .. } if account == SAM)));
+    let opened = w.run(Command::OpenCrate { account: SAM.into() }).unwrap();
+    assert!(opened.iter().any(|e| matches!(e, Event::CrateOpened { contents, .. } if contents.energy > 0 && contents.tickets > 0)));
+    assert_eq!(w.run(Command::OpenCrate { account: SAM.into() }), Err(Refusal::NoCrate));
     assert!(intents(&events).iter().any(|i| matches!(
         i,
         Intent::PayHouse {

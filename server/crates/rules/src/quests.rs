@@ -941,6 +941,7 @@ impl State {
             },
         });
         self.add_tickets(account, tickets, "quest", events);
+        self.drop_crate(account, quest, events);
         if amount == 0 {
             // Nothing to claim: the campaign slot it held is free again.
             if let Payout::Campaign { campaign } = payout {

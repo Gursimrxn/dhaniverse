@@ -74,6 +74,7 @@ pub enum PlayerCommand {
         #[serde(default)]
         weekly: bool,
     },
+    OpenCrate,
     TakeQuest {
         quest: String,
     },
@@ -146,6 +147,7 @@ impl PlayerCommand {
                 reference,
             },
             PlayerCommand::OpenChest { weekly } => Command::OpenChest { account, weekly },
+            PlayerCommand::OpenCrate => Command::OpenCrate { account },
             PlayerCommand::TakeQuest { quest } => Command::TakeQuest { account, quest },
             PlayerCommand::QuestStep { quest, step } => Command::QuestStep {
                 account,
@@ -270,6 +272,8 @@ pub fn named_in(event: &Event) -> Option<Vec<AccountId>> {
         | Event::HumanVerified { account }
         | Event::NameRegistered { account, .. }
         | Event::SignPainting { account, .. }
+        | Event::CrateDropped { account, .. }
+        | Event::CrateOpened { account, .. }
         | Event::WithdrawSent { account, .. }
         | Event::Withdrawn { account, .. }
         | Event::WithdrawFailed { account, .. }
@@ -453,6 +457,7 @@ pub fn you(world: &World, name: &str) -> Value {
         "mystery_left": left_today(player.mysteries, today, c.mystery.per_day),
         "grandma_done": player.grandma_season == Some(state.season),
         "chest": chest_json(world, name, player),
+        "crate": player.crate_waiting,
         "streak": {
             "days": player.streak,
             "week_days": player.days_in_window(today, c.streak.window_days),
@@ -509,7 +514,10 @@ fn bounty(world: &World) -> Vec<Value> {
                 .get(&campaign.template)
                 .map_or(campaign.template.as_str(), |t| t.title.as_str());
             let swarm = (!campaign.meta_hash.is_empty()).then_some(campaign.meta_hash.as_str());
+            // where the quest starts, for the badge the game puts over its giver (ux07)
+            let place = state.book.templates.get(&campaign.template).and_then(|t| t.steps.first()).map_or("", |s| s.place.as_str());
             json!({
+                "place": place,
                 "id": campaign.id,
                 "quest": format!("campaign:{}", campaign.id),
                 "kind": if campaign.boosted() { "boosted" } else { "sponsored" },
@@ -621,12 +629,13 @@ pub fn city(world: &World) -> Value {
         .book
         .errands
         .iter()
-        .map(|e| json!({"quest": format!("errand:{}", e.id), "title": e.title, "story": e.story}))
+        .map(|e| json!({"quest": format!("errand:{}", e.id), "title": e.title, "story": e.story, "place": e.steps.first().map_or("", |s| s.place.as_str())}))
         .collect();
     let mystery = state.todays_mystery().map(|(text, boosted_by)| {
         json!({
             "quest": format!("mystery:{}", text.id),
             "title": text.title,
+            "place": text.steps.first().map_or("", |s| s.place.as_str()),
             "story": text.story,
             "energy": c.mystery.energy,
             "payout": state.mystery_payout(),

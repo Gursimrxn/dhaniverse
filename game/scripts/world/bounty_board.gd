@@ -240,6 +240,18 @@ func _card(o: Dictionary, base: Transform3D) -> Dictionary:
 	_words(body, cost, Brand.FONT_BODY, 28, INK, Vector3(l, -CARD.y * 0.5 + 0.07, 0.005), HORIZONTAL_ALIGNMENT_LEFT, 0.5)
 	var pays := "$" + Usdc.amount(int(o.pays)) if int(o.pays) >= 0 else "a strongbox"
 	_words(body, pays, Brand.FONT_BODY, 40, Brand.BLUE, Vector3(r, -CARD.y * 0.5 + 0.075, 0.005), HORIZONTAL_ALIGNMENT_RIGHT, 0.5)
+	# ux06's crate mark: every quest done drops a crate (wood, brass or gold, drawn as it lands)
+	var crate := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.07, 0.05, 0.01)
+	crate.mesh = box
+	crate.position = Vector3(r - 0.04, -CARD.y * 0.5 + 0.15, 0.006)
+	var brass := StandardMaterial3D.new()
+	brass.albedo_color = DoorChest.TIER_COLOURS.brass
+	brass.metallic = 0.6
+	crate.material_override = brass
+	body.add_child(crate)
+	_words(body, "+ a crate", Brand.FONT_BODY, 22, MUTED, Vector3(r - 0.09, -CARD.y * 0.5 + 0.15, 0.005), HORIZONTAL_ALIGNMENT_RIGHT, 0.4)
 	if _done(o):
 		var chalk := _words(body, "done", Brand.FONT_EDITORIAL, 160, Color(Brand.GREEN, 0.85), Vector3(0.02, -0.06, 0.012), HORIZONTAL_ALIGNMENT_CENTER, CARD.x)
 		chalk.rotation.z = 0.21

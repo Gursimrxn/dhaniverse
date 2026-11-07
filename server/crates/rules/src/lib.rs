@@ -11,6 +11,7 @@ pub mod campaigns;
 pub mod chain;
 mod chest;
 mod clock;
+mod crates;
 mod command;
 mod config;
 pub mod dice;
@@ -206,6 +207,7 @@ fn dispatch(state: &mut State, command: Command) -> Result<Vec<Event>, Refusal> 
             reference,
         } => state.buy_meal(account, item, voucher, reference),
         Command::OpenChest { account, weekly } => state.open_chest(account, weekly),
+        Command::OpenCrate { account } => state.open_crate(account),
         Command::TakeQuest { account, quest } => state.take_quest(account, quest),
         Command::QuestStep {
             account,

@@ -59,7 +59,14 @@ func _run() -> void:
 	await secs(5.0)
 	stand(town.place_at("square") + Vector3(0, 0, 6), town.place_at("square"))
 	await secs(3.0)
+	while world.blast.playing: await process_frame     # the Town Pass milestone first
+	await secs(1.0)
 	await shot("01_hud")
+	world.town_map.open()
+	await secs(0.6)
+	await shot("01b_map")
+	world.town_map.close()
+	await secs(0.4)
 	for page in ["wallet", "quests", "feed", "town"]:
 		world.phone.open_page(page)
 		await secs(1.2)

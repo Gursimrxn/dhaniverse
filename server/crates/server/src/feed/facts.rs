@@ -114,6 +114,8 @@ pub fn read(event: &Event) -> Option<Fact> {
         | Event::WithdrawSent { .. }
         | Event::Withdrawn { .. }
         | Event::WithdrawFailed { .. }
+        | Event::CrateDropped { .. }
+        | Event::CrateOpened { .. }
         | Event::LootDropped { .. }
         | Event::LootClaimed { .. }
         | Event::LootGone { .. }

@@ -72,7 +72,8 @@ func setup(ui: Control, kiosks: Kiosks) -> void:
 	things.add({"at": func(): return chest.global_position + DoorChest.WEEKLY_AT, "reach": 1.5, "over": 1.0, "hint": chest.weekly_hint, "press": chest.open_weekly})
 	var ex: Transform3D = kiosks.placed[EXCHANGE]
 	var sp: Transform3D = kiosks.placed[SPICE]
-	spice.setup(ui, ex.translated_local(BEHIND_COUNTER), sp.translated_local(BEHIND_COUNTER))
+	spice.director = world.director
+	spice.setup(ui, ex.translated_local(BEHIND_COUNTER), sp.translated_local(BEHIND_COUNTER), ex)
 	things.add({"at": func(): return ex * AT_COUNTER, "reach": 2.2, "over": 2.4, "hint": spice.swap_hint, "press": spice.open_swap})
 	things.add({"at": func(): return sp * AT_COUNTER, "reach": 2.2, "over": 2.4, "hint": spice.deliver_hint, "press": spice.deliver})
 	painter.setup(ui, Transform3D(Basis(), _on_ground(PAINTER_AT)), Transform3D(Basis(), _on_ground(SIGN_AT)))

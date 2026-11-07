@@ -11,6 +11,7 @@ const NAME_OVER := 2.15            # m
 
 var player: Node3D
 var title := ""
+var offers := ""                   # ux02: what they're there for, after their name on the tag ("buys MANGO")
 var person: Node3D
 var _tag: KeyHint
 
@@ -21,6 +22,7 @@ func setup(who: String, look: Dictionary, tags: Control) -> void:
 	add_child(person)
 	person.setup("folk", look)
 	_tag = KeyHint.new()
+	_tag.name_tag = true
 	tags.add_child(_tag)
 
 func _process(delta: float) -> void:
@@ -32,7 +34,8 @@ func _process(delta: float) -> void:
 		near = to.length() < LOOKS_WITHIN
 		person.look_target = Vector2(clampf(yaw, -1.1, 1.1), 0.0) if near else Vector2.ZERO
 		var shown := to.length() < NAME_WITHIN
-		if shown != _tag.visible: _tag.show_hint("", title if shown else "")
+		var said := title + (" · " + offers if offers != "" else "")
+		if shown != _tag.visible or (shown and _tag._words.text != said): _tag.show_hint("", said if shown else "")
 		_tag.at = global_position + Vector3.UP * NAME_OVER
 	person.step(0.0, delta)
 

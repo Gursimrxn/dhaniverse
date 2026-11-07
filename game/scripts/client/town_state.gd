@@ -100,15 +100,15 @@ static func offers(you: Dictionary, city: Dictionary) -> Array:
 	for q in you.get("quests", []): on[str(q.get("quest", ""))] = true
 	for c in board_cards(city):
 		out.append({"quest": str(c.get("quest", "campaign:%d" % int(c.get("id", 0)))), "title": str(c.title), "story": "", "by": "sponsored",
-			"energy": int(c.get("energy", 0)), "pays": int(c.get("payout", 0)), "card": c})
+			"energy": int(c.get("energy", 0)), "pays": int(c.get("payout", 0)), "card": c, "place": str(c.get("place", ""))})
 	var errands: Dictionary = city.get("errands", {})
 	for e in errands.get("list", []):
 		out.append({"quest": str(e.quest), "title": str(e.title), "story": str(e.get("story", "")), "by": "errand",
-			"energy": int(errands.get("energy", 0)), "pays": int(errands.get("rate", 0)), "card": {}})
+			"energy": int(errands.get("energy", 0)), "pays": int(errands.get("rate", 0)), "card": {}, "place": str(e.get("place", ""))})
 	var mystery = city.get("mystery")
 	if mystery is Dictionary and not mystery.is_empty():
 		out.append({"quest": str(mystery.quest), "title": str(mystery.title), "story": str(mystery.get("story", "")), "by": "mystery",
-			"energy": int(mystery.get("energy", 0)), "pays": int(mystery.get("payout", 0)), "card": {}, "boosted_by": mystery.get("boosted_by")})
+			"energy": int(mystery.get("energy", 0)), "pays": int(mystery.get("payout", 0)), "card": {}, "boosted_by": mystery.get("boosted_by"), "place": str(mystery.get("place", ""))})
 	var grandma = city.get("grandma")
 	if grandma is Dictionary and not grandma.is_empty() and not bool(you.get("grandma_done", false)):
 		out.append({"quest": str(grandma.quest), "title": str(grandma.title), "story": str(grandma.get("story", "")), "by": "grandma",

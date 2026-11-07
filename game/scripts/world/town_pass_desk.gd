@@ -24,6 +24,7 @@ func setup(ui: Control, clerk_at: Transform3D) -> void:
 	clerk.player = player
 	add_child(clerk)
 	clerk.setup("The town hall's clerk", LOOK, ui)
+	clerk.offers = "Town Pass, World ID"
 	clerk.global_transform = clerk_at
 	var desk := MeshInstance3D.new()
 	var dm := BoxMesh.new()

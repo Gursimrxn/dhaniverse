@@ -34,6 +34,7 @@ var phone: Phone
 var mentor: MentorChat
 var world: Node
 
+var _marks := WorldMarks.new()
 var _pocket := HBoxContainer.new()
 var _slots: Array[Button] = []
 var _looks: Array[StyleBoxFlat] = []
@@ -56,6 +57,13 @@ var _tracker_said := ""
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_marks.world = world     # ux07: badges and the goal over the town, under the plates
+	_marks.client = client
+	add_child(_marks)
+	var slips := JobSlip.new()     # ux03: the job slip a quest prints, and a receipt for every cent
+	slips.client = client
+	slips.wallet_at = func(): return world.energy_plate.global_position + Vector2(20, 100) if world and world.energy_plate else Vector2(40, 110)
+	add_child(slips)
 	_build_pocket()
 	_build_map()
 	_build_mentor()
@@ -68,7 +76,7 @@ func _ready() -> void:
 ## The phone is out (ux10): it has the right of the screen and its own tabs, so the map, the mentor and the pocket step away.
 func _phone_out(out: bool) -> void:
 	var t := create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	for part in [_pocket, _map, _right, _tracker]:
+	for part in [_pocket, _map, _right, _tracker, _marks]:
 		if part: t.tween_property(part, "modulate:a", 0.0 if out else 1.0, 0.2)
 	if world and world.energy_plate: world.energy_plate.phone_out(out)
 
@@ -457,7 +465,7 @@ func _tracker_line(line: Array) -> Control:
 	if line[2] != "":
 		var right := Label.new()
 		right.text = line[2]
-		right.add_theme_font_override("font", Brand.FONT_DISPLAY)     # the mono face has no colon for the countdown
+		right.add_theme_font_override("font", Brand.FONT_BODY if line[0] == "urgent" else Brand.FONT_DISPLAY)     # Bitroad has no colon: the countdown is in Satoshi
 		right.add_theme_font_size_override("font_size", 12 if line[0] == "urgent" else 11)
 		right.add_theme_color_override("font_color", Brand.ORANGE if line[0] == "urgent" else NOTE)
 		right.mouse_filter = Control.MOUSE_FILTER_IGNORE

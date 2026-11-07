@@ -140,6 +140,9 @@ var _board_w := 40.0
 var _board_title: Label
 var _board_energy: Label
 var _ring := Control.new()
+var _board_arrows := HBoxContainer.new()
+var _board_hold_words: Label
+var _board_extra := HBoxContainer.new()   # a further key the bar holds (the exchange's Q, new quote)
 var _ring_k := 0.0
 var _say_left := 0.0
 var _board_line := ""
@@ -872,6 +875,18 @@ func board_bar(on: bool) -> void:
 	board_hold(0.0)
 	if on: _g = 0.0
 
+## What the bar holds: the board's arrows or not, the words by the E ring, and a further key with its words (["Q", "new quote"]): the
+## Bounty Board's by default, the exchange's (ux12) while it's up.
+func board_mode(arrows: bool, hold_words: String, extra: Array) -> void:
+	_board_arrows.visible = arrows
+	_board_hold_words.text = hold_words
+	for old in _board_extra.get_children(): old.queue_free()
+	_board_extra.visible = not extra.is_empty()
+	if extra.size() == 2:
+		_board_extra.add_child(GameHud.key_cap(str(extra[0]), roundi(1.3 * REM)))
+		_board_extra.add_child(_label(Brand.FONT_BODY, 1.3, Brand.CREAM, str(extra[1])))
+	_write_board_line(_board_line, MUTED)
+
 ## The chosen card: its name and what it takes of your energy.
 func board_card(title: String, line: String) -> void:
 	_board_title.text = title
@@ -911,7 +926,7 @@ func _build_board() -> void:
 	var sep := ColorRect.new()
 	sep.color = RULE
 	sep.custom_minimum_size = Vector2(1.0, 2.2 * REM)
-	var arrows := HBoxContainer.new()
+	var arrows := _board_arrows
 	arrows.add_theme_constant_override("separation", roundi(0.5 * REM))
 	for k in ["←", "→"]: arrows.add_child(GameHud.key_cap(k, roundi(1.3 * REM)))
 	_ring.custom_minimum_size = Vector2.ONE * 3.6 * REM
@@ -926,7 +941,10 @@ func _build_board() -> void:
 	e.position = (_ring.custom_minimum_size - e.size) * 0.5
 	_ring.add_child(e)
 	var hold := _label(Brand.FONT_BODY, 1.3, Brand.CREAM, "hold, tear it off")
-	for part in [_board_title, _board_energy, sep, arrows, _ring, hold, GameHud.key_cap("Esc", roundi(1.3 * REM))]:
+	_board_hold_words = hold
+	_board_extra.add_theme_constant_override("separation", roundi(0.5 * REM))
+	_board_extra.visible = false
+	for part in [_board_title, _board_energy, sep, arrows, _ring, hold, _board_extra, GameHud.key_cap("Esc", roundi(1.3 * REM))]:
 		part.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_board.add_child(part)
 	_board.visible = false

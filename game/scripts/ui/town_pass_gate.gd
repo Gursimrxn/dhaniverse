@@ -21,10 +21,13 @@ const GREY := Color("5d5e5e")
 const STAMP := Color("9d9477")
 const MUTED := Color(0, 0, 0, 0.5)
 const WORLD_APP := "https://world.org/download"
+const CLIP_WAIT := 4.0             # s before a verified ticket clips itself
 
 var client: TownClient
 var desk: TownPassDesk
 var _stamped := false
+var _verified := false             # World ID said yes: E clips the ticket (or it clips itself after CLIP_WAIT s)
+var _clip_in := 0.0
 var _key_up := false             # E let go since it opened: the press that stamps is a new one
 var _name := Label.new()
 var _day := Label.new()
@@ -307,6 +310,7 @@ func _build_buttons() -> Control:
 func open() -> void:
 	if visible: return
 	_stamped = false
+	_verified = false
 	_key_up = false
 	_stamp_look.bg_color = Color(0, 0, 0, 0)
 	_stamp.add_theme_color_override("font_color", STAMP)
@@ -323,7 +327,7 @@ func _refresh() -> void:
 	if not visible: return
 	var you := client.you
 	if bool(you.get("human", false)):
-		_stamp_lands()
+		_verified_now()
 		return
 	_name.text = str(you.get("name", client.player))
 	_day.text = "day %d · dawn" % int(client.city.get("day", 1))
@@ -334,13 +338,18 @@ func _refresh() -> void:
 	else: _status.text = "Scan with World App · waiting for your phone"
 	_qr.queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if visible and not Input.is_action_pressed("interact"): _key_up = true
+	if _verified and not _stamped:
+		_clip_in -= delta
+		if _clip_in <= 0.0: _stamp_lands()
 
 func _input(e: InputEvent) -> void:
 	if not visible or _stamped or not e is InputEventKey or not e.pressed or e.echo: return
-	if e.keycode == KEY_ESCAPE:
+	if e.keycode == KEY_ESCAPE and not _verified:
 		_later()
+	elif e.is_action_pressed("interact") and _verified and _key_up:
+		_stamp_lands()
 	elif e.is_action_pressed("interact") and _key_up and client.debug and client.you.get("wallet") != null:
 		client.rehearse({"type": "PassTown"})
 		_status.text = "Stamping…"
@@ -349,7 +358,16 @@ func _input(e: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 func _on_event(e: Dictionary) -> void:
-	if e.get("type") == "HumanVerified" and str(e.get("account", "")) == client.player: _stamp_lands()
+	if e.get("type") == "HumanVerified" and str(e.get("account", "")) == client.player: _verified_now()
+
+## World ID said yes: the gate wants the ticket clipped. E does it; it does itself after CLIP_WAIT s.
+func _verified_now() -> void:
+	if not visible or _verified: return
+	_verified = true
+	_key_up = false
+	_clip_in = CLIP_WAIT
+	_status.text = "Verified. Press E to clip your ticket."
+	_status.add_theme_color_override("font_color", Brand.GREEN)
 
 ## Verified: the stamp lands in its space, green and solid, and the gate opens.
 func _stamp_lands() -> void:

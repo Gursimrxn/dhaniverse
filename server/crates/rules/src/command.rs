@@ -65,6 +65,10 @@ pub enum Command {
         account: AccountId,
         weekly: bool,
     },
+    /// The crate a quest dropped at your feet.
+    OpenCrate {
+        account: AccountId,
+    },
     TakeQuest {
         account: AccountId,
         quest: String,
@@ -237,6 +241,7 @@ impl Command {
             | Command::FreeMeal { .. }
             | Command::BuyMeal { .. }
             | Command::OpenChest { .. }
+            | Command::OpenCrate { .. }
             | Command::TakeQuest { .. }
             | Command::QuestStep { .. }
             | Command::AbandonQuest { .. }

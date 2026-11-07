@@ -125,7 +125,7 @@ func _run() -> void:
 	await rehearse({"type": "PassTown"})
 	check(bool(client.you.get("human", false)), "PassTown: the Town Pass is stamped")
 	check(not town.desk.waiting, "the town hall stops waiting")
-	var gate_until := Time.get_ticks_msec() + 5000
+	var gate_until := Time.get_ticks_msec() + 9000     # verified, the ticket clips itself after 4 s, then the blast and the gate
 	while world.pass_gate and world.pass_gate.is_open() and Time.get_ticks_msec() < gate_until: await process_frame
 	check(not (world.pass_gate and world.pass_gate.is_open()), "the Town Pass gate stamps and opens")
 	check(not (await event("NameRegistered", 3.0)).is_empty() or client.you.get("ens") != null, "the name is registered: %s" % str(client.you.get("ens")))
@@ -286,11 +286,11 @@ func _run() -> void:
 	await shot("08b_swap_quote")
 	town.spice.ask_quote()             # Q: too soon after the last one
 	await frames(5)
-	check(town.spice.sheet._note.text.contains("A new quote in"), "Q too soon: \"%s\"" % town.spice.sheet._note.text)
+	check(town.spice.sheet.note.contains("A new quote in"), "Q too soon: \"%s\"" % town.spice.sheet.note)
 	await rehearse({"type": "Skip", "ms": 65000})
 	check(town.spice.quote_left_ms(town.spice._step()) == 0, "a minute on, the quote is too old to swap on")
 	town.spice.sheet.chosen.emit(0)    # Enter on the old quote: the kiosk asks again instead of swapping
-	check(town.spice.sheet._note.text.contains("too old"), "an old quote: \"%s\"" % town.spice.sheet._note.text)
+	check(town.spice.sheet.note.contains("too old"), "an old quote: \"%s\"" % town.spice.sheet.note)
 	check(not (await event("SwapQuoted", 5.0)).is_empty(), "a new quote came")
 	await frames(3)
 	town.spice.sheet.chosen.emit(0)
@@ -299,7 +299,7 @@ func _run() -> void:
 	await frames(5)
 	check(not town.spice._swapped.is_empty(), "the kiosk keeps the quote it swapped on, to show against the wallet")
 	await shot("08c_swapped")
-	await secs(4.5)
+	await secs(6.0)     # the board lets go 4 s after the swap, and the camera lands back on you
 	var sp: Transform3D = world.kiosks.placed[town.SPICE]
 	hint = await use_at(sp * town.AT_COUNTER)
 	check(hint == "Deliver the spice", "at the Spice Merchant: \"%s\"" % hint)

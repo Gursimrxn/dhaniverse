@@ -4,7 +4,8 @@ extends Node3D
 ## cargo money is swapped for the sponsor's spice on Uniswap from the player's own wallet (Swap), and the Spice Merchant's kiosk in the
 ## Market Hall (spice-merchant.tallyport.eth), where it's delivered (Deliver) and the quest pays. Both are real transactions: a pending
 ## stamp shows from QuestStepSent until the chain says QuestStepDone, or QuestStepFailed with why.
-## The kiosk reads Uniswap's quote off the swap step (PROTOCOL.md, The exchange kiosk): what the cargo buys, the pool's fee, the slippage
+## The exchange is in the world (ux12): Uniswap's live quote on a board over the kiosk (ExchangeBoard), the camera up to it, hold E to pull
+## the lever. It reads Uniswap's quote off the swap step (PROTOCOL.md, The exchange kiosk): what the cargo buys, the pool's fee, the slippage
 ## limit and the least the swap will take, and how long the quote stays good. Q asks for a new one (QuoteSwap), no oftener than the
 ## server allows; a swap on an old quote is refused (QuoteStale), so the kiosk asks again and the player looks before swapping.
 
@@ -18,52 +19,38 @@ var player: CharacterBody3D
 var tell := Callable()
 var keeper: TownNpc
 var merchant: TownNpc
-var sheet := BoardSheet.new(780.0, "Swap")
+var sheet := ExchangeBoard.new()   # the quote board over the kiosk, and its keys while you're at it
+var director: Director
 var _swap_quest := ""              # the quest the sheet is swapping for
 var _wallet_before = null          # the wallet's USDC when the sheet opened: the server's number, shown beside the new one after
 var _swapped := {}                 # the quote the swap was made on, once it's done: shown against what the wallet paid
-var _requote: PaperSheet.Pill
 var _tick := 0.0
 var _look_again := false           # the last quote went stale: the new one is to be read before swapping
 
 ## keeper_at, merchant_at: where each stands, by their kiosk, facing out.
-func setup(ui: Control, keeper_at: Transform3D, merchant_at: Transform3D) -> void:
+func setup(ui: Control, keeper_at: Transform3D, merchant_at: Transform3D, exchange_at: Transform3D) -> void:
 	keeper = TownNpc.new()
 	keeper.player = player
 	add_child(keeper)
 	keeper.setup("The exchange", KEEPER_LOOK, ui)
+	keeper.offers = "swaps on Uniswap"
 	keeper.global_transform = keeper_at
 	merchant = TownNpc.new()
 	merchant.player = player
 	add_child(merchant)
 	merchant.setup("The Spice Merchant", MERCHANT_LOOK, ui)
+	merchant.offers = "buys MANGO"
 	merchant.global_transform = merchant_at
 	sheet.player = player
-	ui.add_child(sheet)
-	_requote = sheet.add_key(KEY_Q, "Q", "Get a new quote")
-	sheet.extra().add_child(_what_uniswap_is())
+	sheet.director = director
+	add_child(sheet)
+	sheet.setup(exchange_at, "Uniswap v4")
+	_fill()
 	sheet.key_pressed.connect(func(_k): ask_quote())
 	sheet.chosen.connect(func(_i): _swap())
 	client.event.connect(_on_event)
 	client.you_changed.connect(func(): if sheet.is_open: _fill())
 	client.refused.connect(_on_refused)
-
-## The sponsor, said once under the quote: Uniswap's own mark and what it is, in a line a player reads before pulling the lever.
-func _what_uniswap_is() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	var mark := TextureRect.new()
-	mark.texture = preload("res://assets/ui/sponsors/Uniswap_horizontallogo_pink.png")
-	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	mark.custom_minimum_size = Vector2(110, 30)
-	mark.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	row.add_child(mark)
-	var said := PaperSheet.words("Uniswap is an exchange with no one behind the counter: a pool of two tokens sets the price, and anyone can swap. "
-		+ "Here your cargo USDC buys MANGO from the pool, on Sepolia. Uniswap sponsors this run: it pays for the lesson.", Brand.FONT_PROSE, 15, 560.0)
-	said.add_theme_color_override("font_color", PaperSheet.INK)
-	row.add_child(said)
-	return row
 
 ## The quest and its open step of this kind, if any: [quest, step].
 func _open(kind: String) -> Array:
@@ -92,6 +79,8 @@ func open_swap() -> void:
 	_swapped = {}
 	sheet.pick = 0
 	_fill()
+	var q: Dictionary = p[0]
+	sheet.set_card(str(q.get("title", "the spice run")).to_lower(), "step %d of %d · %s" % [TownState.steps_done(q) + 1, q.get("steps", []).size(), TownState.step_says(q, p[1]).to_lower()])
 	sheet.open()
 	if quote_left_ms(_step()) == 0: ask_quote()          # none yet, or an old one: a fresh one as the kiosk opens
 
@@ -123,7 +112,6 @@ func ask_quote() -> void:
 	sheet.say("Asking the pool for a quote…", false)
 
 func _process(delta: float) -> void:
-	if not sheet.is_open: return
 	_tick -= delta
 	if _tick > 0.0: return
 	_tick = TICK
@@ -138,53 +126,31 @@ static func quote_words(q: Dictionary) -> String:
 		TokenAmount.at_least(str(q.get("min_out", "0")), dec), sym]
 
 func _fill() -> void:
-	var step := _step()
-	var you := client.you
-	var wallet := TownState.short_address(you.get("wallet"))
-	var usdc = you.get("usdc")
+	var chain := str(client.city.get("chain", "offline"))
+	sheet._chain.text = "Uniswap v4 · Sepolia" if chain == "sepolia" else ("Uniswap v4 · this town's chain" if chain == "anvil" else "Uniswap · a rehearsal pool")
+	var p := _open("swap")
+	var step: Dictionary = _step() if _swap_quest != "" else (p[1] if not p.is_empty() else {})
 	var q = step.get("quote")
-	var done := bool(step.get("done", false)) or not _swapped.is_empty()
-	var waiting := bool(step.get("waiting", false))
-	var offline := str(client.city.get("chain", "offline")) == "offline"
-	var rows := []
-	var intro := ""
-	if q is Dictionary:
-		var sym := str(q.get("symbol", TOKEN))
-		var dec := int(q.get("decimals", 18))
-		intro = quote_words(q)
-		var left := quote_left_ms(step)
-		rows.append({"title": "You pay", "sub": "the cargo money, from your wallet %s" % wallet, "figure": Usdc.text(int(q.get("usdc_in", 0)))})
-		rows.append({"title": "You get about", "sub": "%s, the sponsor's spice, at the pool's price now" % sym, "figure": "%s %s" % [TokenAmount.about(str(q.amount_out), dec), sym]})
-		rows.append({"title": "The pool's fee", "sub": "the Uniswap pool keeps this share of what goes through it", "figure": TokenAmount.fee(q.get("fee_bps", 0))})
-		rows.append({"title": "The least you'll take", "sub": "the swap may fill up to %s under the quote if the price moves, and no further" % TokenAmount.bps(q.get("slippage_bps", 0)),
-			"figure": "%s %s" % [TokenAmount.at_least(str(q.min_out), dec), sym], "figure_sub": "at least"})
-		if not done:
-			rows.append({"title": "This quote", "sub": ("good for a swap for another %s" % TownState.clock(left)) if left > 0 else "is too old to swap on: Q gets a new one",
-				"figure": TownState.clock(left), "figure_sub": "left", "dim": left == 0})
-	else:
-		intro = "The pool is being asked what the cargo money buys. The quote shows here in a moment."
-	if done and not _swapped.is_empty():
-		var dec2 := int(_swapped.get("decimals", 18))
-		var sym2 := str(_swapped.get("symbol", TOKEN))
-		var moved := (" Your wallet went from %s to %s." % [Usdc.text(int(_wallet_before)), Usdc.text(int(usdc))]) if _wallet_before != null and usdc != null and int(_wallet_before) != int(usdc) else ""
-		if _swapped.has("received"):      # the chain said what arrived: show it against the quote
-			rows.append({"title": "Swapped", "sub": "the quote said about %s %s, at least %s %s.%s" % [TokenAmount.about(str(_swapped.amount_out), dec2), sym2,
-				TokenAmount.at_least(str(_swapped.min_out), dec2), sym2, moved], "figure": "%s %s" % [TokenAmount.about(str(_swapped.received), dec2), sym2], "figure_sub": "received"})
-		else:
-			rows.append({"title": "Swapped", "sub": "on the quote of about %s %s: the chain guaranteed at least %s %s.%s" % [TokenAmount.about(str(_swapped.amount_out), dec2), sym2,
-				TokenAmount.at_least(str(_swapped.min_out), dec2), sym2, moved], "figure": "%s %s" % [TokenAmount.at_least(str(_swapped.min_out), dec2), sym2], "figure_sub": "at least, received"})
-		sheet.pick = rows.size() - 1
-	rows.append({"title": "Your wallet", "sub": "as the chain last said" + (", before this swap %s" % Usdc.text(int(_wallet_before)) if _wallet_before != null and usdc != null and int(_wallet_before) != int(usdc) else ""),
-		"figure": Usdc.text(int(usdc)) if usdc != null else "—"})
-	if offline: intro += " This town is a rehearsal: no chain, and the money is a rehearsal too."
-	sheet.set_words("The landing · the exchange", "Swap the cargo money for %s" % (str(q.get("symbol", TOKEN)) if q is Dictionary else TOKEN), intro)
-	sheet.set_rows(rows)
-	var fresh := q is Dictionary and quote_left_ms(step) > 0
-	sheet.set_go("" if waiting or done or step.is_empty() or not (q is Dictionary) else ("Swap" if fresh else "Swap (asks for a new quote first)"))
+	if not q is Dictionary:
+		var idle := "Take the Spice Run at the board: swap here" if p.is_empty() else "E at the counter: a quote from the pool"
+		sheet.show_quote([["Uniswap: a pool of two tokens sets the price,", ""], ["and anyone can swap. Here: USDC for MANGO.", ""], ["", ""], ["", ""]], idle)
+		return
+	var sym := str(q.get("symbol", TOKEN))
+	var dec := int(q.get("decimals", 18))
+	var left := quote_left_ms(step)
+	var rows := [["You pay", Usdc.text(int(q.get("usdc_in", 0)))],
+		["You get, about", "%s %s" % [TokenAmount.about(str(q.amount_out), dec), sym]],
+		["The pool keeps", "%s fee" % TokenAmount.fee(q.get("fee_bps", 0))],
+		["The least you'll take", "%s · %s slippage" % [TokenAmount.at_least(str(q.min_out), dec), TokenAmount.bps(q.get("slippage_bps", 0))]]]
 	var again := requote_in_ms(step)
-	_requote.visible = not done and not waiting and not step.is_empty()
-	BoardSheet.pill_words(_requote, "Get a new quote" if again == 0 else "New quote in %s" % TownState.clock(again))
-	_requote.modulate.a = 1.0 if again == 0 else 0.45
+	var clock := ("quote good for %s · " % TownState.clock(left) if left > 0 else "too old to swap on · ") + ("Q for a new one" if again == 0 else "a new one in %s" % TownState.clock(again))
+	if bool(step.get("waiting", false)):
+		sheet.show_quote(rows, "sent: waiting for the chain", "chain")
+	elif bool(step.get("done", false)) or _swapped.has("received"):
+		var got := TokenAmount.about(str(_swapped.get("received", _swapped.get("amount_out", "0"))), dec)
+		sheet.show_quote(rows, "swapped: take it to the Spice Merchant", "done", "SWAPPED · %s %s" % [got, sym])
+	else:
+		sheet.show_quote(rows, clock)
 
 func _swap() -> void:
 	if _swap_quest == "": return

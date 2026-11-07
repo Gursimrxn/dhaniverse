@@ -62,8 +62,9 @@ func setup(who: String, _title: String, is_resident: bool, tags: Control) -> voi
 		_body = HeroScript.new()
 		add_child(_body)
 	_tag = KeyHint.new()
+	_tag.name_tag = true     # ux02: players by name and title, magenta
 	tags.add_child(_tag)
-	_tag.show_hint("", who)
+	_tag.show_hint("", who + (" · " + _title if _title != "" else ""))
 	visible = false
 
 ## What the server last said about them.

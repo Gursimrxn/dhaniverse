@@ -67,6 +67,11 @@ func _note_done(quest: String) -> void:
 func next_words() -> String:
 	return str(_goal.get("words", ""))
 
+## Where the next thing's diamond floats, or INF for nowhere.
+func next_at() -> Vector3:
+	if not _goal.has("at"): return Vector3.INF
+	return (_goal.at.call() as Vector3) + Vector3.UP * float(_goal.get("over", QuestMarks.OVER))
+
 func next_distance() -> float:
 	if not _goal.has("at"): return INF
 	var at: Vector3 = _goal.at.call()

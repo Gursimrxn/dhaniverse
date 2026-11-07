@@ -100,6 +100,8 @@ var cinema: Cinema
 var phone: Phone
 var opening: Opening
 var loot: LootCrate
+var quest_crate: QuestCrate
+var town_map: TownMap
 var pass_gate: TownPassGate         # the Town Pass at the gangway: World ID, once, at sign-up
 var director: Director
 var presence: Presence
@@ -1599,6 +1601,16 @@ func _market() -> void:
 	loot.people = people
 	add_child(loot)
 	dhaniverse.guide.loot = loot
+	quest_crate = QuestCrate.new()     # ux09: the crate a quest done drops at your feet
+	quest_crate.client = client
+	quest_crate.world = self
+	quest_crate.things = dhaniverse.things
+	quest_crate.sound = sound
+	add_child(quest_crate)
+	town_map = TownMap.new()     # ux08: M, the whole town and its quests
+	town_map.world = self
+	town_map.client = client
+	ui.add_child(town_map)
 	var quests_page: PhoneQuests = phone.page("quests")
 	quests_page.guide = dhaniverse.guide
 	quests_page.loot = loot
@@ -1668,7 +1680,7 @@ func any_sheet_open() -> bool:
 func sheet_up() -> bool:
 	return (settings and settings.is_open) or (pause and pause.is_open) or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
 		or opening.letter._sheet.visible or food_counter.food_menu.is_open or BoardSheet.any_open() or (pass_gate and pass_gate.is_open()) \
-		or (dhaniverse != null and dhaniverse.board.is_open)
+		or (dhaniverse != null and (dhaniverse.board.is_open or dhaniverse.spice.sheet.is_open)) or (town_map and town_map.is_open)
 
 ## Someone is writing in a field (the phone's withdraw form, the mentor's question): the keys are letters, not walking.
 func typing() -> bool:

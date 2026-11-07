@@ -4,7 +4,7 @@
 
 use crate::chain::HumanId;
 use crate::quests::ActiveQuest;
-use crate::{AccountId, EnergyConfig, Event, Ref, Refusal, Usdc};
+use crate::{AccountId, EnergyConfig, Event, Ref, Refusal, Tier, Usdc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -75,6 +75,10 @@ pub struct Player {
     pub chests: u32,
     /// Chests opened since the last golden drop.
     pub since_drop: u32,
+    /// The crate a quest dropped, not yet opened (one at a time), and how many have dropped and been opened.
+    pub crate_waiting: Option<Tier>,
+    pub crates_dropped: u32,
+    pub crates_opened: u32,
     pub weekly_at: Option<u64>,
     /// The week whose Town Goal upgrade they've used.
     pub upgrade_week: Option<u64>,
