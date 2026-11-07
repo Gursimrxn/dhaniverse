@@ -97,8 +97,8 @@ fn errands_cost_ten_energy_three_a_day_and_pay_the_days_errand_rate() {
     let mut w = World::new();
     w.pools(100 * USDC, 100 * USDC, 20 * USDC);
     w.verify(SAM);
-    // 15% of the FIXED day budget (4% of 100 USDC) over 15 errands.
-    assert_eq!(w.state.errand_rate(), 40_000);
+    // 15% of the FIXED day budget (4% of 100 USDC) over 6 errands: a chai's worth.
+    assert_eq!(w.state.errand_rate(), 100_000);
     let errand = format!("errand:{}", w.state.book.errands[0].id);
     let events = take(&mut w, &errand).unwrap();
     assert!(events.contains(&Event::QuestTaken {
@@ -129,13 +129,13 @@ fn errands_cost_ten_energy_three_a_day_and_pay_the_days_errand_rate() {
     step(&mut w, &errand, &steps[0]).unwrap();
     let events = step(&mut w, &errand, &steps[1]).unwrap();
     assert!(
-        matches!(done(&events), Some(Event::QuestDone { reward, .. }) if reward.usdc == 40_000)
+        matches!(done(&events), Some(Event::QuestDone { reward, .. }) if reward.usdc == 100_000)
     );
     assert!(intents(&events).iter().any(|i| matches!(
         i,
         Intent::PayHouse {
             bucket: Bucket::Fixed,
-            amount: 40_000,
+            amount: 100_000,
             ..
         }
     )));

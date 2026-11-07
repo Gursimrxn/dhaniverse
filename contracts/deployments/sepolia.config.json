@@ -1,5 +1,5 @@
 {
-  "_about": "Launch settings for Ethereum Sepolia (chain id 11155111). Read by script/Deploy.s.sol. Money in USDC base units. The deployer must hold the Circle test USDC the seeds below need (faucet.circle.com): poolUsdc + demoCampaign.budget + vault.drip + house seeds.",
+  "_about": "Launch settings for Ethereum Sepolia (chain id 11155111). Read by script/Deploy.s.sol. Money in USDC base units. The deployer must hold the Circle test USDC the seeds below need (faucet.circle.com): poolUsdc + demoCampaign.budget + vault.drip + house seeds. At 0.10 USDC a FOOD the food pool alone is 1,250 FOOD x 0.10 = 125 USDC, so a deploy needs about 137.5 USDC.",
   "network": "sepolia",
   "chainId": 11155111,
   "usdc": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
@@ -14,9 +14,9 @@
     "quoter": "0x68afa8b853caa7a2d40b0f6aee5c4dbc147c8244"
   },
   "market": {
-    "floorUsdcPerFood": 2000,
-    "ceilingUsdcPerFood": 8000,
-    "baseUsdcPerFood": 4000,
+    "floorUsdcPerFood": 60000,
+    "ceilingUsdcPerFood": 140000,
+    "baseUsdcPerFood": 100000,
     "bandBps": 1500,
     "dayLengthSeconds": 3600,
     "tickSpacing": 60,
@@ -31,6 +31,6 @@
   "vault": { "aprBps": 400, "drip": 1000000 },
   "lucky": { "revealDelayBlocks": 5 },
   "mango": { "name": "Mango", "symbol": "MANGO", "fee": 3000, "tickSpacing": 60, "usdcPerMango": 50000, "poolMango": "100000000000000000000", "poolUsdc": 5000000 },
-  "demoCampaign": { "title": "Tallyport Launch", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 5000000, "payoutPerClaim": 1000000, "energyCost": 30, "maxClaims": 4, "perHumanCap": 1, "days": 7 },
+  "demoCampaign": { "title": "Uniswap", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 5000000, "payoutPerClaim": 1000000, "energyCost": 15, "maxClaims": 4, "perHumanCap": 1, "days": 7 },
   "deployerUsdc": 0
 }

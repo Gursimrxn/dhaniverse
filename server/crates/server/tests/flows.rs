@@ -166,7 +166,7 @@ impl Town {
             template: "paint_sign".into(),
             sponsor: "drain".into(),
             budget: 10 * USDC,
-            payout_per_claim: (u64::from(energy) * 3200).max(150_000),
+            payout_per_claim: (u64::from(energy) * 56_000).max(150_000),     // the 25% rule: 0.1 FOOD an energy at the 0.14 ceiling, times 4
             energy_cost: energy,
             max_claims: 5,
             per_human_cap: 5,

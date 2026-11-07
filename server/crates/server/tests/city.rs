@@ -47,7 +47,7 @@ fn the_city_runs_with_nobody_connected() {
     assert_eq!(papers, 10, "a paper every morning");
     let price = world.state.market.price();
     assert!(
-        (500..=3000).contains(&price),
+        (60_000..=140_000).contains(&price),
         "the price stays in its band: {price}"
     );
 }

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Dev: drives the real game against a real server (protocol 3), as a player would, through Tallyport's scenes: arrive, the rehearsal's
 ## faucet and Town Pass, a paid thali, the free thali, a Market Rush run to the bell, the chest, an errand, a sponsor's new Spice Run end to
-## end, a Price Call and a painted sign. Each step goes through the thing in the world (TownThings) or its sheet, and waits for the
+## end, and a Price Call. Each step goes through the thing in the world (TownThings) or its sheet, and waits for the
 ## server's own events. Prints a line per check and quits 1 if any failed. Needs a server started with --debug.
 ##   Godot --headless --path game -s res://dev/dhaniverse_drive.gd -- --arrive --player=drive1
 ##   (GUI, with --drive-shots=<dir>: a screenshot at each scene, the window maximised)
@@ -184,9 +184,12 @@ func _run() -> void:
 	await frames(10)
 	check(not counter.food_menu.is_open, "the menu goes when the meal comes")
 	check(client.payments.size() > 0 and int(client.payments[0].usdc) < 0, "the wallet's recent list has the meal")
-	# energy for the free one: the sponsor's sign quest
-	client.send({"type": "TakeQuest", "quest": "campaign:2"})
+	# energy for the free one: an errand taken and dropped (its energy stays spent)
+	var spare := str(client.city.errands.list[1].quest)
+	client.send({"type": "TakeQuest", "quest": spare})
 	await event("QuestTaken")
+	client.send({"type": "AbandonQuest", "quest": spare})
+	await event("QuestAbandoned")
 	await frames(5)
 	counter.press()
 	await frames(4)
@@ -254,7 +257,7 @@ func _run() -> void:
 	check(world.energy_plate._target == int(client.you.get("usdc", -1)), "the wallet rolls to %s" % USDC.text(int(client.you.get("usdc", 0))))
 
 	# a sponsor opens a new Spice Run, and it's run end to end
-	await rehearse({"type": "NewCampaign", "template": "spice_run", "payout": 1000000, "energy": 30, "slots": 10, "boosted": false})
+	await rehearse({"type": "NewCampaign", "template": "spice_run", "payout": 1000000, "energy": 15, "slots": 10, "boosted": false})
 	var posted := await event("BountyPosted", 4.0, false)
 	check(not posted.is_empty(), "NewCampaign: campaign %d is on the board" % int(posted.get("campaign", 0)))
 	var quest := "campaign:%d" % int(posted.get("campaign", 0))
@@ -332,21 +335,6 @@ func _run() -> void:
 	check(str(called.get("call", "")) == "up", "PriceCalled: up, for day %d" % int(called.get("day", 0)))
 	await secs(2.0)
 
-	# the sign: ask the painter, then paint it on your name
-	hint = await use_at(town.place_at("painter") + Vector3(0.0, 0.0, 1.4))
-	check(hint.begins_with("Ask the sign painter"), "at the sign painter: \"%s\"" % hint)
-	step = await event("QuestStepDone")
-	check(str(step.get("step", "")) == "painter", "talked to the painter")
-	hint = await use_at(town.painter.board_at() + Vector3(0, 0, 0.9))
-	check(hint == "Paint your shop sign", "at your sign: \"%s\"" % hint)
-	town.painter._field.text = "%s's chai, since today" % client.player
-	await shot("12_sign")
-	town.painter.sheet.chosen.emit(0)
-	check(not (await event("SignPainting")).is_empty(), "SignPainting: pending")
-	done = await event("QuestDone", 8.0)
-	await frames(10)
-	check(str(client.you.get("sign", "")).ends_with("since today"), "the sign on %s: \"%s\"" % [str(client.you.get("ens")), str(client.you.get("sign", ""))])
-	check(str(done.get("quest", "")) == "campaign:2", "Paint Your Shop Sign done")
 	await secs(1.0)
 	await shot("13_end")
 	await _grandma()

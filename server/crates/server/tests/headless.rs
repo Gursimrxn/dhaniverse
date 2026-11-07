@@ -23,9 +23,9 @@ fn a_session_a_crash_and_the_same_state_after() {
     assert_eq!(snapshot["you"]["energy"], 100);
     assert_eq!(snapshot["you"]["in_rush"], false);
     assert_eq!(snapshot["city"]["menu"][0]["name"], "chai");
-    // Kofi's first slice has already sold, so the price is a little under the launch 0.004 USDC.
+    // Kofi's first slice has already sold, so the price is a little under the launch 0.10 USDC.
     let price = snapshot["city"]["price"].as_u64().unwrap();
-    assert!((2000..=4000).contains(&price), "{price}");
+    assert!((60_000..=100_000).contains(&price), "{price}");
     let chai = snapshot["city"]["menu"][0].clone();
     assert_eq!(
         chai["price"].as_u64().unwrap(),

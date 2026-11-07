@@ -6,12 +6,13 @@
 # FROM THE PLAN means the Tallyport technical plan or build spec sets the launch value. TUNABLE means nobody has yet.
 # Story and quest words live in quests.toml.
 
-# FoodHook's settings. Prices are USDC base units per whole FOOD.
+# FoodHook's settings. Prices are USDC base units per whole FOOD. A chai is 1 FOOD and a thali 6, so at these a chai costs
+# 6 to 14 cents and a thali 36 to 84: food that costs something, never more than a reward buys.
 [food]
-base_price = 4000               # FROM CONTRACTS: 0.004 USDC per FOOD
-start_price = 4000              # FROM CONTRACTS
-floor = 2000                    # FROM CONTRACTS
-ceiling = 8000                  # FROM CONTRACTS
+base_price = 100000             # FROM CONTRACTS (deployments/*.config.json market): 0.10 USDC per FOOD
+start_price = 100000            # FROM CONTRACTS
+floor = 60000                   # FROM CONTRACTS: 0.06
+ceiling = 140000                # FROM CONTRACTS: 0.14
 band_bps = 1500                 # FROM CONTRACTS: 15% either way from the day's open
 pool_food = 1250                # FROM CONTRACTS: whole FOOD the deploy seeds the pool with (poolFood)
 
@@ -92,7 +93,7 @@ login_tickets = 1               # TUNABLE
 per_day = 3                     # FROM THE PLAN
 energy = 10                     # FROM THE PLAN
 budget_bps = 1500               # FROM THE PLAN: 15% of the FIXED day budget
-expected_per_day = 15           # TUNABLE: the rate is that share over this many errands
+expected_per_day = 6            # TUNABLE: the rate is that share over this many errands (offline: 0.10 USDC, a chai)
 
 [mystery]
 energy = 50                     # FROM THE PLAN
@@ -179,7 +180,7 @@ template = "spice_run"
 sponsor = "Uniswap"
 budget = 50000000
 payout_per_claim = 1000000
-energy_cost = 30
+energy_cost = 15                # the 25% rule at the ceiling: 1.5 FOOD x 0.14 x 4 = 0.84, under the 1.00 payout
 max_claims = 50
 per_human_cap = 1
 days = 7

@@ -13,9 +13,9 @@
     "quoter": "0x68afa8b853caa7a2d40b0f6aee5c4dbc147c8244"
   },
   "market": {
-    "floorUsdcPerFood": 2000,
-    "ceilingUsdcPerFood": 8000,
-    "baseUsdcPerFood": 4000,
+    "floorUsdcPerFood": 60000,
+    "ceilingUsdcPerFood": 140000,
+    "baseUsdcPerFood": 100000,
     "bandBps": 1500,
     "dayLengthSeconds": 3600,
     "tickSpacing": 60,
@@ -30,6 +30,6 @@
   "vault": { "aprBps": 400, "drip": 50000000 },
   "lucky": { "revealDelayBlocks": 2 },
   "mango": { "name": "Mango", "symbol": "MANGO", "fee": 3000, "tickSpacing": 60, "usdcPerMango": 50000, "poolMango": "200000000000000000000000", "poolUsdc": 10000000000 },
-  "demoCampaign": { "title": "Tallyport Launch", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 100000000, "payoutPerClaim": 1000000, "energyCost": 30, "maxClaims": 80, "perHumanCap": 1, "days": 7 },
+  "demoCampaign": { "title": "Uniswap", "template": "spice_run", "metaHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "budget": 100000000, "payoutPerClaim": 1000000, "energyCost": 15, "maxClaims": 80, "perHumanCap": 1, "days": 7 },
   "deployerUsdc": 20000000000
 }
