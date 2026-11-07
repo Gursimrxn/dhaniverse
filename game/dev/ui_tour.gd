@@ -60,7 +60,7 @@ func _run() -> void:
 	stand(town.place_at("square") + Vector3(0, 0, 6), town.place_at("square"))
 	await secs(3.0)
 	await shot("01_hud")
-	for page in ["wallet", "quests", "feed", "town", "me"]:
+	for page in ["wallet", "quests", "feed", "town"]:
 		world.phone.open_page(page)
 		await secs(1.2)
 		await shot("02_phone_" + page)

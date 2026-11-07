@@ -111,6 +111,9 @@ func _input(e: InputEvent) -> void:
 	if e is InputEventKey or e is InputEventMouseButton or (e is InputEventMouseMotion and e.relative.length() > 2.0): _idle_for = 0.0
 
 func _unhandled_input(e: InputEvent) -> void:
+	if Screens.holding():     # a screen is up: its wheel, drag and keys are its own
+		_drag = false
+		return
 	if e.is_action_pressed("camera_mode"):
 		cycle_mode()
 	elif e is InputEventMouseMotion:
@@ -151,8 +154,8 @@ func _target_pos() -> Vector3:
 func _process(delta: float) -> void:
 	if delta <= 0.0: return
 	var turn := Input.get_axis("rotate_right", "rotate_left")
-	if turn != 0.0:
-		yaw += 1.8 * turn * delta
+	if turn != 0.0 and not Screens.holding():
+		yaw += 1.8 * turn * delta * look_speed
 		_manual = 0.0
 	_manual += delta
 	_glide = maxf(_glide - delta, 0.0)

@@ -257,7 +257,7 @@ func _note_payment(e: Dictionary) -> void:
 	var p := {}
 	match str(e.get("type", "")):
 		"MealEaten": p = {"what": "meal", "item": str(e.get("item", "")), "usdc": -int(e.get("usdc", 0)), "tx": e.get("tx")}
-		"RewardPaid": p = {"what": str(e.get("why", "reward")), "usdc": int(e.get("amount", 0)), "tx": e.get("tx")}
+		"RewardPaid": p = {"what": str(e.get("why", "reward")), "usdc": int(e.get("amount", 0)) - int(e.get("advance_repaid", 0)), "less": int(e.get("advance_repaid", 0)), "tx": e.get("tx")}
 		"DrawWon": p = {"what": "weekly draw", "usdc": int(e.get("prize", 0)), "tx": e.get("tx")}
 		_: return
 	payments.push_front(p)

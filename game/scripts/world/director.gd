@@ -69,8 +69,31 @@ func follow(shot: Callable, seconds: float, fov := 40.0) -> void:
 		at = shot.call(minf(t / seconds, 1.0))
 		cam.look_at_from_position(at[0], at[1])
 
+## A shot held over something that moves, until the next shot or land(): shot() gives [eye, what it looks at]. The camera eases
+## into it from wherever it is over `into` seconds; no key skips it (someone is writing their name under it).
+func hold(shot: Callable, into := 1.6, fov := 40.0) -> void:
+	_token += 1
+	var me := _token
+	_skippable = false
+	if Access.reduce_motion: into = 0.0     # no glide: straight to the shot
+	var now := get_viewport().get_camera_3d()
+	var from := now.global_transform if now else cam.global_transform
+	var from_fov := now.fov if now else fov
+	cam.global_transform = from
+	cam.make_current()
+	var t := 0.0
+	while me == _token:
+		var at: Array = shot.call()
+		var to := Transform3D.IDENTITY.looking_at(at[1] - at[0]).translated(at[0])
+		var k := eased(minf(t / into, 1.0)) if into > 0.0 else 1.0
+		cam.global_transform = from.interpolate_with(to, k)
+		cam.fov = lerpf(from_fov, fov, k)
+		await get_tree().process_frame
+		t += get_process_delta_time()
+
 ## Glide from wherever the shot ended into the player's view, and hand back.
 func land(seconds := LAND_TIME) -> void:
+	if Access.reduce_motion: seconds = minf(seconds, 0.3)
 	_token += 1
 	var me := _token
 	_skippable = false

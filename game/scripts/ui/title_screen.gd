@@ -131,7 +131,7 @@ func _build_plate() -> void:
 	column.add_theme_constant_override("separation", 8)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
-	var title := _small("Tallyport, live", Brand.CREAM)
+	var title := _small("Dhaniverse, live", Brand.CREAM)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 	_people = _small("", Brand.CREAM_MUTED)
@@ -261,7 +261,7 @@ func _build_menu() -> void:
 ## The town is showing: film the ferry in, and bring the title in when it's there.
 func enter() -> void:
 	cinema.bars_in()
-	cinema.card("Tallyport", "", "", Opening.FILM - 2.2)
+	cinema.card("Dhaniverse", "", "", Opening.FILM - 2.2)
 	_may_skip = true
 	get_tree().create_timer(BootIntro.WIPE_TIME).timeout.connect(func(): opening.ride_held = false)   # called as the burst's wipe starts
 	opening.alongside.connect(_menu_in, CONNECT_ONE_SHOT)

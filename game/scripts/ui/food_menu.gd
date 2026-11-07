@@ -7,7 +7,9 @@ extends Control
 ## counter puts the menu away when the meal comes.
 
 const R := 1280.0 / 144.0          # px per board rem: boards are 1440 wide at 10 px a rem, the game 1280
-const BAR := 20                    # energy in one of the HUD's five pips (EnergyPips)
+const BAR := 10                    # energy in one of the HUD's ten pips (EnergyPips)
+const PIPS := 10
+const STEADY := 0.02               # a price within 2% of yesterday's has barely moved
 const FULL := 100                  # the most energy the server lets you hold
 const GAIN := Color("55C06C")
 const OFF := Color(1.0, 0.973, 0.89, 0.15)
@@ -33,6 +35,7 @@ var _pips := Control.new()
 var _waste := _text("", Brand.FONT_BODY, 1.4, WARM)
 var _price := _text("", Brand.FONT_DISPLAY, 3.2)
 var _price_was := _text("", Brand.FONT_BODY, 1.3, Brand.CREAM_MUTED)
+var _demand := _text("", Brand.FONT_BODY, 1.3, WARM)       # supply and demand, in words: why the price is what it is
 var _note := _text("", Brand.FONT_BODY, 1.4, WARM)
 var _go := PanelContainer.new()
 var _go_words := _text("", Brand.FONT_BODY, 1.8, Brand.PLATE)
@@ -101,6 +104,8 @@ func _ready() -> void:
 	price.add_child(_text("Price", Brand.FONT_BODY, 1.5))
 	price.add_child(_price)
 	price.add_child(_price_was)
+	_demand.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	price.add_child(_demand)
 	side.add_child(price)
 	var pill := StyleBoxFlat.new()
 	pill.bg_color = Brand.CREAM
@@ -257,11 +262,11 @@ func _fill() -> void:
 	_now = int(client.you.get("energy", 0))
 	_after = mini(FULL, _now + int(m.energy))
 	_sel_name.text = _label(m)
-	_energy.text = "%s → %s of 5" % [_bars(_now), _bars(_after)]
+	_energy.text = "%s → %s of %d" % [_bars(_now), _bars(_after), FULL]
 	_pips.queue_redraw()
 	var wasted := _now + int(m.energy) - FULL
 	_waste.visible = wasted > 0
-	_waste.text = "You can only hold 5 bars. %s would go to waste." % _bars(wasted)
+	_waste.text = "You can hold %d energy: %s of it would go to waste." % [FULL, _bars(wasted)]
 	var now := client.now_ms()
 	var you := client.you
 	var pending: bool = you.get("meal_pending") != null
@@ -270,11 +275,13 @@ func _fill() -> void:
 		_price.text = "Free"
 		_price_was.text = "once a day, on the town" if ready else "ready again %s" % TownState.soon(TownState.left_ms(you.get("free_meal_at"), now))
 		_go_words.text = "Take the free thali" if ready else "Not yet"
+		_demand.text = ""
 	else:
 		_price.text = Usdc.text(int(m.price))
 		var was := int(m.get("was", m.price))
 		_price_was.text = "at most %s · %s" % [Usdc.text(int(m.get("max_usdc", m.price))), ("yesterday " + Usdc.text(was)) if was != int(m.price) else "the same as yesterday"]
 		_go_words.text = "Pay with a voucher" if _voucher else "Pay %s" % Usdc.text(int(m.price))
+		_say_demand(m, was)
 	if pending: _go_words.text = "Waiting for the chain…"
 	var usdc = you.get("usdc")
 	var offline := str(client.city.get("chain", "offline")) == "offline"
@@ -337,11 +344,11 @@ func _row(i: int, best: bool) -> Control:
 	return row
 
 func _draw_pips() -> void:
-	var w := R * 2.8
-	var h := R * 1.6
-	var gap := R * 0.6
+	var w := R * 1.4
+	var h := R * 1.0
+	var gap := R * 0.35
 	_box.set_corner_radius_all(int(R * 0.4))
-	for k in 5:
+	for k in PIPS:
 		var at := Rect2(k * (w + gap), 0.0, w, h)
 		var a := clampf(_now / float(BAR) - k, 0.0, 1.0)
 		var b := clampf(_after / float(BAR) - k, 0.0, 1.0)
@@ -364,10 +371,23 @@ static func _per(m: Dictionary) -> float:
 	return INF if int(m.energy) <= 0 or bool(m.get("free", false)) else float(int(m.price)) * BAR / int(m.energy)
 
 static func _bars(energy: int) -> String:
-	return _num(energy / float(BAR))
+	return str(energy)
 
-static func _num(x: float) -> String:
-	return ("%.1f" % x).trim_suffix(".0")
+## The market in words, for the meal picked: every meal bought in town today pushes the price of food up, and a quiet day lets it
+## fall back. Up on yesterday is demand; down is food left on the shelves.
+func _say_demand(m: Dictionary, was: int) -> void:
+	var now := int(m.price)
+	var move := (now - was) / float(maxi(was, 1))
+	var what := _label(m)
+	if move > STEADY:
+		_demand.text = "%s is in demand: %.1f%% dearer than yesterday, so it costs %s more." % [what, move * 100.0, Usdc.text(now - was)]
+		_demand.add_theme_color_override("font_color", WARM)
+	elif move < -STEADY:
+		_demand.text = "Plenty of %s about: %.1f%% cheaper than yesterday, %s less." % [what.to_lower(), -move * 100.0, Usdc.text(was - now)]
+		_demand.add_theme_color_override("font_color", GAIN)
+	else:
+		_demand.text = "Steady: %s costs about what it did yesterday." % what.to_lower()
+		_demand.add_theme_color_override("font_color", Brand.CREAM_MUTED)
 
 ## Bitroad has no arrows, so the board's ↑ and ↓ are drawn, centred on c.
 static func _arrow_on(c: Control, up: bool, colour: Color, tall: float) -> void:

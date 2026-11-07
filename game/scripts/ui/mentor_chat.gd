@@ -1,7 +1,9 @@
 class_name MentorChat
 extends Control
-## The mentor: only ever reads your own story, and never changes anything. A short line surfaces in the corner when something
-## real has happened; H opens the big chat, where the line types itself out and you can ask something back. Nothing pauses.
+## The mentor: only ever reads your own story, and never changes anything. A short line surfaces (`said`: the HUD's mentor plate,
+## ux02) when something real has happened; H opens the big chat, where the line types itself out and you can ask something back.
+
+signal said(line: String)
 
 ## Sizes are the design board's (GameDialogue), scaled from 1440x810 to 1280x720.
 const PLATE_MARGIN := 98.0       # px from the screen's sides
@@ -17,9 +19,10 @@ const INSET := 28.0              # the plate's padding at the right and bottom
 const LINE := 1.25               # the mentor's line height, of its font size
 const RISE := 21.0               # px the answers slide in from
 const SHADE := Color("1b1c1c")   # the letterbox
+const ROW := Color("333434")     # an answer, on the dark plate
+const MUTED := Color("C9C1A6")
 const CAP_EDGE := Color("9d9477")
 const TYPE_RATE := 45.0          # letters a second
-const CORNER_FOR := 9.0          # s
 const MAX_QUESTION := 200
 const PROMPTS := ["What just happened to me?", "What should I look at next?", "Why did that cost so much?"]
 const NAME := "Your mentor"
@@ -39,9 +42,6 @@ var _caret := ColorRect.new()
 var _rows: Array[PanelContainer] = []
 var _field := LineEdit.new()
 var _blink := 0.0
-var _corner := PanelContainer.new()
-var _corner_text := Label.new()
-var _corner_left := 0.0
 var _shown := 0.0
 var _heard := "Nothing to talk about yet. Go and live a bit. I'll be here."
 var _held: Array[String] = []    # lines waiting for a moment to finish
@@ -52,7 +52,6 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = PaperSheet.ABOVE_THE_WORLD
 	_build_plate()
-	_build_corner()
 	resized.connect(func(): if is_open: _layout())
 	if client: client.event.connect(_on_event)
 
@@ -95,7 +94,7 @@ func _build_plate() -> void:
 	_caret.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_plate.add_child(_caret)
 	for i in PROMPTS.size():
-		var row := _row(str(i + 1), PhonePage.words(PROMPTS[i], 15, Brand.CREAM, false))
+		var row := _row(str(i + 1), _words(PROMPTS[i], 15, Brand.CREAM, false))
 		row.mouse_entered.connect(_light.bind(row, true))
 		row.mouse_exited.connect(_light.bind(row, false))
 		row.gui_input.connect(_clicked.bind(PROMPTS[i]))
@@ -127,7 +126,7 @@ func _build_bars() -> void:
 	mark.custom_minimum_size = Vector2(21, 20)
 	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.add_child(mark)
-	title.add_child(_centred(PhonePage.words("Mentor chat", 13, Brand.CREAM, false)))
+	title.add_child(_centred(_words("Mentor chat", 13, Brand.CREAM, false)))
 	top.add_child(title)
 	var legend := _bar(Control.PRESET_BOTTOM_WIDE)
 	legend.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -139,7 +138,7 @@ func _build_bars() -> void:
 		group.add_theme_constant_override("separation", 7)
 		group.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		for key in part[0]: group.add_child(_cap(key))
-		group.add_child(_centred(PhonePage.words(part[1], 12, Brand.CREAM, false)))
+		group.add_child(_centred(_words(part[1], 12, Brand.CREAM, false)))
 		legend.add_child(group)
 
 ## A letterbox bar, and the row that holds what's printed on it.
@@ -189,7 +188,7 @@ func _row(key: String, body: Control) -> PanelContainer:
 	var row := PanelContainer.new()
 	row.custom_minimum_size.y = 50
 	var look := StyleBoxFlat.new()
-	look.bg_color = PhonePage.ROW
+	look.bg_color = ROW
 	look.set_corner_radius_all(14)
 	look.content_margin_left = 14
 	look.content_margin_right = 14
@@ -210,13 +209,13 @@ func _row(key: String, body: Control) -> PanelContainer:
 
 ## The board's hover: the row goes cream and its words dark.
 func _light(row: PanelContainer, on: bool) -> void:
-	(row.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Brand.CREAM if on else PhonePage.ROW
+	(row.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Brand.CREAM if on else ROW
 	var ink := Brand.PLATE if on else Brand.CREAM
 	for words in row.find_children("", "Label", true, false):
 		if words.custom_minimum_size.x != 25.0: words.add_theme_color_override("font_color", ink)   # not the key caps
 	if _field.get_parent() and _field.get_parent().get_parent() == row:
 		_field.add_theme_color_override("font_color", ink)
-		_field.add_theme_color_override("font_placeholder_color", Color("5C5642") if on else PhonePage.MUTED)
+		_field.add_theme_color_override("font_placeholder_color", Color("5C5642") if on else MUTED)
 
 ## The round portrait in its cream ring, the name tag and the line under it, breaking out of the plate's top edge.
 func _build_face() -> void:
@@ -260,7 +259,7 @@ func _build_face() -> void:
 	tag.add_theme_stylebox_override("normal", tag_look)
 	tag.position = Vector2(39, 96)
 	_plate.add_child(tag)
-	var about := PhonePage.words(TAGLINE, 12, Brand.CREAM_MUTED, false)
+	var about := _words(TAGLINE, 12, Brand.CREAM_MUTED, false)
 	about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	about.add_theme_constant_override("line_spacing", roundi(12 * 1.4 - Brand.FONT_BODY.get_height(12)))
 	about.position = Vector2(39, 139)
@@ -286,19 +285,14 @@ func _round_mask() -> ShaderMaterial:
 	m.shader = shader
 	return m
 
-const CORNER_AT := Vector2(21, 229)    # px from the right, and down: under the map's place name
-
-## The notice is the island's mentor moment now (Island): the corner is never seen, and each time it would show, the line goes to
-## the island and the corner is put away again, so the next line shows too.
-func _build_corner() -> void:
-	_corner.modulate.a = 0.0
-	_corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_corner.visible = false
-	add_child(_corner)
-	_corner.visibility_changed.connect(func():
-		if not _corner.visible: return
-		_corner.hide.call_deferred()
-		if Island.up: Island.up.mentor_says(_heard))
+## Words on the dark plate and its bars, in the plate's own type (not the phone's light pages).
+static func _words(text: String, font_size: int, colour: Color, _wrap := false) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_override("font", Brand.FONT_BODY)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", colour)
+	return label
 
 func _on_event(e: Dictionary) -> void:
 	if e.type != "MentorSays" or e.get("account") != client.player: return
@@ -312,17 +306,12 @@ func hold_lines(on: bool) -> void:
 
 func hear(line: String) -> void:
 	_heard = line
-	if is_open:
-		_type_out()
-	else:
-		if not speaks_up: return
-		_corner_left = CORNER_FOR
-		_corner.visible = true
+	if is_open: _type_out()
+	elif speaks_up: said.emit(line)
 
 func toggle() -> void:
 	_screen.visible = not _screen.visible
 	if _screen.visible:
-		_corner.visible = false
 		_layout()
 		_rise()
 		_type_out()
@@ -378,16 +367,12 @@ func _process(delta: float) -> void:
 		_text.visible_characters = int(_shown)
 		_blink = fmod(_blink + delta, 1.0)
 		_place_caret()
-	if _corner.visible:
-		_corner_left -= delta
-		_corner.visible = _corner_left > 0.0
-		_corner.reset_size()
-		_corner.position = Vector2(size.x - _corner.size.x - CORNER_AT.x, CORNER_AT.y)
 
 func _input(e: InputEvent) -> void:
 	if not e is InputEventKey or PaperSheet.is_typing(self) and e.keycode != KEY_ESCAPE: return
 	if not e.is_pressed() or e.is_echo(): return
 	if e.keycode == KEY_H or (e.keycode == KEY_ESCAPE and is_open):   # Esc must always get out, from the text field too
+		if not is_open and not Screens.free_to_open(): return
 		toggle()
 	elif is_open and e.keycode >= KEY_1 and e.keycode < KEY_1 + PROMPTS.size():
 		_ask(PROMPTS[e.keycode - KEY_1])

@@ -444,14 +444,14 @@ func _game() -> void:
 
 func _access() -> void:
 	_lead("Make the town easier to read and to play.")
-	_slider("Text and UI size", "text_scale", 80, 140, 100, "%", func(v: int): _apply_access())
+	_slider("Text and UI size", "text_scale", 80, 120, 100, "%", func(v: int): _apply_access())
 	_toggle("Reduce motion", "No camera drift, rolls or slides; the big moments stay calm", "reduce_motion", false, func(_v: bool): _apply_access())
 	_toggle("Tap instead of hold", "One press does what holding E does", "tap_holds", false, func(_v: bool): _apply_access())
 	_slider("Look speed", "look_speed", 40, 200, 100, "%", func(v: int): _apply_access())
 	_toggle("Invert look up and down", "", "invert_y", false, func(_v: bool): _apply_access())
 
 func _apply_access() -> void:
-	Access.text_scale = float(world._setting("text_scale", 100)) / 100.0
+	Access.text_scale = clampf(float(world._setting("text_scale", 100)) / 100.0, 0.8, 1.2)     # a value saved before the range was 80 to 120
 	Access.reduce_motion = bool(world._setting("reduce_motion", false))
 	Access.tap_holds = bool(world._setting("tap_holds", false))
 	CameraRig.look_speed = float(world._setting("look_speed", 100)) / 100.0

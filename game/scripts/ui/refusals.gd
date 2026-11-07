@@ -28,6 +28,9 @@ static func say(r: Dictionary, now := 0) -> String:
 		"WeeklyChestNotReady": return "The weekly chest opens after %d days of the last 7. You've come %d." % [int(r.get("need", 5)), int(r.get("days", 0))]
 		"NoWallet": return "Your wallet isn't ready yet. It comes from the chain a few seconds after you arrive."
 		"NoVoucher": return "You have no meal vouchers. They come in chests."
+		"BadAddress": return "That isn't an address it can go to: it needs 0x and 40 letters or digits, and not your own wallet."
+		"LootGone": return "Someone got to the crate first, or its time ran out."
+		"BadAmount": return "Put in how much to send, in USDC: 1.50 is a dollar and a half."
 		"NeedsTownPass": return "That needs your Town Pass. Get it at the town hall, or on your phone's wallet page."
 		"BudgetSpent": return "The town's budget for that is spent today. Try again tomorrow."
 		"NoName": return "Your sign is written on your name, and that comes with your Town Pass."

@@ -1,9 +1,9 @@
 class_name MorningPaper
 extends Control
-## The Tallyport Tally, written by the server from what really happened. When a new one comes out, a folded corner shows
+## The Dhaniverse Tally, written by the server from what really happened. When a new one comes out, a folded corner shows
 ## its headline for a while; N opens today's paper at any time, and N or Esc closes it. Nothing pauses behind it.
 
-const NAME := "The Tallyport Tally"
+const NAME := "The Dhaniverse Tally"
 const SHOW_NEW_FOR := 14.0       # s
 
 var client: TownClient
@@ -88,6 +88,7 @@ func _input(e: InputEvent) -> void:
 	if not e is InputEventKey or PaperSheet.is_typing(self) and e.keycode != KEY_ESCAPE: return
 	if not e.is_pressed() or e.is_echo(): return
 	if e.keycode == KEY_N or (e.keycode == KEY_ESCAPE and _sheet.visible):
+		if not _sheet.visible and not Screens.free_to_open(): return
 		toggle()
 		get_viewport().set_input_as_handled()
 

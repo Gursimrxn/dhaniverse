@@ -18,6 +18,7 @@ var client: TownClient
 var player: CharacterBody3D
 var world: Node3D
 var tracked := ""
+var loot: LootCrate                # a crate out goes before everything: it won't wait
 var _diamond := Node3D.new()
 var _goal := {}                    # {words, at: Callable -> Vector3, over: m, waiting}
 var _think_in := 0.0
@@ -48,6 +49,7 @@ func _on_event(e: Dictionary) -> void:
 func track(quest: String) -> void:
 	tracked = quest
 	world._save_setting(TRACKED, quest)
+	_think_in = 0.0     # the diamond, the route and the tracker move to it now
 
 ## Was this quest finished today (the real day), on this machine?
 func done_today(quest: String) -> bool:
@@ -61,10 +63,22 @@ func _note_done(quest: String) -> void:
 	_done[quest] = true
 	world._save_setting(DONE, {"day": _day, "quests": _done.keys()})
 
+## What the island, the minimap and the quest tracker all show: the next thing's words, and how far off it is (m; INF for nowhere).
+func next_words() -> String:
+	return str(_goal.get("words", ""))
+
+func next_distance() -> float:
+	if not _goal.has("at"): return INF
+	var at: Vector3 = _goal.at.call()
+	return Vector2(at.x - player.global_position.x, at.z - player.global_position.z).length()
+
 ## The next thing to do: the tracked quest's step, or the board, the table or the chest.
 func _think() -> void:
 	_goal = {}
 	if client.you.is_empty() or world.opening.playing or (world.title and world.title.is_up): return
+	if loot and loot.where() != Vector3.INF:
+		_goal = {"words": "the loot crate, %s" % loot.place_words(), "at": loot.where, "over": 1.6}
+		return
 	var q := TownState.quest(client.you, tracked)
 	if q.is_empty() or TownState.next_step(q).is_empty():
 		q = {}

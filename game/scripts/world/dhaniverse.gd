@@ -78,7 +78,7 @@ func setup(ui: Control, kiosks: Kiosks) -> void:
 	painter.setup(ui, Transform3D(Basis(), _on_ground(PAINTER_AT)), Transform3D(Basis(), _on_ground(SIGN_AT)))
 	things.add({"at": func(): return painter.board_at() + Vector3(0, 0, 0.9), "reach": 2.2, "over": 2.7, "hint": painter.sign_hint, "press": painter.open})
 	desk.setup(ui, Transform3D(Basis(Vector3.UP, PI), _on_ground(CLERK_AT)))
-	things.add({"at": desk.desk_at, "reach": 2.2, "over": 2.0, "hint": desk.hint, "press": desk.ask})
+	things.add({"at": desk.desk_at, "reach": 2.2, "over": 2.0, "hint": desk.hint, "press": desk.press})
 	bank_clerk = TownNpc.new()
 	bank_clerk.player = player
 	add_child(bank_clerk)

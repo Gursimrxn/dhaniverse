@@ -13,13 +13,25 @@ const MARK := preload("res://assets/ui/bank/mark.svg")
 
 var town_pass := Callable()        # asks for a Town Pass link (TownPassDesk.ask)
 
+var _mode := ""                    # "", "deposit" or "withdraw": the panel open under the balance
+var _to := ""                      # the withdraw form's fields, kept across the page's rebuilds
+var _amount := ""
+var _status := ""                  # what the last withdrawal is doing, in words
+var _status_tone := MUTED
+var _listening := false
+
 func refresh() -> void:
+	if not _listening:
+		_listening = true
+		client.event.connect(_on_event)
+		client.refused.connect(_on_refused)
 	clear_page()
 	add_theme_constant_override("separation", 12)
 	var you := client.you
 	var chain := str(client.city.get("chain", "offline"))
 	add_child(_card(you, chain))
 	add_child(_balance(you, chain))
+	if you.get("wallet") != null: add_child(_moves(you, chain))
 	add_child(_pass(you))
 	var pending: Array = you.get("pending_rewards", [])
 	if not pending.is_empty():
@@ -33,9 +45,14 @@ func refresh() -> void:
 			add_child(r)
 	add_child(caps("Transactions"))
 	if client.payments.is_empty():
-		add_child(words("Nothing has moved yet this session.", 13, MUTED))
+		add_child(words("Nothing yet this session. Pay, meals, the crate and withdrawals land here as they happen.", 13, MUTED))
 	for p in client.payments:
 		add_child(_transaction(p, chain))
+	var history := TownState.address_link(chain, you.get("wallet"))
+	if history != "":     # everything this wallet ever did, on the chain's explorer: opened only on a press
+		var all := action("All transactions on the explorer ↗", false)
+		all.pressed.connect(func(): OS.shell_open(history))
+		add_child(all)
 
 ## The landing's bank card: white, the bloom in its corner, light capitals, the address spaced out, the name in Mondwest's stand-in.
 func _card(you: Dictionary, chain: String) -> Control:
@@ -142,6 +159,140 @@ func _balance(you: Dictionary, chain: String) -> Control:
 	r.add_child(c)
 	return r
 
+## Deposit and Withdraw, the landing's pill pair, and the panel for whichever is open.
+func _moves(you: Dictionary, chain: String) -> Control:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	var pair := HBoxContainer.new()
+	pair.add_theme_constant_override("separation", 6)
+	var deposit := action("Deposit", _mode == "deposit" or _mode == "")
+	var withdraw := action("Withdraw", _mode == "withdraw" or _mode == "")
+	deposit.pressed.connect(func(): _open_mode("deposit"))
+	withdraw.pressed.connect(func(): _open_mode("withdraw"))
+	pair.add_child(deposit)
+	pair.add_child(withdraw)
+	column.add_child(pair)
+	if _mode == "deposit": column.add_child(_deposit(you, chain))
+	elif _mode == "withdraw": column.add_child(_withdraw(you, chain))
+	return column
+
+func _open_mode(mode: String) -> void:
+	_mode = "" if _mode == mode else mode
+	refresh()
+
+## Your address to send USDC to, with copy and the explorer. On a rehearsal town there's no chain to send on.
+func _deposit(you: Dictionary, chain: String) -> Control:
+	var r := row()
+	var c := VBoxContainer.new()
+	c.add_theme_constant_override("separation", 8)
+	c.add_child(caps("Deposit USDC" + ("" if chain == "offline" else " on " + chain.capitalize())))
+	var address := str(you.wallet)
+	var shown := words(address, 12, INK)
+	shown.add_theme_font_override("font", Brand.FONT_NUMBER)
+	c.add_child(shown)
+	if chain == "offline":
+		c.add_child(words("This is a rehearsal town: nothing on a chain reaches it. Use the test panel's Fund (F1).", 12, WARN))
+	else:
+		c.add_child(words("Send USDC on %s to this address from any wallet. It shows here once the chain has it. Test USDC comes free from faucet.circle.com." % chain.capitalize(), 12, MUTED))
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 6)
+	var copy := chip("Copy address")
+	copy.pressed.connect(func():
+		DisplayServer.clipboard_set(address)
+		copy.text = "Copied")
+	buttons.add_child(copy)
+	if chain != "offline":
+		var view := chip("Explorer ↗")
+		view.pressed.connect(func(): OS.shell_open(TownState.address_link(chain, address)))
+		buttons.add_child(view)
+	c.add_child(buttons)
+	r.add_child(c)
+	return r
+
+## Send USDC out: an address, an amount (or all of it), and Send. The server checks both; the chain moves it.
+func _withdraw(you: Dictionary, chain: String) -> Control:
+	var r := row()
+	var c := VBoxContainer.new()
+	c.add_theme_constant_override("separation", 8)
+	c.add_child(caps("Withdraw USDC"))
+	var to := _field("0x… the address it goes to", _to)
+	to.text_changed.connect(func(t: String): _to = t.strip_edges())
+	c.add_child(to)
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 6)
+	var amount := _field("Amount in USDC", _amount)
+	amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	amount.text_changed.connect(func(t: String): _amount = t.strip_edges())
+	line.add_child(amount)
+	var most := chip("Max")
+	most.pressed.connect(func():
+		_amount = Usdc.amount(int(you.get("usdc", 0)))
+		amount.text = _amount)
+	line.add_child(most)
+	c.add_child(line)
+	var send := action("Send" + (" rehearsal money" if chain == "offline" else ""))
+	send.pressed.connect(_send)
+	c.add_child(send)
+	if _status != "": c.add_child(words(_status, 12, _status_tone))
+	r.add_child(c)
+	return r
+
+func _field(hint: String, value: String) -> LineEdit:
+	var e := LineEdit.new()
+	e.placeholder_text = hint
+	e.text = value
+	e.add_theme_font_override("font", FONT_REGULAR)
+	e.add_theme_font_size_override("font_size", 13)
+	e.add_theme_color_override("font_color", INK)
+	e.add_theme_color_override("font_placeholder_color", MUTED)
+	e.add_theme_color_override("caret_color", INK)
+	var look := StyleBoxFlat.new()
+	look.bg_color = Color(0, 0, 0, 0.04)
+	look.border_color = LINE
+	look.set_border_width_all(1)
+	look.set_corner_radius_all(10)
+	look.content_margin_left = 10
+	look.content_margin_right = 10
+	look.content_margin_top = 8
+	look.content_margin_bottom = 8
+	e.add_theme_stylebox_override("normal", look)
+	var focus := look.duplicate()
+	focus.border_color = INK
+	e.add_theme_stylebox_override("focus", focus)
+	return e
+
+## "1.5" -> 1500000. Anything that isn't a plain amount is 0, which the server refuses in words.
+static func _units(text: String) -> int:
+	if not text.is_valid_float(): return 0
+	return int(round(text.to_float() * Usdc.UNITS))
+
+func _send() -> void:
+	_status = "Sending…"
+	_status_tone = MUTED
+	client.send({"type": "Withdraw", "to": _to, "amount": _units(_amount)})
+	refresh()
+
+func _on_event(e: Dictionary) -> void:
+	if str(e.get("account", "")) != client.player: return
+	match str(e.get("type", "")):
+		"WithdrawSent":
+			_status = "On its way: %s to %s. Waiting for the chain…" % ["$" + Usdc.amount(int(e.amount)), TownState.short_address(e.to)]
+			_status_tone = MUTED
+		"Withdrawn":
+			_status = "Sent: %s landed at %s." % ["$" + Usdc.amount(int(e.amount)), TownState.short_address(e.to)]
+			_status_tone = GOOD
+			_amount = ""
+		"WithdrawFailed":
+			_status = "The chain refused it, so nothing left your wallet. (%s)" % str(e.get("reason", ""))
+			_status_tone = WARN
+		_: return
+
+func _on_refused(command: Dictionary, refusal: Dictionary) -> void:
+	if command.get("type") != "Withdraw": return
+	_status = Refusals.say(refusal, client.now_ms())
+	_status_tone = WARN
+	refresh()
+
 func _pill(text: String, back: Color, ink: Color) -> Control:
 	var p := PanelContainer.new()
 	var look := StyleBoxFlat.new()
@@ -175,6 +326,8 @@ func _transaction(p: Dictionary, chain: String) -> Control:
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.add_theme_constant_override("separation", 0)
 	text.add_child(words(what, 14, INK, false))
+	if int(p.get("less", 0)) > 0:     # the payout paid back the cargo advance first
+		text.add_child(words("%s payout, less your %s advance" % [Usdc.text(int(p.usdc) + int(p.less)), Usdc.text(int(p.less))], 11, MUTED, false))
 	var link := TownState.tx_link(chain, p.get("tx"))
 	if link != "":
 		var b := LinkButton.new()

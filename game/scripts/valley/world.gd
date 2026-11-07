@@ -99,6 +99,7 @@ var _culled_for := -2           # the room it's culled for, or -1 outdoors
 var cinema: Cinema
 var phone: Phone
 var opening: Opening
+var loot: LootCrate
 var pass_gate: TownPassGate         # the Town Pass at the gangway: World ID, once, at sign-up
 var director: Director
 var presence: Presence
@@ -497,7 +498,9 @@ func cycle_time_mode() -> void:
 	set_time_mode(SkyModes.ORDER[(SkyModes.ORDER.find(mode) + 1) % SkyModes.ORDER.size()])
 
 func _unhandled_input(e: InputEvent) -> void:
+	if Screens.holding(): return
 	if e.is_action_pressed("time_of_day"): cycle_time_mode()
+	elif not OS.is_debug_build(): return     # the rest are for working on the town, not in the shipped game
 	elif e is InputEventKey and e.pressed and not e.echo and e.keycode == KEY_F2:
 		_save_setting("chosen_quality", "low" if quality == "high" else "high")
 		get_tree().reload_current_scene()
@@ -1542,6 +1545,8 @@ func _market() -> void:
 	settings.world = self
 	settings.cinema = cinema
 	ui.add_child(settings)
+	Screens.up = func(): return sheet_up() or typing() or (title != null and title.is_up)
+	Screens.busy = func(): return any_sheet_open() or Screens.holding() or opening.playing or director.busy
 	pause = PauseMenu.new()     # Esc in the town: Resume, Settings, Controls, Title, Quit
 	pause.world = self
 	pause.cinema = cinema
@@ -1580,13 +1585,24 @@ func _market() -> void:
 	dhaniverse.hud = hud
 	add_child(dhaniverse)
 	dhaniverse.setup(ui, kiosks)
-	phone.town_pass = dhaniverse.desk.ask
 	energy_plate.pass_waiting = func(): return dhaniverse.desk.waiting
-	pass_gate = TownPassGate.new()
+	pass_gate = TownPassGate.new()     # the Town Pass, in the film: at the gangway, at the town hall's desk and from the phone
 	pass_gate.client = client
 	pass_gate.desk = dhaniverse.desk
 	ui.add_child(pass_gate)
 	opening.pass_gate = pass_gate
+	dhaniverse.desk.open_gate = pass_gate.open
+	loot = LootCrate.new()     # the urgent crate a paid meal drops, for anyone to reach first
+	loot.client = client
+	loot.world = self
+	loot.things = dhaniverse.things
+	loot.people = people
+	add_child(loot)
+	dhaniverse.guide.loot = loot
+	var quests_page: PhoneQuests = phone.page("quests")
+	quests_page.guide = dhaniverse.guide
+	quests_page.loot = loot
+	phone.town_pass = pass_gate.open
 	_say_who()
 
 ## The bank's counter and the room in the Homes' courtyard, standing where they always have: nothing to do at them now.
@@ -1645,9 +1661,19 @@ func surface_at(p: Vector3) -> String:
 
 ## Is a paper, the phone or anything like them up on screen?
 func any_sheet_open() -> bool:
-	return (settings and settings.is_open) or (pause and pause.is_open) or phone.is_open or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
-		or (pass_gate and pass_gate.is_open()) \
-		or opening.letter._sheet.visible or food_counter.food_menu.is_open or BoardSheet.any_open()
+	return phone.is_open or sheet_up()
+
+## A screen that takes the whole of you: a menu, a paper, the Town Pass, the mentor, the board in focus. (The phone is in your hand:
+## you can walk.)
+func sheet_up() -> bool:
+	return (settings and settings.is_open) or (pause and pause.is_open) or mentor.is_open or morning_paper._sheet.visible or opening.ticket._sheet.visible \
+		or opening.letter._sheet.visible or food_counter.food_menu.is_open or BoardSheet.any_open() or (pass_gate and pass_gate.is_open()) \
+		or (dhaniverse != null and dhaniverse.board.is_open)
+
+## Someone is writing in a field (the phone's withdraw form, the mentor's question): the keys are letters, not walking.
+func typing() -> bool:
+	var f := get_viewport().gui_get_focus_owner()
+	return f is LineEdit or f is TextEdit
 
 func _pace(delta: float) -> void:
 	if not steady_frames or _pace_t > PACE_AFTER + PACE_OVER: return
@@ -1749,6 +1775,10 @@ func _process(delta: float) -> void:
 	_far_shadows(delta)
 	if rig: rig.idle_drift = cinematic_on
 	if rig and phone: rig.hold_cursor(settings.is_open or any_sheet_open())     # the mouse is free for as long as anything's held up
+	if hud and energy_plate:     # a menu or a paper has the whole screen: none of the HUD under it (the board in focus dims it instead)
+		var bare := sheet_up() and not (dhaniverse != null and dhaniverse.board.is_open)
+		hud.visible = not bare
+		energy_plate.visible = not bare
 	var eye := get_viewport().get_camera_3d()
 	if eye:
 		RenderingServer.global_shader_parameter_set("vh_eye", eye.global_position)

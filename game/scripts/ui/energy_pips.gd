@@ -2,17 +2,17 @@ class_name EnergyPips
 extends Control
 ## Energy as a row of pips that fill one by one: meals fill it. It shows what the server says and works nothing out for itself.
 
-const PIPS := 5
-const PIP := Vector2(20, 12)
-const GAP := 4.0
+const PIPS := 10                   # ux02: ten pips, ten energy each
+const PIP := Vector2(12, 7)        # the board's 13 x 8, on the 1280x720 canvas
+const GAP := 2.5
 const RADIUS := 4
-const OFF := Color("4a4b4b")
+const OFF := Color("3d3e3e")
 const FILL := 0.32               # s a pip takes to fill
 const FILL_STAGGER := 0.07       # s between pips, left to right
 const BREATH := 1.6              # s each way, the last pip's breath
 
 var _lit := PIPS
-var _fill := PackedFloat32Array([1, 1, 1, 1, 1])   # how far across each pip is lit
+var _fill := PackedFloat32Array()  # how far across each pip is lit
 var _breath := 1.0               # the last pip's opacity
 var _heard := false
 var _breathing: Tween
@@ -20,6 +20,8 @@ var _rising: Tween
 var _pip := StyleBoxFlat.new()
 
 func _ready() -> void:
+	_fill.resize(PIPS)
+	_fill.fill(1.0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(PIPS * PIP.x + (PIPS - 1) * GAP, PIP.y)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER

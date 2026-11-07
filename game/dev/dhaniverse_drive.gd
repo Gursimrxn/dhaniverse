@@ -125,13 +125,21 @@ func _run() -> void:
 	await rehearse({"type": "PassTown"})
 	check(bool(client.you.get("human", false)), "PassTown: the Town Pass is stamped")
 	check(not town.desk.waiting, "the town hall stops waiting")
+	var gate_until := Time.get_ticks_msec() + 5000
+	while world.pass_gate and world.pass_gate.is_open() and Time.get_ticks_msec() < gate_until: await process_frame
+	check(not (world.pass_gate and world.pass_gate.is_open()), "the Town Pass gate stamps and opens")
 	check(not (await event("NameRegistered", 3.0)).is_empty() or client.you.get("ens") != null, "the name is registered: %s" % str(client.you.get("ens")))
 	await shot("03_wallet_hud")
 
 	# energy to spend: an errand from the Bounty Board, and Grandma's Ledger
 	if client.you.get("quests", []).is_empty():
 		var first: Array = town.guide.next_line()
-		check(not first.is_empty() and first[0] == "the Bounty Board", "the first goal is the Bounty Board: %s" % str(first))
+		var crate_out: bool = not world.loot.current().is_empty()     # the paid thali dropped a crate: it goes first
+		check(not first.is_empty() and str(first[0]).begins_with("the loot crate" if crate_out else "the Bounty Board"), "the first goal is %s: %s" % ["the crate" if crate_out else "the Bounty Board", str(first)])
+	if not world.loot.current().is_empty():     # first there: the crate's prize
+		client.send({"type": "ClaimLoot", "id": int(world.loot.current().id)})
+		var claimed := await event("LootClaimed")
+		check(int(claimed.get("prize", 0)) == 2000000, "the loot crate is claimed: %s" % USDC.text(int(claimed.get("prize", 0))))
 	await look_at_thing(town.board.front(9.0), town.board.front(0.0) + Vector3(0, 2.0, 0), "03b_board")
 	var hint := await use_at(town.board.front())
 	check(hint == "Read the Bounty Board", "at the Bounty Board: \"%s\"" % hint)

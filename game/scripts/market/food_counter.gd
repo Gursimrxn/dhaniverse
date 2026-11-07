@@ -96,7 +96,7 @@ func _show_prices() -> void:
 		_tags[food].show_price(LABELS[food], price, price - int(menu[food].get("was", price)))
 
 func _unhandled_input(e: InputEvent) -> void:
-	if _here and not food_menu.is_open and e.is_action_pressed("interact"): press()
+	if _here and Screens.free_to_open() and e.is_action_pressed("interact"): press()     # never over the phone or another screen
 
 ## The key at the counter: the menu, on what he stands at. The meal comes when the server says it was paid for.
 func press() -> void:

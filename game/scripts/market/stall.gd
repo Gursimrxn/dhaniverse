@@ -276,7 +276,8 @@ func _update_hint(crate: String) -> void:
 	_hint.at = where
 
 func _unhandled_input(e: InputEvent) -> void:
-	if not behind or not e.is_action_pressed("interact") or e.is_echo(): return
+	if not behind or not e.is_action_pressed("interact") or e.is_echo() or Screens.holding(): return
+	if not in_rush and not Screens.free_to_open(): return     # a new run never starts under the phone or another screen
 	get_viewport().set_input_as_handled()
 	if in_rush: press()
 	else: start_run()

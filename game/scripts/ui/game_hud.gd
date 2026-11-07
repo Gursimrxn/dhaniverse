@@ -1,95 +1,76 @@
 class_name GameHud
 extends Control
-## The rest of the HUD on the design board, around the plates: the edge shading, the map, the town's ticker, the bar of things you
-## carry, the keys, and a toast when the town changes. Shows what the server says.
+## The HUD around the plates, as on the design board (ux02, scaled from 1440x810 to the 1280x720 canvas): the minimap with the
+## place inside it, the mentor's plate under it when the mentor has something to say, the quest tracker under your wallet (an urgent
+## crate first, then the quest you're tracking with its next step, then the others), and the pocket of five pages at the bottom,
+## keys 1 to 5. The phone takes the screen's right when it's out, and these step away for it (ux10).
 
-const TICKER_KEEP := 3
-const SLOT := 60.0
-const LIFT := 7.0                # px the slot in use rises
-const SLOT_OFF := Color("3a3b3b")
+const SLOT := 41.0               # the pocket's slots, each its own plate
+const SLOT_R := 12
+const SLOT_GAP := 14.0
+const POCKET_BOTTOM := 41.0      # px from the screen's bottom to the slots' bottom; their names hang under them
+const ICON := 20.0
+const LIFT := 6.0                # px the slot in use rises
 const LIFT_TIME := 0.52          # s the chosen slot takes to rise
-const RING_TIME := 0.64          # s its ring takes to draw round it
+const RING_TIME := 0.64          # s its green ring takes to draw round it
 const SETTLE := 0.3              # s a slot put away takes to settle
 const SQUASH := 0.94             # a press
 const RING_WAY := [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]   # the ring's sides, clockwise from the top
-const PLACE_ROLL := 16.0         # px the place name rolls
-const PLACE_NEAR := 6.0          # m from a building's footprint: you're at it
-const TOAST_AT := 78.0           # px from the top
-const TOAST_FOR := 6.0           # s
+const NOTE := Color("C9C1A6")    # the board's small print
 const CAP_EDGE := Color("9d9477")
-const SLOTS := [["wallet", "Your wallet", "wallet"], ["calendar", "Your quests", "quests"], ["pencil", "The town's feed", "feed"], ["calculator", "The town: goal, draw, boards", "town"], ["bulb", "Your mentor", "mentor"]]
-const SHOCKS := {"festival": ["A festival fills the town", "Food costs more while it lasts"], "harvest": ["Harvest on the landing", "Food gets cheaper for a while"], "drought": ["Dry weather up the river", "Food costs more for a while"]}
-const KEYS := [[["sprint"], "Run"], [["rotate_left", "rotate_right"], "Rotate"], [["camera_mode"], "View"]]   # what camera_rig and player really read
-
+const PLACE_NEAR := 6.0          # m from a building's footprint: you're at it
+const MENTOR_AT := 193.0         # px from the top: under the minimap
+const MENTOR_W := 258.0
+const MENTOR_FOR := 9.0          # s the mentor's line stays up
+const TRACKER_W := 267.0         # as wide as the plates over it
+const TRACKER_OTHERS := 3        # the quests not tracked, listed under it
+const TRACKER_EVERY := 0.25      # s between rewrites
+const ROOM_NAMES := ["The Bank", "Market Hall", "Common Table", "Arrival Hall", "The Homes"]   # world.gd's ROOMS, in their order
+# key, page, the name under the slot
+const SLOTS := [["wallet", "WALLET"], ["quests", "QUESTS"], ["feed", "FEED"], ["town", "TOWN"], ["mentor", "MENTOR"]]
 
 var client: TownClient
 var phone: Phone
 var mentor: MentorChat
 var world: Node
 
-var _ticker := VBoxContainer.new()
-var _lines: Array[Array] = []
+var _pocket := HBoxContainer.new()
 var _slots: Array[Button] = []
-var _slot_name := Label.new()
-var _on := -1
 var _looks: Array[StyleBoxFlat] = []
+var _count := Label.new()        # on Quests: how many you're on
+var _on := -1
 var _lift := PackedFloat32Array()    # each slot: how far it has risen
 var _ring := PackedFloat32Array()    # each slot: how much of its ring is drawn
 var _raising: Array[Tween] = []
-var _place_old := Label.new()        # the name rolling away
-var _place_box := Control.new()
-var _place_roll: Tween
-var _toast := PanelContainer.new()
-var _toast_title := Label.new()
-var _toast_sub := Label.new()
-var _toast_bar := Control.new()
-var _bar_column: Control          # the slot bar and its name: faded while the phone is out
-var _toast_left := 0.0
-var _last_shock := ""
-var _place := Label.new()
 var _map: Control
-var _keys := VBoxContainer.new()
-var _keys_said := ""
+var _right := Control.new()       # the mentor's plate, under the map: what the phone puts away
+var _mentor := PanelContainer.new()
+var _mentor_line := Label.new()
+var _mentor_left := 0.0
+var _mentor_fade: Tween
+var _tracker := PanelContainer.new()
+var _tracker_rows := VBoxContainer.new()
+var _tracker_in := 0.0
+var _tracker_said := ""
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_edge_shade())
-	_build_ticker()
-	_build_bar()
-	_build_keys()
-	_keys.visible = false     # no standing key list: keys show on the thing they act on, and all of them in Esc > Controls
-	_build_toast()
+	_build_pocket()
 	_build_map()
-	if phone: phone.toggled.connect(func(out: bool): create_tween().tween_property(_bar_column, "modulate:a", 0.0 if out else 1.0, 0.2))
+	_build_mentor()
+	_build_tracker()
+	if phone: phone.toggled.connect(_phone_out)
+	if mentor: mentor.said.connect(_mentor_says)
 	client.you_changed.connect(_refresh)
-	client.city_changed.connect(_refresh)
 	client.synced.connect(_refresh)
-	client.event.connect(_on_event)
 
-## The board's darkened edges, which is what lets words sit on the scene.
-func _edge_shade() -> Control:
-	var g := Gradient.new()
-	g.set_color(0, Color(0.149, 0.153, 0.153, 0.0))
-	g.set_color(1, Color(0.149, 0.153, 0.153, 0.42))
-	g.add_point(0.62, Color(0.149, 0.153, 0.153, 0.0))
-	return _shade(g, Vector2(0.5, 0.5), Vector2(1.0, 1.0), Control.PRESET_FULL_RECT)
-
-func _shade(g: Gradient, from: Vector2, to: Vector2, preset: int) -> TextureRect:
-	var tex := GradientTexture2D.new()
-	tex.gradient = g
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = from
-	tex.fill_to = to
-	tex.width = 256
-	tex.height = 144
-	var shade := TextureRect.new()
-	shade.texture = tex
-	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	shade.set_anchors_and_offsets_preset(preset)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shade.z_index = -1
-	return shade
+## The phone is out (ux10): it has the right of the screen and its own tabs, so the map, the mentor and the pocket step away.
+func _phone_out(out: bool) -> void:
+	var t := create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	for part in [_pocket, _map, _right, _tracker]:
+		if part: t.tween_property(part, "modulate:a", 0.0 if out else 1.0, 0.2)
+	if world and world.energy_plate: world.energy_plate.phone_out(out)
 
 static func on_scene(label: Label, font: Font, font_size: int, colour := Brand.CREAM) -> Label:
 	label.add_theme_font_override("font", font)
@@ -123,106 +104,94 @@ static func key_cap(text: String, font_size := 12) -> Label:
 	cap.text = text
 	return cap
 
-func _build_ticker() -> void:
-	_ticker.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_ticker.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_ticker.position = Vector2(21, size.y - 21)
-	_ticker.offset_left = 21
-	_ticker.offset_bottom = -21
-	_ticker.custom_minimum_size.x = 302
-	_ticker.add_theme_constant_override("separation", 7)
-	_ticker.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_ticker)
+## The key an action is bound to now, as its cap prints it.
+static func _key_name(action: String) -> String:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			return OS.get_keycode_string(e.physical_keycode if e.keycode == KEY_NONE else e.keycode)
+	return "?"
 
-func _say_on_ticker(text: String, gain := "") -> void:
-	_lines.append([gain, text])
-	if _lines.size() > TICKER_KEEP: _lines.pop_front()
-	for old in _ticker.get_children():
-		_ticker.remove_child(old)
-		old.queue_free()
-	for line in _lines:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 7)
-		if line[0] != "":
-			var g := on_scene(Label.new(), Brand.FONT_NUMBER, 13, Brand.MINT)
-			g.text = line[0]
-			row.add_child(g)
-		var t := on_scene(Label.new(), Brand.FONT_BODY, 13)
-		t.text = line[1]
-		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		t.custom_minimum_size.x = 260
-		row.add_child(t)
-		_ticker.add_child(row)
+# --- the pocket ----------------------------------------------------------------------------------------------------------
 
-func _build_bar() -> void:
-	var column := VBoxContainer.new()
-	_bar_column = column
-	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	column.offset_bottom = -21
-	column.alignment = BoxContainer.ALIGNMENT_END
-	column.add_theme_constant_override("separation", 11)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	on_scene(_slot_name, Brand.FONT_BODY, 12)
-	_slot_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(_slot_name)
-	var plate := PanelContainer.new()
-	var s := StyleBoxFlat.new()
-	s.bg_color = Brand.PLATE
-	s.border_color = Brand.CREAM
-	s.set_border_width_all(3)
-	s.set_corner_radius_all(21)
-	s.set_content_margin_all(7)
-	plate.add_theme_stylebox_override("panel", Brand.as_plate(s))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 7)
+## Five slots in a row at the bottom middle, each a small dark plate in a cream ring, its key in the corner and its name under it.
+func _build_pocket() -> void:
+	_pocket.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_pocket.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_pocket.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_pocket.offset_bottom = -POCKET_BOTTOM
+	_pocket.add_theme_constant_override("separation", SLOT_GAP)
+	_pocket.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for i in SLOTS.size():
 		var b := _slot(i)
 		_slots.append(b)
-		row.add_child(b)
-	plate.add_child(row)
-	column.add_child(plate)
-	add_child(column)
+		_pocket.add_child(b)
+	add_child(_pocket)
 	for i in _slots.size(): _set_lift(0.0, i)
-	_mark_slot(-1)
+	_count.add_theme_font_override("font", Brand.FONT_DISPLAY)
+	_count.add_theme_font_size_override("font_size", 10)
+	_count.add_theme_color_override("font_color", Brand.PLATE)
+	var pill := StyleBoxFlat.new()
+	pill.bg_color = Brand.CREAM
+	pill.set_corner_radius_all(9)
+	pill.content_margin_left = 4
+	pill.content_margin_right = 4
+	_count.add_theme_stylebox_override("normal", pill)
+	_count.custom_minimum_size = Vector2(18, 18)
+	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_count.visible = false
+	_slots[1].add_child(_count)
 
 func _slot(i: int) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2.ONE * SLOT
 	b.focus_mode = Control.FOCUS_NONE
-	b.icon = load("res://assets/ui/icons/%s.png" % SLOTS[i][0])
+	b.icon = load("res://assets/ui/icons/pocket_%s.svg" % SLOTS[i][0])
 	b.expand_icon = true
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_theme_constant_override("icon_max_width", 43)
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.add_theme_constant_override("icon_max_width", int(ICON))
 	b.pressed.connect(use_slot.bind(i))
-	b.mouse_entered.connect(func(): _slot_name.text = SLOTS[i][1])
-	b.mouse_exited.connect(func(): if _on >= 0: _slot_name.text = SLOTS[_on][1])
-	var n := Label.new()
-	n.add_theme_font_override("font", Brand.FONT_DISPLAY)
-	n.add_theme_font_size_override("font_size", 11)
-	n.modulate.a = 0.85
-	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	n.text = str(i + 1)
-	n.add_theme_color_override("font_color", Color.WHITE)    # coloured by modulate, as the slot rises
-	b.add_child(n)
 	var look := StyleBoxFlat.new()
-	look.set_corner_radius_all(14)
+	look.bg_color = Brand.PLATE
+	look.border_color = Brand.CREAM
+	look.set_border_width_all(2)
+	look.set_expand_margin_all(2)      # the ring sits outside the slot, as the board's box-shadow does
+	look.set_corner_radius_all(SLOT_R)
 	for state in ["normal", "hover", "pressed"]:
 		b.add_theme_stylebox_override(state, look)
 	_looks.append(look)
+	var n := Label.new()               # its key, in the corner
+	n.add_theme_font_override("font", Brand.FONT_DISPLAY)
+	n.add_theme_font_size_override("font_size", 9)
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	n.text = str(i + 1)
+	n.position = Vector2(4, 1)
+	b.add_child(n)
+	var cap := Label.new()             # its name, under it on the scene
+	cap.text = SLOTS[i][1]
+	cap.add_theme_font_override("font", Brand.FONT_DISPLAY)
+	cap.add_theme_font_size_override("font_size", 10)
+	cap.add_theme_color_override("font_color", Brand.CREAM)
+	cap.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	cap.add_theme_constant_override("shadow_offset_y", 1)
+	cap.add_theme_constant_override("shadow_outline_size", 3)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cap.position = Vector2(-14, SLOT + 5)
+	cap.size = Vector2(SLOT + 28, 14)
+	b.add_child(cap)
 	_lift.append(0.0)
 	_ring.append(0.0)
 	_raising.append(null)
 	b.draw.connect(_draw_ring.bind(i))
 	return b
 
-## The slot's look, as on the board: the one in use is cream, lifted, with a green ring round it. The name over the bar always
-## shows: the slot in use, or the last one named. A slot taken up rises and its ring draws round it; one put away settles back.
+## The slot in use rises, turns cream and a green ring draws round it; one put away settles back.
 func _mark_slot(on: int) -> void:
 	var was := _on
 	_on = on
-	if on >= 0 or _slot_name.text == "": _slot_name.text = SLOTS[maxi(on, 0)][1]
 	if was == on: return
 	for i in [was, on]:
 		if i < 0: continue
@@ -237,40 +206,43 @@ func _mark_slot(on: int) -> void:
 		t.tween_method(_set_ring.bind(i), _ring[i], to, RING_TIME if to > 0.0 else SETTLE).set_delay(0.12 if to > 0.0 else 0.0)
 		_raising[i] = t
 
-## The slot's face drawn LIFT higher as it rises (the container keeps its place), turning from dark to cream.
+## The slot's face drawn LIFT higher as it rises (the row keeps its place), from dark to cream, its ink turning with it.
 func _set_lift(v: float, i: int) -> void:
 	_lift[i] = v
 	var look := _looks[i]
-	look.bg_color = SLOT_OFF.lerp(Brand.CREAM, v)
-	look.expand_margin_top = LIFT * v
-	look.expand_margin_bottom = -LIFT * v
-	look.content_margin_bottom = LIFT * 2.0 * v
-	var n: Label = _slots[i].get_child(0)
-	n.position = Vector2(7, 4 - LIFT * v)
-	n.modulate = Color(Brand.CREAM.lerp(Brand.PLATE, v), 0.85)
-	_slots[i].queue_redraw()
+	look.bg_color = Brand.PLATE.lerp(Brand.CREAM, v)
+	look.expand_margin_top = 2.0 + LIFT * v
+	look.expand_margin_bottom = 2.0 - LIFT * v
+	var b := _slots[i]
+	var ink := Brand.CREAM.lerp(Brand.PLATE, v)
+	for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color"]: b.add_theme_color_override(state, ink)
+	b.add_theme_constant_override("icon_max_width", int(ICON))
+	var n: Label = b.get_child(0)
+	n.position = Vector2(4, 1 - LIFT * v)
+	n.add_theme_color_override("font_color", NOTE.lerp(Brand.PLATE, v))
+	b.queue_redraw()
 
 func _set_ring(v: float, i: int) -> void:
 	_ring[i] = v
 	_slots[i].queue_redraw()
 
-## The green ring outside the slot, drawn round it clockwise from the top left, as far as it has got: the board's stroke-dashoffset.
+## The green ring over the cream one, drawn round the slot clockwise from the top left, as far as it has got.
 func _draw_ring(i: int) -> void:
 	if _ring[i] <= 0.0: return
 	var b := _slots[i]
-	var r := 15.5                         # the ring's middle: 3 px wide, outside the slot's 14 px corners
-	var side := SLOT + 3.0 - r * 2.0
+	var r := SLOT_R + 1.0                  # the ring's middle, 2 px outside the slot's corners
+	var side := SLOT + 2.0 - r * 2.0
 	var left := _ring[i] * (side * 4.0 + TAU * r)
-	var p := Vector2(-1.5 + r, -1.5 - LIFT * _lift[i])
+	var p := Vector2(-1.0 + r, -1.0 - LIFT * _lift[i])
 	for k in 4:
 		var way: Vector2 = RING_WAY[k]
-		b.draw_line(p, p + way * minf(left, side), Brand.GREEN, 3.0, true)
+		b.draw_line(p, p + way * minf(left, side), Brand.GREEN, 2.5, true)
 		left -= side
 		p += way * side
 		if left <= 0.0: return
 		var mid: Vector2 = p + RING_WAY[(k + 1) % 4] * r
 		var from := -PI * 0.5 + k * PI * 0.5
-		b.draw_arc(mid, r, from, from + minf(left / r, PI * 0.5), 8, Brand.GREEN, 3.0, true)
+		b.draw_arc(mid, r, from, from + minf(left / r, PI * 0.5), 8, Brand.GREEN, 2.5, true)
 		left -= r * PI * 0.5
 		p = mid + way * r
 		if left <= 0.0: return
@@ -286,8 +258,9 @@ func _squash(i: int) -> void:
 
 ## Press a slot, by key or mouse. Pressing what's open puts it away.
 func use_slot(i: int) -> void:
+	if not phone.is_open and not mentor.is_open and not Screens.free_to_open(): return     # the pause menu, a sheet or a film has the screen
 	_squash(i)
-	var what: String = SLOTS[i][2]
+	var what: String = SLOTS[i][0]
 	if what == "mentor":
 		if phone.is_open: phone.toggle()
 		mentor.toggle()
@@ -297,171 +270,238 @@ func use_slot(i: int) -> void:
 	phone.open_page(what)
 	_mark_slot(i if phone.is_open else -1)
 
-## Bottom right, as on the board: the keys that do something out in the world, as they're bound now.
-func _build_keys() -> void:
-	_keys.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_keys.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_keys.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_keys.offset_right = -21
-	_keys.offset_bottom = -21
-	_keys.add_theme_constant_override("separation", 7)
-	_keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_keys)
-	_write_keys()
-
-func _write_keys() -> void:
-	var said := ",".join(KEYS.map(func(k): return ",".join(k[0].map(_key_name))))
-	if said == _keys_said: return
-	_keys_said = said
-	for old in _keys.get_children():
-		_keys.remove_child(old)
-		old.queue_free()
-	for k in KEYS:
-		var row := HBoxContainer.new()
-		row.alignment = BoxContainer.ALIGNMENT_END
-		row.add_theme_constant_override("separation", 7)
-		for action in k[0]:
-			row.add_child(key_cap(_key_name(action)))
-		var what := on_scene(Label.new(), Brand.FONT_BODY, 12)
-		what.text = k[1]
-		row.add_child(what)
-		_keys.add_child(row)
-
-static func _key_name(action: String) -> String:
-	for e in InputMap.action_get_events(action):
-		if e is InputEventKey:
-			return OS.get_keycode_string(e.physical_keycode if e.keycode == KEY_NONE else e.keycode)
-	return "?"
-
-func _build_toast() -> void:
-	var s := StyleBoxFlat.new()
-	s.bg_color = Brand.ORANGE
-	s.border_color = Brand.CREAM
-	s.set_border_width_all(3)
-	s.set_corner_radius_all(18)
-	s.content_margin_left = 0
-	s.content_margin_right = 0
-	s.content_margin_top = 7
-	s.content_margin_bottom = 0
-	_toast.add_theme_stylebox_override("panel", Brand.as_plate(s))
-	_toast.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW    # the timer bar, round the corners
-	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 11)
-	var icon := TextureRect.new()
-	icon.texture = preload("res://assets/ui/icons/siren.png")
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.custom_minimum_size = Vector2(32, 32)
-	row.add_child(icon)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 0)
-	for pair in [[_toast_title, 13], [_toast_sub, 12]]:
-		var l: Label = pair[0]
-		l.add_theme_font_override("font", Brand.FONT_BODY)
-		l.add_theme_font_size_override("font_size", pair[1])
-		l.add_theme_color_override("font_color", Color.BLACK)
-		column.add_child(l)
-	row.add_child(column)
-	var padded := MarginContainer.new()   # the board's .8rem 2.4rem .8rem .8rem
-	padded.add_theme_constant_override("margin_left", 7)
-	padded.add_theme_constant_override("margin_right", 21)
-	padded.add_theme_constant_override("margin_bottom", 7)
-	padded.add_child(row)
-	# the board's timer: a dark .4rem bar along the bottom, draining while the toast shows
-	_toast_bar.custom_minimum_size.y = 4
-	_toast_bar.draw.connect(func(): _toast_bar.draw_rect(Rect2(0, 0, _toast_bar.size.x * _toast_left / TOAST_FOR, 4), Color(0, 0, 0, 0.35)))
-	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 0)
-	stack.add_child(padded)
-	stack.add_child(_toast_bar)
-	_toast.add_child(stack)
-	_toast.visible = false
-	add_child(_toast)
-
-## The town has changed: the island says so now, as a town moment (Island); the toast's plate stays hidden.
-func toast(title: String, sub: String) -> void:
-	if Island.up: Island.up.town(title, sub)
+# --- the map and the mentor ----------------------------------------------------------------------------------------------
 
 func _build_map() -> void:
 	if world == null: return
 	_map = load("res://scripts/ui/minimap.gd").new()
 	_map.world = world
 	add_child(_map)
-	_place_box.size = Vector2(300, 20)
-	_place_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for l in [_place, _place_old]:
-		on_scene(l, Brand.FONT_BODY, 14)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		l.size = _place_box.size
-		_place_box.add_child(l)
-	add_child(_place_box)
 
 ## The minimap's gold marker: where your first quest's next step is (world x, z), or INF for nowhere.
 func set_goal(at: Vector2) -> void:
 	if _map: _map.goal = at
 
-## A new place: its name rolls up into view as the last one rolls away.
-## The place shown under the minimap.
+## The place shown inside the minimap.
 func place_name() -> String:
-	return _place.text
+	return _map.place if _map else ""
 
-func _roll_place(here: String) -> void:
-	if _place_roll: _place_roll.kill()
-	_place_old.text = _place.text
-	_place.text = here
-	if _place_old.text == "" or not HudMotion.on:
-		_place_old.text = ""
-		_place.position.y = 0.0
-		_place.modulate.a = 1.0
-		return
-	_place_old.position.y = 0.0
-	_place_old.modulate.a = 1.0
-	_place.position.y = PLACE_ROLL
-	_place.modulate.a = 0.0
-	_place_roll = create_tween().set_parallel().set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	_place_roll.tween_property(_place_old, "position:y", -PLACE_ROLL, 0.4)
-	_place_roll.tween_property(_place_old, "modulate:a", 0.0, 0.4)
-	_place_roll.tween_property(_place, "position:y", 0.0, 0.4)
-	_place_roll.tween_property(_place, "modulate:a", 1.0, 0.4)
+## Under the minimap: the mentor's line in the serif italic and "H Ask the mentor", for a while after something real happened.
+func _build_mentor() -> void:
+	var look := StyleBoxFlat.new()
+	look.bg_color = Brand.PLATE
+	look.border_color = Brand.CREAM
+	look.set_border_width_all(3)
+	look.set_expand_margin_all(3)
+	look.set_corner_radius_all(18)
+	look.content_margin_left = 12
+	look.content_margin_right = 12
+	look.content_margin_top = 11
+	look.content_margin_bottom = 11
+	_mentor.add_theme_stylebox_override("panel", Brand.as_plate(look))
+	_mentor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mentor.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_mentor.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_mentor.offset_right = -21
+	_mentor.offset_top = MENTOR_AT
+	_mentor.custom_minimum_size.x = MENTOR_W
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 7)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mentor_line.add_theme_font_override("font", Brand.FONT_EDITORIAL_ITALIC)
+	_mentor_line.add_theme_font_size_override("font_size", 16)
+	_mentor_line.add_theme_color_override("font_color", Brand.CREAM)
+	_mentor_line.add_theme_constant_override("line_spacing", roundi(16 * 1.25 - Brand.FONT_EDITORIAL_ITALIC.get_height(16)))
+	_mentor_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mentor_line.custom_minimum_size.x = MENTOR_W - 24.0
+	column.add_child(_mentor_line)
+	var ask := HBoxContainer.new()
+	ask.add_theme_constant_override("separation", 7)
+	ask.add_child(key_cap("H", 11))
+	var words := Label.new()
+	words.text = "Ask the mentor"
+	words.add_theme_font_override("font", Brand.FONT_BODY)
+	words.add_theme_font_size_override("font_size", 11)
+	words.add_theme_color_override("font_color", NOTE)
+	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ask.add_child(words)
+	column.add_child(ask)
+	_mentor.add_child(column)
+	_mentor.visible = false
+	_right.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_right.add_child(_mentor)
+	add_child(_right)
+
+func _mentor_says(line: String) -> void:
+	_mentor_line.text = "“%s”" % line.strip_edges()
+	_mentor_left = MENTOR_FOR
+	_show_mentor(true)
+
+func _show_mentor(on: bool) -> void:
+	if _mentor_fade: _mentor_fade.kill()
+	if on:
+		if not _mentor.visible: _mentor.modulate.a = 0.0
+		_mentor.visible = true
+		_mentor.reset_size()
+	_mentor_fade = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT if on else Tween.EASE_IN)
+	_mentor_fade.tween_property(_mentor, "modulate:a", 1.0 if on else 0.0, 0.3 if HudMotion.on else 0.01)
+	if not on: _mentor_fade.tween_callback(_mentor.hide)
+
+# --- the quest tracker ----------------------------------------------------------------------------------------------------
+
+func _build_tracker() -> void:
+	var look := StyleBoxFlat.new()
+	look.bg_color = Brand.PLATE
+	look.border_color = Brand.CREAM
+	look.set_border_width_all(3)
+	look.set_expand_margin_all(3)
+	look.set_corner_radius_all(18)
+	look.content_margin_left = 14
+	look.content_margin_right = 14
+	look.content_margin_top = 11
+	look.content_margin_bottom = 12
+	_tracker.add_theme_stylebox_override("panel", Brand.as_plate(look))
+	_tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tracker.custom_minimum_size.x = TRACKER_W
+	_tracker_rows.add_theme_constant_override("separation", 6)
+	_tracker_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tracker.add_child(_tracker_rows)
+	_tracker.visible = false
+	add_child(_tracker)
+
+## What's running, rewritten only when its words change: the crate (orange, counting down), the tracked quest (a gold diamond, its
+## steps done, its next step and how far), then the others, quieter.
+func _write_tracker() -> void:
+	if world == null or world.dhaniverse == null: return
+	var guide: Guide = world.dhaniverse.guide
+	var you := client.you
+	var lines: Array = []                 # [kind, words, right]
+	var crate: Dictionary = world.loot.current() if world.loot else {}
+	if not crate.is_empty():
+		var left := TownState.clock(TownState.left_ms(crate.ends_at, client.now_ms()))
+		lines.append(["urgent", "URGENT · LOOT CRATE", left])
+		lines.append(["crate", "%s · %s" % [Usdc.text(int(crate.prize)), world.loot.place_words()], ""])
+	var quests: Array = you.get("quests", [])
+	var tracked := TownState.quest(you, guide.tracked)
+	if not tracked.is_empty():
+		if not lines.is_empty(): lines.append(["gap", "", ""])
+		lines.append(["head", "QUEST", "%d/%d" % [TownState.steps_done(tracked), tracked.get("steps", []).size()]])
+		lines.append(["title", str(tracked.get("title", "")), ""])
+		var step := TownState.next_step(tracked)
+		if not step.is_empty():
+			var far := guide.next_distance() if crate.is_empty() else INF
+			lines.append(["next", QuestMarks.step_words(step) + (" · %d m" % roundi(far) if far != INF else ""), ""])
+	var others := quests.filter(func(q): return str(q.get("quest", "")) != guide.tracked)
+	for i in mini(others.size(), TRACKER_OTHERS):
+		if i == 0: lines.append(["gap", "", ""])
+		lines.append(["other", str(others[i].get("title", "")), "%d/%d" % [TownState.steps_done(others[i]), others[i].get("steps", []).size()]])
+	var said := str(lines)
+	if said == _tracker_said: return
+	_tracker_said = said
+	for old in _tracker_rows.get_children():
+		_tracker_rows.remove_child(old)
+		old.queue_free()
+	for line in lines: _tracker_rows.add_child(_tracker_line(line))
+	var show := not lines.is_empty()
+	if show != _tracker.visible:
+		_tracker.visible = show
+		if show and HudMotion.on:
+			_tracker.modulate.a = 0.0
+			create_tween().tween_property(_tracker, "modulate:a", 1.0 if not (phone and phone.is_open) else 0.0, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tracker.reset_size()
+
+func _tracker_line(line: Array) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if line[0] == "gap":
+		row.custom_minimum_size.y = 2
+		return row
+	var words := Label.new()
+	words.text = line[1]
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# a wrapping label needs its width given, or it wraps a letter a line: the plate, less its padding, the diamond and the number
+	words.custom_minimum_size.x = TRACKER_W - 28.0 - (20.0 if line[0] in ["title", "crate"] else 0.0) - (44.0 if line[2] != "" else 0.0)
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var font: Font = Brand.FONT_BODY
+	var px := 12
+	var ink := Brand.CREAM_MUTED
+	match line[0]:
+		"urgent", "head":
+			font = Brand.FONT_DISPLAY
+			px = 10
+			ink = Brand.ORANGE if line[0] == "urgent" else NOTE
+		"crate":
+			px = 14
+			ink = Brand.CREAM
+		"title":
+			px = 15
+			ink = Brand.CREAM
+		"next": ink = Color("F0C33A")
+		"other": ink = NOTE
+	words.add_theme_font_override("font", font)
+	words.add_theme_font_size_override("font_size", px)
+	words.add_theme_color_override("font_color", ink)
+	if line[0] == "title" or line[0] == "crate":
+		var diamond := Control.new()     # the gold diamond the guide puts over the place
+		diamond.custom_minimum_size = Vector2(12, 12)
+		diamond.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var fill := Brand.ORANGE if line[0] == "crate" else Color("F0C33A")
+		diamond.draw.connect(func():
+			var pts := PackedVector2Array([Vector2(6, 0), Vector2(12, 6), Vector2(6, 12), Vector2(0, 6)])
+			diamond.draw_colored_polygon(pts, fill))
+		row.add_child(diamond)
+	row.add_child(words)
+	if line[2] != "":
+		var right := Label.new()
+		right.text = line[2]
+		right.add_theme_font_override("font", Brand.FONT_DISPLAY)     # the mono face has no colon for the countdown
+		right.add_theme_font_size_override("font_size", 12 if line[0] == "urgent" else 11)
+		right.add_theme_color_override("font_color", Brand.ORANGE if line[0] == "urgent" else NOTE)
+		right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(right)
+	return row
+
+# --- each frame ----------------------------------------------------------------------------------------------------------
 
 func _refresh() -> void:
-	_write_keys()    # a rebind in settings shows on the next word from the server
-	var shock := str(client.city.get("shock", ""))
-	if shock != _last_shock:
-		_last_shock = shock
-		if SHOCKS.has(shock): toast(SHOCKS[shock][0], SHOCKS[shock][1])
-
-func _on_event(e: Dictionary) -> void:
-	if e.type == "FeedPost": _say_on_ticker(str(e.text))
+	var n: int = client.you.get("quests", []).size()
+	_count.visible = n > 0
+	_count.text = str(n)
+	_count.reset_size()
+	_count.position = Vector2(SLOT - _count.size.x + 6.0, -6.0)
 
 func _process(delta: float) -> void:
-	if _toast.visible:
-		_toast_left -= delta
-		if _toast_left <= 0.0:
-			_toast.visible = false
-		_toast.reset_size()
-		_toast.position = Vector2((size.x - _toast.size.x) * 0.5, TOAST_AT)
-		_toast_bar.queue_redraw()
-	if _map:
-		# right-aligned under the map's plate, the board's 1.2rem below it
-		_place_box.position = Vector2(size.x - 300.0 - 21.0, 21.0 + _map.PLATE + 11.0)
-		var here := _where_am_i()
-		if here != _place.text: _roll_place(here)
+	if _map: _map.place = _where_am_i()
+	_tracker_in -= delta
+	if _tracker_in <= 0.0:
+		_tracker_in = TRACKER_EVERY
+		_write_tracker()
+	var under: Control = world.energy_plate if world else null
+	if under: _tracker.position = Vector2(21.0, under.position.y + under.size.y + 14.0)
+	if _mentor_left > 0.0:
+		_mentor_left -= delta
+		if mentor.is_open: _mentor_left = 0.0     # H: the chat has it now
+		if _mentor_left <= 0.0: _show_mentor(false)
 
-## The name of the place you're at: the landing, the square, or the building you're in or by (world.json's sites); else the town.
+## The name of the place you're at: the landing, the square, or the building you're in or by; else the town.
 func _where_am_i() -> String:
 	var p: Vector3 = world.player.global_position
 	var at := Vector2(p.x, p.z)
 	if at.distance_to(Vector2(Opening.JETTY_AT.x, Opening.JETTY_AT.z)) < PLACE_NEAR * 2.5: return "The Landing"
 	if at.distance_to(Vector2(Dhaniverse.PLACES.square.x, Dhaniverse.PLACES.square.z)) < PLACE_NEAR * 2.0: return "Tally Square"
-	var best := "Tallyport"
+	var best := "Dhaniverse"
 	var nearest := PLACE_NEAR
-	for site in world.data.d.get("sites", []):
-		var d := ((at - WorldData.v2(site.pos)).abs() - WorldData.v2(site.half)).max(Vector2.ZERO).length()   # 0 inside its footprint
+	var rooms: Array = world.all_rooms()
+	for i in mini(ROOM_NAMES.size(), rooms.size()):
+		var lo: Vector3 = rooms[i][0]
+		var hi: Vector3 = rooms[i][1]
+		var d := Vector2(maxf(lo.x - at.x, at.x - hi.x), maxf(lo.z - at.y, at.y - hi.z)).max(Vector2.ZERO).length()   # 0 inside its footprint
 		if d < nearest:
 			nearest = d
-			best = str(site.get("name", best))
+			best = ROOM_NAMES[i]
 	return best
 
 func _unhandled_key_input(e: InputEvent) -> void:

@@ -76,7 +76,7 @@ func _physics_process(delta: float) -> void:
 		_heading = null
 		return
 	var input := Vector2.ZERO
-	if not frozen:
+	if not frozen and not Screens.holding():     # a screen up (the pause menu, the phone, a sheet) has the keys
 		input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var yaw: float = rig.yaw if rig else 0.0
 	var dir := Vector3(input.x, 0, input.y).rotated(Vector3.UP, yaw)
@@ -101,19 +101,21 @@ func _physics_process(delta: float) -> void:
 	_step_up(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
 
-## Up kerbs, doorsteps and stairs: if walking is blocked here but clear STEP_H higher, stand on what is ahead
-## in one move (only lifting would let gravity pull the body straight back off the edge).
+## Up kerbs, doorsteps and stairs: if walking is blocked here by something steep but clear STEP_H higher, stand on
+## what is ahead in one move (only lifting would let gravity pull the body straight back off the edge). A slope it can
+## walk is left to move_and_slide, and the move goes no further than this frame's own: anything more is extra speed.
 func _step_up(motion: Vector3) -> void:
 	if motion.length() < 1e-4 or (not is_on_floor() and velocity.y > 1.0): return
 	var ahead := motion.normalized() * STEP_REACH
 	var from := global_transform
-	if not test_move(from, ahead): return
+	var hit := KinematicCollision3D.new()
+	if not test_move(from, ahead, hit): return
+	if hit.get_normal().angle_to(Vector3.UP) <= floor_max_angle: return     # the ground rising: walked, not stepped
 	var up := Vector3.UP * STEP_H
 	if test_move(from, up): return
 	var raised := from.translated(up)
 	if test_move(raised, ahead): return
-	var hit := KinematicCollision3D.new()
-	var lifted := raised.translated(ahead)
+	var lifted := raised.translated(motion)
 	if not test_move(lifted, -up * 1.2, hit): return
 	var top := lifted.origin - Vector3.UP * hit.get_travel().length()
 	if top.y > from.origin.y + 0.01:

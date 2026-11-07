@@ -1,9 +1,10 @@
 class_name TownPassDesk
 extends Node3D
 ## The town hall's clerk, at a desk by the Arrival Hall's door, and the Town Pass (PROTOCOL.md, The Town Pass): one pass for one real
-## person, proven with World ID. Asking for it (TownPass) gets a one-time link; it opens in the system browser, and the game waits for
-## HumanVerified, when everything the town owed you is paid and your name (sam.tallyport.eth) is registered. The phone's wallet page
-## asks the same way (ask()).
+## person, proven with World ID. Asking for it (TownPass) gets a one-time link and the same link as a QR code (qr), which the Town
+## Pass gate (TownPassGate) draws for the World App on the player's phone: nothing opens in a browser. The game waits for
+## HumanVerified, when everything the town owed you is paid and your name is registered. Pressing E at the desk, or the phone's
+## wallet page, opens the gate (open_gate).
 
 const LOOK := {"top": "28324a", "tee": "eaf0f4", "skin": "c58c5c", "hair": "3a2a20", "bottom": "2a2a30", "shoes": "2a2a30", "open_top": false, "tall": 1.0, "bun": true}
 
@@ -13,7 +14,9 @@ var client: TownClient
 var player: CharacterBody3D
 var tell := Callable()
 var clerk: TownNpc
-var waiting := false               # a link was opened: waiting for World ID
+var waiting := false               # a link was given: waiting for World ID
+var qr: Array = []                 # the link's QR code, row by row ("1" dark), for the gate to draw
+var open_gate := Callable()        # the Town Pass gate's open: what pressing E at the desk does
 
 func setup(ui: Control, clerk_at: Transform3D) -> void:
 	clerk = TownNpc.new()
@@ -57,7 +60,12 @@ func hint() -> String:
 	if client.you.is_empty() or bool(client.you.get("human", false)): return ""
 	return "Waiting for World ID…" if waiting else "Get your Town Pass"
 
-## Ask for a one-time link. It opens in the browser when the server sends it.
+## E at the desk: the gate, with its code (or asking for one straight away, before the gate exists).
+func press() -> void:
+	if open_gate.is_valid(): open_gate.call()
+	else: ask()
+
+## Ask for a one-time link and its code: the gate draws it when the server sends it.
 func ask() -> void:
 	if bool(client.you.get("human", false)): return
 	if clerk: clerk.greet()
@@ -67,12 +75,10 @@ func _on_replied(command: Dictionary, reply: Dictionary) -> void:
 	if command.get("type") != "TownPass": return
 	var url := str(reply.get("url", ""))
 	if url == "": return
+	qr = reply.get("qr", [])
 	waiting = true
 	waiting_changed.emit(true)
-	if DisplayServer.get_name() == "headless" or OS.get_cmdline_user_args().has("--no-browser"): print("town pass: ", url)    # a test reads it here
-	else: OS.shell_open(url)
-	if tell.is_valid():
-		tell.call("The pass page is open in your browser: prove you're one real person with World ID." + (" A rehearsal pass is offered." if client.debug else ""))
+	if DisplayServer.get_name() == "headless": print("town pass: ", url)    # a test reads it here
 
 func _on_refused(command: Dictionary, refusal: Dictionary) -> void:
 	if command.get("type") == "TownPass" and tell.is_valid(): tell.call(Refusals.say(refusal, client.now_ms()))

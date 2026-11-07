@@ -22,8 +22,6 @@ const RIDE_NAMED := 2.5            # how much faster it comes in once there's no
 const FILM := 5.5                  # s before the player has the deck
 const PORT_LAND := 1.8             # s from the title's shot down to the deck
 const ON_DECK :=Vector3(2.4, 0.05, 0.0)   # where he starts: on the foredeck, clear of the cabin's roof
-const AT_RAIL_BOW := 3.5           # m along the deck: he's reached the rail
-const AT_RAIL_SIDE := 1.45         # m across it, on either side
 const BOB := 0.03                  # m
 const TALK_AT := 3.1               # m from the harbourmaster
 const LETTER_AFTER := 2.2          # s from him speaking to the letter being read
@@ -96,20 +94,17 @@ func play() -> void:
 	await get_tree().process_frame     # the screen's size is known from here
 	cinema.wipe_open()
 	cinema.bars_in()
-	cinema.card("Tallyport", "", "", FILM - 2.2)
+	cinema.card("Dhaniverse", "", "", FILM - 2.2)
 	director.skipped.connect(_end_film, CONNECT_ONE_SHOT)
 	await director.follow(_film_shot, FILM, 36.0)
 	if step == "film": _end_film()
 
-## The ferry came in under the title: the camera comes down from that shot to the deck, and it's theirs from there.
+## The ferry came in under the title: the camera goes straight from that shot to the one over the boat, and the ticket asks
+## for a name.
 func play_from_port(mode_was: String) -> void:
 	_begin()
 	_mode_was = mode_was
-	step = "deck"
-	player.frozen = false
-	cinema.bars_out()
-	director.land(PORT_LAND)
-	_called_for = 0.0
+	_open_ticket()
 
 ## Straight to the jetty, for a player who skips the ride.
 func come_in_now() -> void:
@@ -141,11 +136,15 @@ func _film_shot(u: float) -> Array:
 
 func _end_film() -> void:
 	if step != "film": return
-	step = "deck"
-	player.frozen = false
-	cinema.bars_out()
-	director.land(1.0)
-	_called_for = 0.0
+	_open_ticket()
+
+## Over the boat, as on the board (ux05): high behind the deck, looking along the jetty to the landing and the town, held on the
+## ferry as it comes in, for as long as the ticket and the Town Pass are up.
+func _name_shot() -> Array:
+	var f: Vector3 = ferry.get_global_transform_interpolated().origin
+	var way := Vector3(JETTY_AT.x - f.x, 0.0, JETTY_AT.z - f.z).normalized()
+	var side := way.cross(Vector3.UP)
+	return [f - way * 9.0 + side * 2.5 + Vector3.UP * 6.5, f + way * 16.0 + Vector3.UP * 0.8]
 
 func _physics_process(delta: float) -> void:
 	if _ride_u >= 1.0 or ride_held: return
@@ -176,13 +175,9 @@ func _alongside() -> void:
 	alongside.emit()
 
 func _process(delta: float) -> void:
-	_keys.want = playing and step in ["deck", "ashore"]
+	_keys.want = playing and step == "ashore"
 	if not playing: return
 	match step:
-		"deck":
-			var l: Vector3 = ferry.global_transform.affine_inverse() * player.global_position
-			if l.x > AT_RAIL_BOW or absf(l.z) > AT_RAIL_SIDE or l.x < -0.2:
-				_open_ticket()
 		"ashore":
 			_called_for -= delta
 			if _called_for <= 0.0 and _ride_u >= 1.0:
@@ -197,6 +192,8 @@ func _to_keeper() -> float:
 func _open_ticket() -> void:
 	step = "ticket"
 	player.frozen = true
+	cinema.bars_in()
+	director.hold(_name_shot)     # already held (a name refused): it eases from where it is, which is there
 	sound.play("paper")
 	ticket.open()
 
@@ -207,7 +204,9 @@ func _on_named(who: String) -> void:
 	if pass_gate and TownPassGate.wanted(client):
 		step = "pass"                  # held at the gangway until the Town Pass is stamped, once
 		pass_gate.open()
-		await pass_gate.passed
+		await pass_gate.through
+	cinema.bars_out()
+	await director.land(PORT_LAND)     # from over the boat down to him, on the deck
 	player.frozen = false
 	step = "ashore"
 	_called_for = 0.0
@@ -216,7 +215,7 @@ func _on_named(who: String) -> void:
 func hold_for_pass() -> void:
 	player.frozen = true
 	pass_gate.open()
-	await pass_gate.passed
+	await pass_gate.through
 	player.frozen = false
 
 func _on_synced() -> void:

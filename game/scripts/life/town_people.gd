@@ -11,6 +11,8 @@ const STIR_EVERY := Vector2(5.0, 18.0)   # s between someone looking round or ge
 const WALKERS_SEEN := 48.0         # m: out of doors you see further
 const GROUND_FROM := 0.6           # m over their feet the ground's looked for from: a kerb or a step up, never an awning
 const WALK := 1.15                 # m/s
+const RUN := 3.4                   # m/s: running for the loot crate
+const CRATE_AROUND := 1.8          # m from the crate they stop, round it
 const PAUSE_CHANCE := 0.35         # at a waypoint, stop and look about
 const PAUSE := Vector2(2.0, 9.0)   # s
 # laps people walk, on the paved ways (x, z), each out and back
@@ -104,6 +106,20 @@ func react(pleased: bool, at: Vector3) -> void:
 		w.react_for = 4.0
 		(w.body as Node3D).call_deferred("gesture", "Wave" if pleased else "Defeat")
 
+## A loot crate fell: the `how_many` walkers nearest it drop what they're doing and run for it (a race the player can see they're
+## in). stop_rush() sends them back to their walks.
+func rush_to(at: Vector3, how_many: int) -> void:
+	stop_rush()
+	var by_distance := _walkers.duplicate()
+	by_distance.sort_custom(func(a, b): return (a.body as Node3D).position.distance_to(at) < (b.body as Node3D).position.distance_to(at))
+	for i in mini(how_many, by_distance.size()):
+		var w: Dictionary = by_distance[i]
+		w.rush = Vector2(at.x, at.z)
+		w.pause = 0.0
+
+func stop_rush() -> void:
+	for w in _walkers: w.erase("rush")
+
 ## They keep walking when nobody's there to see, so the town doesn't freeze behind you; only the posing stops.
 func _walk_on(w: Dictionary, delta: float) -> void:
 	var body: Node3D = w.body
@@ -118,9 +134,15 @@ func _walk_on(w: Dictionary, delta: float) -> void:
 		w.pause -= delta
 	else:
 		var route: Array = w.route
-		var goal: Vector2 = route[w.at]
+		var goal: Vector2 = w.get("rush", route[w.at])
 		var to := Vector2(goal.x - body.position.x, goal.y - body.position.z)
-		if to.length() < 0.25:
+		if w.has("rush"):
+			if to.length() > CRATE_AROUND:
+				var run := to.normalized() * minf(RUN * delta, to.length() - CRATE_AROUND)
+				body.position += Vector3(run.x, 0.0, run.y)
+				speed = RUN
+			if near: body.rotation.y = lerp_angle(body.rotation.y, atan2(to.x, to.y), 1.0 - exp(-8.0 * delta))
+		elif to.length() < 0.25:
 			var next: int = w.at + w.dir
 			if next < 0 or next >= route.size():
 				w.dir = -w.dir

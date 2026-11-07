@@ -19,10 +19,9 @@ const GAP := 0.7                   # between the lobe and the pill
 const CARD := Vector2(46.0, 17.0)
 const CARD_R := 2.4
 const RUN_W := 46.0
-const MAX_W := 60.0
-const MENTOR_W := 38.0             # rem: the widest a mentor's line grows
-const MAX_TEXT := 40.0             # rem: a longer line is cut short
-const NEXT_TEXT := 26.0            # rem: the most of the Next line's words
+const MAX_W := 72.0                # rem: as wide as the room between the plates on the left and the minimap
+const MAX_TEXT := 56.0             # rem: a longer line is cut short
+const NEXT_TEXT := 40.0            # rem: the most of the Next line's words
 const NEXT_EVERY := 0.25           # s between reading the Guide
 const SAY_FOR := 3.0               # s a refusal shows in the board's bar
 const RING := 3.0                  # px
@@ -44,11 +43,11 @@ const SUN_LOW := Color("FF8A3D")
 const TOWN := Color("3a3b3b")
 const STALL := "Kofi's stall"
 # kind: [place in line, seconds up, the board's width in rem]. A meal goes ahead of anything waiting; the town waits for everyone.
-const KINDS := {"paid": [0, 3.6, 36.0], "meal": [0, 3.0, 33.0], "rush": [1, 3.0, 33.0], "money": [1, 3.2, 34.0], "quest": [1, 3.6, 36.0], "mentor": [2, 8.0, 36.0], "town": [3, 3.0, 36.0]}
+const KINDS := {"paid": [0, 3.6, 36.0], "meal": [0, 3.0, 33.0], "rush": [1, 3.0, 33.0], "money": [1, 3.2, 34.0], "quest": [1, 3.6, 36.0], "town": [3, 3.0, 36.0]}
 const WHY := {"streak": "for coming back", "rush": "for a Rush run", "chest": "from your chest", "weekly chest": "from the weekly strongbox", "quest": "for a quest",
 	"price call": "for a right price call", "referral": "for a friend you brought"}
 const WAITING_FOR := {"town_pass": "waiting for your Town Pass", "budget": "the town's budget is spent today: tomorrow", "chain": "the chain refused it: tried again tomorrow"}
-const FEED_PLACES := {"board": "Market Rush", "season": "Tallyport"}
+const FEED_PLACES := {"board": "Market Rush", "season": "Dhaniverse"}
 const ICONS := {
 	"bowl": '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1.5 1-1.5 1-3M13 7.5c0-1.5 1-1.5 1-3"/>',
 	"stall": '<path d="M3 9l2-5h14l2 5"/><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/>',
@@ -74,7 +73,6 @@ var _shape := ColorRect.new()
 var _mat := ShaderMaterial.new()
 var _coin_mat := ShaderMaterial.new()
 var _face_mat := ShaderMaterial.new()
-var _ringed_mat := ShaderMaterial.new()
 var _rest := HBoxContainer.new()
 var _dial := Control.new()
 var _clock: Label
@@ -146,7 +144,6 @@ var _ring_k := 0.0
 var _say_left := 0.0
 var _board_line := ""
 var _board_want := 40.0
-var _quest_paid_at := -100000
 
 ## Made and put on screen by world.gd; returned for the opening's plates.
 static func join(parent: Control, world_: Node, hud_: GameHud) -> Island:
@@ -176,8 +173,6 @@ func _ready() -> void:
 	var round_it := Shader.new()
 	round_it.code = ROUND
 	_face_mat.shader = round_it
-	_ringed_mat.shader = round_it
-	_ringed_mat.set_shader_parameter(&"ring", 0.25 / H)
 	_build_rest()
 	_build_run()
 	_build_moment()
@@ -187,7 +182,6 @@ func _ready() -> void:
 	for n in find_children("*", "Control", true, false): (n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	client.event.connect(_on_event)
-	if hud: hud._ticker.hide()     # its lines are the island's town moments now
 	visible = false
 
 func _exit_tree() -> void:
@@ -221,10 +215,11 @@ func _on_event(e: Dictionary) -> void:
 		"TicketsEarned":
 			_add({"kind": "money", "head": "+%d ticket%s." % [int(e.tickets), "" if int(e.tickets) == 1 else "s"], "sub": [[str(WHY.get(str(e.get("why", "")), "")), ""]],
 				"fig": str(int(e.get("total", 0))), "note": [["this week", ""]], "lobe": "ticket", "fill": Brand.BLUE})
-		"RewardPaid":
-			if str(e.get("why", "")) == "quest" and Time.get_ticks_msec() - _quest_paid_at < 15000: return     # the quest's own moment said it
-			_add({"kind": "money", "head": "Paid.", "sub": [["%s · into your wallet" % str(e.get("why", "a reward")).capitalize(), ""]], "fig": "+" + Usdc.text(int(e.amount)),
-				"ink": Brand.MINT, "lobe": "coin", "fill": Brand.GREEN})
+		"RewardPaid":     # what reached the wallet, to the cent: a payout that paid back a cargo advance says so
+			var landed := int(e.amount) - int(e.get("advance_repaid", 0))
+			var why := str(e.get("why", "a reward")).capitalize()
+			var said := ("%s · %s, less your %s advance" % [why, Usdc.text(int(e.amount)), Usdc.text(int(e.advance_repaid))]) if int(e.get("advance_repaid", 0)) > 0 else "%s · into your wallet" % why
+			_add({"kind": "money", "head": "Paid.", "sub": [[said, ""]], "fig": "+" + Usdc.text(landed), "ink": Brand.MINT, "lobe": "coin", "fill": Brand.GREEN})
 		"RewardPending":
 			_add({"kind": "money", "head": "Owed to you.", "sub": [["%s · %s" % [str(e.get("why", "")).capitalize(), WAITING_FOR.get(str(e.get("waiting", "")), "waiting")], ""]],
 				"fig": Usdc.text(int(e.amount)), "ink": Brand.CREAM, "lobe": "coin", "fill": TOWN})
@@ -241,14 +236,11 @@ func _on_event(e: Dictionary) -> void:
 		"QuestStepFailed":
 			_add({"kind": "quest", "head": "Didn't go through.", "sub": [[Refusals.reason(e.get("reason")), ""]], "note": [["try again", ""]], "lobe": "quest", "fill": Brand.PLATE})
 		"QuestDone":
+			# the money says itself when it lands (RewardPaid, or RewardPending while it's held): this is the quest done
 			var r: Dictionary = e.get("reward", {})
-			var usdc := int(r.get("usdc", 0))
-			var paid := usdc > 0 and bool(client.you.get("human", false))     # without the Town Pass it's held: RewardPending says so
-			if paid: _quest_paid_at = Time.get_ticks_msec()
-			_add({"kind": "paid", "head": "%s · %s" % ["Paid" if paid else "Done", str(e.get("title", "")).to_lower()],
+			_add({"kind": "paid", "head": "Done · %s" % str(e.get("title", "")).to_lower(),
 				"sub": [[("+%d ticket%s" % [int(r.get("tickets", 0)), "" if int(r.get("tickets", 0)) == 1 else "s"]) + ((" · " + str(r.title)) if r.get("title") != null and str(r.get("title", "")) != "" else ""), ""]],
-				"fig": "+" + Usdc.amount(usdc) if usdc > 0 else "", "ink": Brand.MINT if paid else Brand.CREAM,
-				"note": [["into your wallet" if paid else "held for your Town Pass", ""]] if usdc > 0 else [], "lobe": "coin" if paid else "quest", "fill": Brand.GREEN})
+				"lobe": "quest", "fill": Brand.GREEN})
 		"QuestAbandoned": _add({"kind": "quest", "head": "Quest dropped.", "sub": [[TownState.quest_title(client.you, client.city, str(e.quest)), ""]], "lobe": "quest", "fill": TOWN})
 		"QuestFailed": _add({"kind": "quest", "head": "Quest failed.", "sub": [[Refusals.reason(e.get("reason")), ""]], "lobe": "quest", "fill": Brand.PLATE})
 		"PriceCalled": _add({"kind": "money", "head": "Called: %s." % str(e.get("call", "")), "sub": [["Settles when the next city day opens", ""]], "lobe": "coin", "fill": TOWN})
@@ -290,13 +282,11 @@ func _order(served: int) -> void:
 	last.sub = [["%s this run · %s" % ["1 order" if served == 1 else "%d orders" % served, STALL], ""]]
 	last.fig = str(served)
 
-## The mentor's line (MentorChat's corner hands it over). Only the newest waits.
-func mentor_says(line: String) -> void:
-	for i in range(_q.size() - 1, -1, -1):
-		if _q[i].kind == "mentor": _q.remove_at(i)
-	_add({"kind": "mentor", "head": "A thought.", "sub": [[line, ""]], "note": [["H", "key"], ["Ask", "w"]], "lobe": "mentor", "fill": Brand.MAGENTA})
-
 ## The town has changed (the feed, or GameHud's toast).
+## Something to run for now (the loot crate): ahead of the town's news, in the orange that wants attention.
+func urgent(head: String, sub := "") -> void:
+	_add({"kind": "money", "head": head, "sub": [[sub, ""]] if sub != "" else [], "lobe": "coin", "fill": Brand.ORANGE})
+
 func town(head: String, sub := "", someone := false) -> void:
 	_add({"kind": "town", "head": head, "sub": [[sub, ""]] if sub != "" else [], "lobe": "face" if someone else "coin", "fill": TOWN})
 
@@ -315,7 +305,6 @@ static func queue_in(q: Array[Dictionary], m: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_tick_clock(delta)
-	if _m.get("kind", "") == "mentor" and world.mentor.is_open: _done()   # H: the chat has it now
 	var hide := _hidden()
 	if visible == hide: visible = not hide
 	if hide:
@@ -335,7 +324,7 @@ func _hidden() -> bool:
 	if _board_on: return false
 	if (world.title and world.title.is_up) or world.opening.playing or world.director.busy or world.blast.playing: return true
 	if world.moments and world.moments.running: return true
-	return world.any_sheet_open() and not world.phone.is_open
+	return world.any_sheet_open()     # the phone too: it has the screen's right and its own wallet (ux10)
 
 ## The city day's clock, counted down here between the server's words: its word wins whenever it has spoken.
 func _tick_clock(delta: float) -> void:
@@ -555,11 +544,6 @@ func _open(m: Dictionary) -> void:
 	_end.visible = end > 0.0
 	var widest := MAX_W
 	var sub: Array = m.get("sub", [])
-	if m.kind == "mentor":
-		# the mentor's first sentence, whole; the pill grows to MENTOR_W, then whole words and "…"
-		widest = MENTOR_W
-		var room := (widest - 4.2 - 1.6) * REM - end
-		sub = [[whole_words(first_sentence(str(sub[0][0])), room, Brand.FONT_BODY, roundi(1.2 * REM)), ""]]
 	var body := maxf(_fit(_head), _runs(_sub, sub, 1.2 if not _keyed(sub) else 1.3, Brand.FONT_DISPLAY, 1.2))
 	var need := 4.2 + (body + (1.6 * REM + end if end > 0.0 else 0.0)) / REM
 	_w = clampf(maxf(float(KINDS[m.kind][2]), need), 0.0, widest)
@@ -569,13 +553,6 @@ func _open(m: Dictionary) -> void:
 	var lobe := _lobe_of(_w)
 	_set_icon(_icon, m.lobe, Vector2(lobe.x, lobe.y))
 	_dots.position.y = (H + 1.2) * REM
-
-## Up to and with the first full stop (or ! or ?) that ends a sentence; the whole line if there is none.
-static func first_sentence(line: String) -> String:
-	line = line.strip_edges()
-	for i in line.length() - 1:
-		if line[i] in ".!?" and line[i + 1] == " ": return line.left(i + 1)
-	return line
 
 ## As many whole words as fit in room px, then "…"; the line as it is if it fits.
 static func whole_words(line: String, room: float, font: Font, px: int) -> String:
@@ -638,9 +615,9 @@ func _set_icon(rect: TextureRect, what: String, at: Vector2) -> void:
 			rect.texture = COIN
 			rect.material = _coin_mat
 			side = 3.4
-		"face", "mentor":
-			rect.texture = MentorChat.FACE if what == "mentor" else PlayerFace.FACE
-			rect.material = _ringed_mat if what == "mentor" else _face_mat
+		"face":
+			rect.texture = PlayerFace.FACE
+			rect.material = _face_mat
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			side = H
 		_: rect.texture = _svg(what)

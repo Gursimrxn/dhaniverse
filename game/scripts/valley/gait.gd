@@ -7,11 +7,11 @@ extends RefCounted
 
 signal stepped(where: Vector3, heavy: float)   # a foot came down
 
-const STRIDE_WALK := 1.0           # m, a full cycle of both feet, at a stroll
-const STRIDE_FAST := 1.7           # m, at a run
+const STRIDE_WALK := 1.5           # m, a full cycle of both feet, at a stroll: about three steps a second at his brisk walk
+const STRIDE_FAST := 2.6           # m, at a run: four steps a second, both feet off the ground between them
 const SPEED_FAST := 5.2            # m/s it's a full run
 const STANCE_WALK := 0.6           # of a cycle a foot is down
-const STANCE_RUN := 0.36
+const STANCE_RUN := 0.3
 const LIFT_WALK := 0.085           # m a swinging foot clears the ground
 const LIFT_RUN := 0.17
 const STILL := 0.12                # m/s: slower than this he's standing
@@ -37,7 +37,7 @@ const INERTIA := 0.012             # skeleton units of lag per m/s²
 const HIP_DROP := 0.055            # how far the pelvis sits below straight legs
 const BENT_WALK := 0.9             # moving, the hip's height over the ground as a share of the leg's length: knees bent, so a planted foot has room
 const BENT_RUN := 0.84             # to pass under him
-const STANCE_LEAST := 0.25         # of a cycle: however fast, a foot is down at least this long
+const STANCE_LEAST := 0.18         # of a cycle: however fast, a foot is down at least this long
 const RE_AIM := 0.06               # m off where a flying foot should land before it's re-aimed
 const TOE_OFF := 0.97              # of the leg's length from the hip: a foot left that far behind comes up
 const STEP_MOST := 1.0 / 45.0      # s: the feet are stepped no longer than this at a time
