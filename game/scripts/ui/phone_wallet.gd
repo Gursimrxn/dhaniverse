@@ -104,7 +104,7 @@ func _card(you: Dictionary, chain: String) -> Control:
 	note.position = Vector2(20, CARD.y - 56)
 	card.add_child(note)
 	var name := Label.new()
-	name.text = str(you.ens) if you.get("ens") != null else str(you.get("name", client.player))
+	name.text = str(you.get("name", client.player))
 	name.add_theme_font_override("font", Brand.FONT_DISPLAY)
 	name.add_theme_font_size_override("font_size", 15)
 	name.add_theme_color_override("font_color", Color.BLACK)

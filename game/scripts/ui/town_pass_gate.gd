@@ -321,8 +321,7 @@ func _refresh() -> void:
 		return
 	_name.text = str(you.get("name", client.player))
 	_day.text = "day %d · dawn" % int(client.city.get("day", 1))
-	var ens = you.get("ens")
-	_unlocks.text = "Unlocks real pay and your name%s. It tells the town you’re one person, never who." % (", " + str(ens) if ens != null else " in the town")
+	_unlocks.text = "Unlocks real pay in USDC. It tells the town you’re one person, never who."
 	if you.get("wallet") == null: _status.text = "Your wallet is being made on the chain…"
 	elif client.debug: _status.text = "A rehearsal town: press E to stamp a rehearsal pass"
 	elif desk.qr.is_empty(): _status.text = "Asking the town hall for your code…"

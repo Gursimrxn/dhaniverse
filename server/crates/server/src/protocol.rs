@@ -389,6 +389,10 @@ fn quest_json(world: &World, quest: &ActiveQuest) -> Value {
         "any_order": quest.any_order,
         "steps": steps,
         "hold": hold,
+        // what the quest has given you to carry: the advance owed until the payout repays it, and the tokens the swap got
+        "advanced": quest.advanced,
+        "cargo_usdc": if quest.steps.iter().any(|s| s.kind == rules::book::StepKind::Cargo) { spice.cargo } else { 0 },
+        "swapped": quest.swapped.to_string(),
     })
 }
 

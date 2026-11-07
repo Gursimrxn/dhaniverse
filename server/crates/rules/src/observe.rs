@@ -526,6 +526,9 @@ impl State {
                             *usdc += amount;
                         }
                     }
+                    if let Ok(q) = self.quest_mut(&account, &quest) {
+                        q.advanced += amount;
+                    }
                     if let Some(index) = self.step_waiting_on(&account, &quest, &reference) {
                         self.step_done(&account, &quest, index, &mut events);
                     }

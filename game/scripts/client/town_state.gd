@@ -142,3 +142,32 @@ static func short_address(address) -> String:
 static func tier_after(tier: String) -> String:
 	var i := TIERS.find(tier)
 	return TIERS[mini(i + 1, TIERS.size() - 1)] if i >= 0 else tier
+
+## What your quests have you carrying (ux13): the cargo money advanced and still owed (USDC units), and the quest token a swap got,
+## held for a delivery (base units as the server sends them, with its symbol and decimals). Both go when the quest pays.
+static func carrying(you: Dictionary) -> Dictionary:
+	var owe := 0
+	var cargo := "0"
+	var symbol := "MANGO"
+	var decimals := 18
+	for q in you.get("quests", []):
+		if q.get("steps", []).any(func(s): return str(s.get("kind", "")) == "deliver" and bool(s.get("done", false))): continue
+		owe += int(q.get("advanced", 0))
+		if str(q.get("swapped", "0")) != "0":
+			cargo = str(q.swapped)
+			for s in q.get("steps", []):
+				if s.get("quote") is Dictionary:
+					symbol = str(s.quote.get("symbol", symbol))
+					decimals = int(s.quote.get("decimals", decimals))
+	return {"owe": owe, "cargo": cargo, "symbol": symbol, "decimals": decimals}
+
+## A step in money words, where it moves money (the Spice Run's), else its own words cut to a line.
+static func step_says(q: Dictionary, step: Dictionary) -> String:
+	var cargo := int(q.get("cargo_usdc", 0))
+	match str(step.get("kind", "")):
+		"cargo": return "Collect the $%s cargo money at the harbourmaster" % Usdc.amount(cargo) if cargo > 0 else "Collect the cargo money at the harbourmaster"
+		"swap": return "Swap $%s for MANGO at the exchange" % Usdc.amount(cargo) if cargo > 0 else "Swap the cargo money for MANGO at the exchange"
+		"deliver":
+			var held := str(q.get("swapped", "0"))
+			return "Deliver %s MANGO to the Spice Merchant" % TokenAmount.about(held, 18) if held != "0" else "Deliver the MANGO to the Spice Merchant"
+	return QuestMarks.step_words(step)

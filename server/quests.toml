@@ -18,7 +18,7 @@ story = "Uniswap is paying for a spice run. The harbourmaster has cargo money fo
 steps = [
   { id = "cargo", kind = "cargo", place = "harbourmaster", text = "Collect the cargo money from the harbourmaster. If your wallet is short, he'll advance it." },
   { id = "swap", kind = "swap", place = "kiosk", text = "Swap the cargo money for MANGO through Uniswap at the exchange kiosk. Read the quote, the fee and the slippage first." },
-  { id = "deliver", kind = "deliver", place = "spice-merchant", text = "Deliver the spice to the Spice Merchant at spice-merchant.tallyport.eth." },
+  { id = "deliver", kind = "deliver", place = "spice-merchant", text = "Deliver the MANGO to the Spice Merchant in the Market Hall. He pays back the cargo money, then your fee." },
 ]
 
 [templates.paint_sign]

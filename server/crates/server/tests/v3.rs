@@ -210,8 +210,10 @@ fn a_sponsored_quest_runs_over_the_socket_and_pays_once_the_town_pass_is_held() 
     let save = fresh_save("v3_quest");
     let server = Server::start(&save, &["--heartbeat-ms", "0"]);
     let mut sam = Client::connect(&server.addr);
-    let snapshot = sam.hello("sam");
-    let card = snapshot["city"]["bounty"]
+    sam.hello("sam");
+    // the town opens no sign campaign of its own: a sponsor opens one here
+    sam.debug(json!({"type": "NewCampaign", "template": "paint_sign", "payout": 250_000, "energy": 20, "slots": 40}));
+    let card = sam.latest_city()["bounty"]
         .as_array()
         .unwrap()
         .iter()

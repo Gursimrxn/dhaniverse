@@ -391,7 +391,7 @@ func _write_tracker() -> void:
 		var step := TownState.next_step(tracked)
 		if not step.is_empty():
 			var far := guide.next_distance() if crate.is_empty() else INF
-			lines.append(["next", QuestMarks.step_words(step) + (" · %d m" % roundi(far) if far != INF else ""), ""])
+			lines.append(["next", TownState.step_says(tracked, step) + (" · %d m" % roundi(far) if far != INF else ""), ""])
 	var others := quests.filter(func(q): return str(q.get("quest", "")) != guide.tracked)
 	for i in mini(others.size(), TRACKER_OTHERS):
 		if i == 0: lines.append(["gap", "", ""])

@@ -83,6 +83,8 @@ pub struct ActiveQuest {
     pub meals_before: u32,
     /// Quest tokens the swap got, for the delivery.
     pub swapped: u128,
+    /// USDC the campaign advanced for the cargo: owed until the payout repays it.
+    pub advanced: Usdc,
     pub hold: Option<Hold>,
 }
 
@@ -293,6 +295,7 @@ impl State {
             energy,
             meals_before: player.paid_meals,
             swapped: 0,
+            advanced: 0,
             hold: None,
             kind,
         };
@@ -331,7 +334,7 @@ impl State {
         self.life.player(account)?.quests.get(quest)
     }
 
-    fn quest_mut(&mut self, account: &str, quest: &str) -> Result<&mut ActiveQuest, Refusal> {
+    pub(crate) fn quest_mut(&mut self, account: &str, quest: &str) -> Result<&mut ActiveQuest, Refusal> {
         self.life
             .get_mut(account)?
             .quests

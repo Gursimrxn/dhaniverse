@@ -266,7 +266,7 @@ fn the_spice_run_runs_end_to_end_offline_with_an_advance_and_a_paid_claim() {
     );
     assert_eq!(
         town.world.state.campaigns.board().count(),
-        3,
+        2,
         "the offline campaigns are on the board"
     );
     town.verify("sam");
@@ -331,7 +331,7 @@ fn a_save_full_of_chain_observations_rebuilds_the_same_world_and_the_offline_cha
         seq,
         "the resumed offline chain had nothing new to say: no second campaigns, no repeats"
     );
-    assert_eq!(back.world.state.campaigns.all().count(), 3);
+    assert_eq!(back.world.state.campaigns.all().count(), 2);
     // And it goes on: priya's Rush pot was owed, and the Town Pass pays it.
     let owed = back.world.state.house.owed_to("priya");
     assert!(owed > 0);

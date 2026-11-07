@@ -176,7 +176,7 @@ max_advance = 1000000           # FROM CONTRACTS: CampaignEscrow's maxAdvance, 1
 # A campaign the offline ledger opens at the start, so the Bounty Board has a card without a chain.
 [[offline.campaigns]]
 template = "spice_run"
-sponsor = "Tallyport Launch"
+sponsor = "Uniswap"
 budget = 50000000
 payout_per_claim = 1000000
 energy_cost = 30
@@ -186,19 +186,8 @@ days = 7
 kind = 0
 
 [[offline.campaigns]]
-template = "paint_sign"
-sponsor = "Tallyport Launch"
-budget = 10000000
-payout_per_claim = 250000
-energy_cost = 20
-max_claims = 40
-per_human_cap = 1
-days = 7
-kind = 0
-
-[[offline.campaigns]]
 template = "town_pass"
-sponsor = "Tallyport Launch"
+sponsor = "World"
 budget = 10000000
 payout_per_claim = 200000
 energy_cost = 0

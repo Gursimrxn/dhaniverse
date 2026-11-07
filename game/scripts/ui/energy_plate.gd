@@ -26,6 +26,9 @@ var _target := -1                  # USDC units the figure is rolling to
 var _shown := 0.0
 var _rolling: Tween
 var _status := RichTextLabel.new()
+var _carry := HBoxContainer.new()  # ux13: what a quest has you carrying, beside the money: the IOU and the quest token
+var _iou := Label.new()
+var _cargo := Label.new()
 var _tick := 0.0
 var pass_waiting := Callable()     # true while a Town Pass link is open in the browser (TownPassDesk.waiting)
 
@@ -145,6 +148,11 @@ func _wallet_plate() -> Control:
 	_usdc_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for part in [_disc, _usdc, _unit, _usdc_note]: top.add_child(part)
 	column.add_child(top)
+	_carry.add_theme_constant_override("separation", 6)
+	_carry.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_carry.add_child(_chip(_iou, Brand.CREAM, Brand.PLATE, Color(0, 0, 0, 0)))
+	_carry.add_child(_chip(_cargo, Color("3a2a10"), Color("F0C33A"), Color("F0C33A")))
+	column.add_child(_carry)
 	column.add_child(small_print(_status))
 	_wallet.add_child(column)
 	return _wallet
@@ -192,6 +200,30 @@ func _write_wallet(you: Dictionary, now: int) -> void:
 		line = "[color=#%s]%s[/color]" % [warm, "Town Pass: waiting for World ID" if pass_waiting.is_valid() and pass_waiting.call() else "No Town Pass yet"]
 	_status.text = line
 	_status.visible = line != ""
+	var carry := TownState.carrying(you)
+	_iou.text = "IOU $%s · harbourmaster" % Usdc.amount(int(carry.owe))
+	_iou.visible = int(carry.owe) > 0
+	_cargo.text = "%s %s" % [TokenAmount.about(str(carry.cargo), int(carry.decimals)), str(carry.symbol)]
+	_cargo.visible = str(carry.cargo) != "0"
+	_carry.visible = _iou.visible or _cargo.visible
+
+## A small pill on the wallet plate.
+func _chip(label: Label, fill: Color, ink: Color, ring: Color) -> Label:
+	var look := StyleBoxFlat.new()
+	look.bg_color = fill
+	look.border_color = ring
+	look.set_border_width_all(1 if ring.a > 0.0 else 0)
+	look.set_corner_radius_all(99)
+	look.content_margin_left = 8
+	look.content_margin_right = 8
+	look.content_margin_top = 2
+	look.content_margin_bottom = 2
+	label.add_theme_stylebox_override("normal", look)
+	label.add_theme_font_override("font", Brand.FONT_BODY)
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", ink)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 ## From now on, what this client hears.
 func listen(to: TownClient) -> void:

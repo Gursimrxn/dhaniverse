@@ -225,7 +225,6 @@ func _on_event(e: Dictionary) -> void:
 				"fig": Usdc.text(int(e.amount)), "ink": Brand.CREAM, "lobe": "coin", "fill": TOWN})
 		"WalletReady": _add({"kind": "money", "head": "Your wallet.", "sub": [[TownState.short_address(e.get("address")) + " · on your phone", ""]], "lobe": "coin", "fill": TOWN})
 		"HumanVerified": _add({"kind": "quest", "head": "Town Pass stamped.", "sub": [["The town can pay you now", ""]], "lobe": "pass", "fill": Brand.GREEN})
-		"NameRegistered": _add({"kind": "quest", "head": "Your name.", "sub": [[str(e.get("name", "")), ""]], "lobe": "pass", "fill": Brand.MAGENTA})
 		"QuestTaken":
 			_add({"kind": "quest", "head": "Quest taken.", "sub": [[TownState.quest_title(client.you, client.city, str(e.quest)), ""]], "fig": "-%d" % int(e.get("energy", 0)) if int(e.get("energy", 0)) > 0 else "",
 				"ink": OUT_INK, "note": [["energy", ""]] if int(e.get("energy", 0)) > 0 else [], "lobe": "quest", "fill": Brand.ORANGE})

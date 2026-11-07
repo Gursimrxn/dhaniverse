@@ -161,6 +161,12 @@ impl Client {
             .collect()
     }
 
+    /// The latest `city` received.
+    pub fn latest_city(&self) -> Value {
+        let found = self.inbox.iter().rev().find(|m| m["type"] == "city");
+        found.expect("a city message")["city"].clone()
+    }
+
     /// The latest `you` received.
     pub fn latest_you(&self) -> Value {
         let found = self.inbox.iter().rev().find(|m| m["type"] == "you");

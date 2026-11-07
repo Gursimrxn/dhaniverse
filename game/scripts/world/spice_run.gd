@@ -41,11 +41,29 @@ func setup(ui: Control, keeper_at: Transform3D, merchant_at: Transform3D) -> voi
 	sheet.player = player
 	ui.add_child(sheet)
 	_requote = sheet.add_key(KEY_Q, "Q", "Get a new quote")
+	sheet.extra().add_child(_what_uniswap_is())
 	sheet.key_pressed.connect(func(_k): ask_quote())
 	sheet.chosen.connect(func(_i): _swap())
 	client.event.connect(_on_event)
 	client.you_changed.connect(func(): if sheet.is_open: _fill())
 	client.refused.connect(_on_refused)
+
+## The sponsor, said once under the quote: Uniswap's own mark and what it is, in a line a player reads before pulling the lever.
+func _what_uniswap_is() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	var mark := TextureRect.new()
+	mark.texture = preload("res://assets/ui/sponsors/Uniswap_horizontallogo_pink.png")
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.custom_minimum_size = Vector2(110, 30)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(mark)
+	var said := PaperSheet.words("Uniswap is an exchange with no one behind the counter: a pool of two tokens sets the price, and anyone can swap. "
+		+ "Here your cargo USDC buys MANGO from the pool, on Sepolia. Uniswap sponsors this run: it pays for the lesson.", Brand.FONT_PROSE, 15, 560.0)
+	said.add_theme_color_override("font_color", PaperSheet.INK)
+	row.add_child(said)
+	return row
 
 ## The quest and its open step of this kind, if any: [quest, step].
 func _open(kind: String) -> Array:

@@ -90,7 +90,7 @@ func _think() -> void:
 	if not q.is_empty():
 		var s := TownState.next_step(q)
 		var place := str(s.get("place", ""))
-		_goal = {"words": QuestMarks.step_words(s), "waiting": bool(s.get("waiting", false))}
+		_goal = {"words": TownState.step_says(q, s), "waiting": bool(s.get("waiting", false))}
 		if town.knows(place):
 			_goal.at = func(): return town.place_at(place)
 			_goal.over = QuestMarks.OVER_PERSON if town.is_person(place) else QuestMarks.OVER
